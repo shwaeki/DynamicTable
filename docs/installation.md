@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | PHP | 8.2+ |
-| Laravel | 11, 12 or 13 |
+| Laravel | 10, 11, 12 or 13 |
 | Database | MySQL, MariaDB, PostgreSQL or SQLite |
 | JavaScript build step | none |
 | CSS framework | none required |

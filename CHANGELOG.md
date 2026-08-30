@@ -4,6 +4,16 @@ All notable changes to Laravel DynamicTable are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Laravel 10 support. `Schema::getColumns()` and `Schema::getIndexes()` are
+  Laravel 11 additions, so the new `Support\SchemaIntrospector` uses them when
+  they exist and otherwise runs the equivalent driver queries (SQLite, MySQL,
+  MariaDB, PostgreSQL, SQL Server) itself. `doctrine/dbal` is still never
+  required. The test matrix now covers Laravel 10 on PHP 8.2 and 8.3.
+
 ## [1.0.0] — 2026-08-30
 
 First public release.

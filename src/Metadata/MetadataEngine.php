@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
+use Shwaeki\DynamicTable\Support\SchemaIntrospector;
 use Throwable;
 use UnitEnum;
 
@@ -30,6 +30,8 @@ class MetadataEngine
     /** @var array<string, FieldMetadata|false> */
     protected array $pathMemo = [];
 
+    protected SchemaIntrospector $schema;
+
     /** Method names on Eloquent/base classes that must never be probed as relations. */
     protected const SKIP_METHODS = [
         'newQuery', 'newModelQuery', 'newQueryWithoutRelationships', 'newCollection',
@@ -46,7 +48,10 @@ class MetadataEngine
         'getQualifiedKeyName', 'query', 'on', 'onWriteConnection', 'all', 'with',
     ];
 
-    public function __construct(protected ?string $storeName = null) {}
+    public function __construct(protected ?string $storeName = null, ?SchemaIntrospector $schema = null)
+    {
+        $this->schema = $schema ?? new SchemaIntrospector;
+    }
 
     /**
      * @param  class-string<Model>|Model  $model
@@ -305,7 +310,7 @@ class MetadataEngine
         $columns = [];
 
         try {
-            $columns = Schema::connection($connection)->getColumns($table);
+            $columns = $this->schema->columns($connection, $table);
         } catch (Throwable) {
             $columns = [];
         }
@@ -313,7 +318,7 @@ class MetadataEngine
         $indexed = [];
 
         try {
-            foreach (Schema::connection($connection)->getIndexes($table) as $index) {
+            foreach ($this->schema->indexes($connection, $table) as $index) {
                 foreach ($index['columns'] as $column) {
                     $indexed[$column] = true;
                 }

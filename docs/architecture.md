@@ -165,11 +165,13 @@ dropped, a warning is surfaced, and the table still renders.
 
 ## 9. Supported versions
 
-- **PHP 8.2+** — matches the floor of every currently supported Laravel release.
-- **Laravel 11, 12 and 13.** Laravel 11 is the floor because the package relies
-  on `Schema::getColumns()`, which removed the `doctrine/dbal` requirement for
-  schema introspection. Supporting Laravel 10 would mean carrying dbal for one
-  release line; that cost is not worth paying.
+- **PHP 8.2+.** Laravel 10 itself also runs on PHP 8.1, but 8.1 is end of life,
+  so the package does not carry it.
+- **Laravel 10, 11, 12 and 13.** Laravel 11 introduced `Schema::getColumns()`
+  and `Schema::getIndexes()`, which read the schema natively instead of through
+  `doctrine/dbal`. Rather than require dbal on Laravel 10, `SchemaIntrospector`
+  uses those methods when they exist and otherwise runs the same driver queries
+  itself — so the package never pulls dbal in, on any version.
 - Databases: MySQL, MariaDB, PostgreSQL, SQLite. No database-specific SQL is
   emitted; `LIKE` is used for search because it is the portable option, and the
   docs explain when to reach for a real search index instead.

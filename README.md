@@ -152,7 +152,7 @@ Full checklist in [docs/security.md](docs/security.md).
 
 ## Requirements
 
-PHP 8.2+ · Laravel 11, 12 or 13 · MySQL, MariaDB, PostgreSQL or SQLite.
+PHP 8.2+ · Laravel 10, 11, 12 or 13 · MySQL, MariaDB, PostgreSQL or SQLite.
 
 No Livewire. No Alpine. No jQuery. No npm. No CSS framework required.
 (It works happily *inside* a Livewire app — it just doesn't need one. The

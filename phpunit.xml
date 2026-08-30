@@ -18,6 +18,8 @@
         <env name="APP_ENV" value="testing"/>
         <env name="DB_CONNECTION" value="testing"/>
         <env name="CACHE_STORE" value="array"/>
+        <!-- Laravel 10 reads CACHE_DRIVER; 11+ reads CACHE_STORE. -->
+        <env name="CACHE_DRIVER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
     </php>
