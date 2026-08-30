@@ -4,7 +4,7 @@
  * Escape, and restores focus the same way.
  */
 
-import { el, iconContent } from './dom.js';
+import { el } from './dom.js';
 
 export { el };
 
@@ -303,7 +303,7 @@ export function menu(table, trigger, items, options = {}) {
             },
         }, [
             el('span', { class: 'dt-menu-check', 'aria-hidden': 'true', text: item.active ? '✓' : '' }),
-            item.icon ? el('span', { class: 'dt-menu-icon', 'aria-hidden': 'true', ...iconContent(item.icon) }) : null,
+            item.icon ? el('span', { class: 'dt-menu-icon', 'aria-hidden': 'true', html: item.icon }) : null,
             el('span', { class: 'dt-menu-label', text: item.label }),
             item.badge ? el('span', { class: 'dt-menu-badge', text: item.badge }) : null,
         ]);

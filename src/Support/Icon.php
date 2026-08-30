@@ -2,6 +2,7 @@
 
 namespace Shwaeki\DynamicTable\Support;
 
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\HtmlString;
 
 /**
@@ -21,9 +22,20 @@ final class Icon
         return $icon !== null && preg_match('/<[a-z!\/]/i', $icon) === 1;
     }
 
-    /** The icon, ready to echo with {!! !!}. */
-    public static function html(?string $icon): HtmlString
+    /**
+     * The icon as ready-to-insert HTML.
+     *
+     * An Htmlable says outright that it is markup, which is the escape hatch
+     * when a glyph would be mistaken for text or the other way round. Actions
+     * normalise their icon through here once, when it is set, so every place
+     * that draws one — Blade, the browser — just inserts it.
+     */
+    public static function html(string|Htmlable|null $icon): HtmlString
     {
+        if ($icon instanceof Htmlable) {
+            return new HtmlString($icon->toHtml());
+        }
+
         $icon = (string) $icon;
 
         return new HtmlString(self::isMarkup($icon) ? $icon : e($icon));

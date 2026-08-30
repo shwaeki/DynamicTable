@@ -1,5 +1,7 @@
 <?php
 
+use Illuminate\Support\HtmlString;
+use Shwaeki\DynamicTable\Actions\RowAction;
 use Shwaeki\DynamicTable\Support\Icon;
 use Shwaeki\DynamicTable\Support\TableRenderer;
 use Shwaeki\DynamicTable\Tests\Fixtures\MarkupUsersTable;
@@ -19,6 +21,15 @@ it('escapes an icon that is not markup', function (): void {
     expect(Icon::html('a < b')->toHtml())->toBe('a &lt; b')
         ->and(Icon::html('<i class="fa"></i>')->toHtml())->toBe('<i class="fa"></i>')
         ->and(Icon::isMarkup('🗄'))->toBeFalse();
+});
+
+it('takes an Htmlable icon at its word', function (): void {
+    $action = RowAction::make('edit')->icon(new HtmlString('a < b'));
+
+    expect(Icon::html(new HtmlString('a < b'))->toHtml())->toBe('a < b')
+        // The icon is normalised once, when it is set, so every renderer can
+        // insert it as-is.
+        ->and($action->toArray()['icon'])->toBe('a < b');
 });
 
 it('keeps a column the model has no attribute for, and gives its closure the record', function (): void {

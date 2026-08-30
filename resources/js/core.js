@@ -9,7 +9,7 @@
  * that is imported the first time it is actually needed.
  */
 
-import { csrfToken, debounce, el, get, iconContent } from './dom.js';
+import { csrfToken, debounce, el, get } from './dom.js';
 
 export { debounce, el };
 
@@ -385,9 +385,11 @@ export class DynamicTable {
                 const shared = {
                     class: ['dt-row-action', action.destructive ? 'dt-row-action-danger' : null],
                     title: action.label,
-                    // An icon may be markup — an icon font element — in which
-                    // case it is inserted as markup rather than printed.
-                    ...iconContent(action.icon || action.label),
+                    // The server normalised the icon to safe HTML — an icon
+                    // font element stays markup, a glyph is already escaped —
+                    // so it is inserted rather than printed. A button with no
+                    // icon falls back to its label, which is plain text.
+                    ...(action.icon ? { html: action.icon } : { text: action.label }),
                 };
 
                 cell.append(action.link

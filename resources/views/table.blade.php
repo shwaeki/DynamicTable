@@ -344,14 +344,14 @@
                                             class="dt-row-action {{ !empty($action['destructive']) ? 'dt-row-action-danger' : '' }}"
                                             @if (!empty($action['target'])) target="{{ $action['target'] }}" rel="noopener" @endif
                                             title="{{ $action['label'] }}"
-                                        >{!! \Shwaeki\DynamicTable\Support\Icon::html($action['icon'] ?? $action['label']) !!}</a>
+                                        >{!! $action['icon'] ?? e($action['label']) !!}</a>
                                     @else
                                         <button
                                             type="button"
                                             class="dt-row-action {{ !empty($action['destructive']) ? 'dt-row-action-danger' : '' }}"
                                             data-dt-row-action="{{ $action['name'] }}"
                                             title="{{ $action['label'] }}"
-                                        >{!! \Shwaeki\DynamicTable\Support\Icon::html($action['icon'] ?? $action['label']) !!}</button>
+                                        >{!! $action['icon'] ?? e($action['label']) !!}</button>
                                     @endif
                                 @endforeach
                             </td>

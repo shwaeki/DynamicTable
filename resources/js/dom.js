@@ -40,22 +40,6 @@ export function el(tag, attrs = {}, children = []) {
     return node;
 }
 
-/**
- * Does this string look like markup rather than a glyph?
- *
- * Icons are written in the table class — an emoji, a character, or the markup
- * of an icon font (`<i class="far fa-edit"></i>`). Markup is rendered as
- * markup, anything else as text. Mirrors Support\Icon on the server.
- */
-export function isMarkup(value) {
-    return typeof value === 'string' && /<[a-z!/]/i.test(value);
-}
-
-/** `text` or `html` for el(), whichever this icon needs. */
-export function iconContent(value) {
-    return isMarkup(value) ? { html: value } : { text: value };
-}
-
 export function debounce(fn, wait) {
     let timer = null;
 

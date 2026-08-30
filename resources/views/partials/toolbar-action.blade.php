@@ -11,12 +11,12 @@
         class="{{ $class }}"
         @if (! empty($action['target'])) target="{{ $action['target'] }}" rel="noopener" @endif
     >
-        @if (! empty($action['icon']))<span aria-hidden="true">{!! \Shwaeki\DynamicTable\Support\Icon::html($action['icon']) !!}</span>@endif
+        @if (! empty($action['icon']))<span aria-hidden="true">{!! $action['icon'] !!}</span>@endif
         {{ $action['label'] }}
     </a>
 @else
     <button type="button" class="{{ $class }}" data-dt-toolbar-action="{{ $action['name'] }}">
-        @if (! empty($action['icon']))<span aria-hidden="true">{!! \Shwaeki\DynamicTable\Support\Icon::html($action['icon']) !!}</span>@endif
+        @if (! empty($action['icon']))<span aria-hidden="true">{!! $action['icon'] !!}</span>@endif
         {{ $action['label'] }}
     </button>
 @endif

@@ -4,6 +4,17 @@ All notable changes to Laravel DynamicTable are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] — 2026-08-30
+
+### Fixed
+
+- Action icons are now normalised to safe HTML once, on `->icon()`, instead of
+  each renderer deciding. Every place that draws one — the server-rendered
+  table, the browser repaint, toolbar buttons, menu items — inserts it, so an
+  icon-font element can no longer come out as text on any path. `->icon()` also
+  accepts an `Htmlable` (`new HtmlString('<i class="far fa-edit"></i>')`), which
+  is treated as markup outright.
+
 ## [1.2.0] — 2026-08-30
 
 ### Fixed

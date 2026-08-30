@@ -3,8 +3,10 @@
 namespace Shwaeki\DynamicTable\Actions;
 
 use Closure;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
 use Shwaeki\DynamicTable\DynamicTable;
+use Shwaeki\DynamicTable\Support\Icon;
 
 /**
  * A button in the table's own toolbar — "New product", "Sync catalogue".
@@ -63,9 +65,16 @@ final class ToolbarAction
         return $this;
     }
 
-    public function icon(string $icon): self
+    /**
+     * The button's icon.
+     *
+     * A glyph, an emoji, or the markup of an icon font — `<i class="far
+     * fa-edit"></i>` — which is rendered as markup. Pass an Htmlable
+     * (`new HtmlString(...)`) to say so outright.
+     */
+    public function icon(string|Htmlable $icon): self
     {
-        $this->icon = $icon;
+        $this->icon = Icon::html($icon)->toHtml();
 
         return $this;
     }
