@@ -90,7 +90,7 @@ it('queues an export that exceeds the threshold', function (): void {
 
 it('refuses export when the feature is off', function (): void {
     $this->postJson(route('dynamic-table.export'), ['table' => 'users', 'scope' => 'view'])
-        ->assertStatus(500);
+        ->assertStatus(403);
 });
 
 it('builds an import template from the importable columns', function (): void {

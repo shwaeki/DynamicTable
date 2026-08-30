@@ -68,8 +68,11 @@ it('renders a page of 100 rows with relationship columns in a constant number of
     $queries = DB::getQueryLog();
     DB::disableQueryLog();
 
-    // 1 count + 1 page + 1 per eager-loaded relation (department, role).
-    expect($queries)->toHaveCount(4);
+    // 1 row estimate + 1 count + 1 page + 1 per eager-loaded relation
+    // (department, role). The estimate decides whether counting the result set
+    // is affordable; it is cached for ten minutes in a real application, and on
+    // MySQL or Postgres it reads statistics rather than the table.
+    expect($queries)->toHaveCount(5);
 });
 
 it('does not grow its query count with the page size', function (): void {

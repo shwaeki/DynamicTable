@@ -203,5 +203,5 @@ it('keeps the user default independent of the system default', function (): void
 });
 
 it('does not offer views on a table without the feature', function (): void {
-    $this->postJson(route('dynamic-table.views.index'), ['table' => 'users'])->assertStatus(500);
+    $this->postJson(route('dynamic-table.views.index'), ['table' => 'users'])->assertStatus(403);
 });

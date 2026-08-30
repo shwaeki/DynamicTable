@@ -81,7 +81,7 @@ it('refuses to edit through a table where the feature is off', function (): void
     $this->postJson(route('dynamic-table.edit'), [
         'table' => 'users',
         'changes' => [['id' => User::first()->id, 'field' => 'name', 'value' => 'nope']],
-    ])->assertStatus(500);
+    ])->assertStatus(403);
 });
 
 it('cannot reach a record outside the table query scope', function (): void {

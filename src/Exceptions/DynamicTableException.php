@@ -28,9 +28,4 @@ class DynamicTableException extends RuntimeException
     {
         return new self("The field [{$field}] is not available on this table.");
     }
-
-    public static function featureDisabled(string $feature): self
-    {
-        return new self("The [{$feature}] feature is not enabled for this table.");
-    }
 }

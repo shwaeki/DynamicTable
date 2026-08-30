@@ -79,8 +79,10 @@ it('loads relationship columns without N+1 queries', function (): void {
     $queries = count(DB::getQueryLog());
     DB::disableQueryLog();
 
-    // count + page + one eager load per relationship (department, role).
-    expect($queries)->toBeLessThanOrEqual(4)
+    // Row estimate + count + page + one eager load per relationship
+    // (department, role). What matters is that the number does not grow with
+    // the page: see the page-size test in the performance suite.
+    expect($queries)->toBeLessThanOrEqual(5)
         ->and($rows)->toHaveCount(10)
         ->and($rows[0]['c']['department__name'])->not->toBeNull();
 });

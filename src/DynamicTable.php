@@ -350,7 +350,11 @@ abstract class DynamicTable
     public function requireFeature(string $feature): void
     {
         if (! $this->hasFeature($feature)) {
-            throw DynamicTableException::featureDisabled($feature);
+            // Forbidden, not a server error: the endpoint exists and the
+            // request is well formed, this table simply does not offer the
+            // feature. A 500 would also leak a stack trace for what is a
+            // routine "not for this table" answer.
+            abort(403, "The [{$feature}] feature is not enabled for this table.");
         }
     }
 

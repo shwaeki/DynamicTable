@@ -3,6 +3,7 @@
 namespace Shwaeki\DynamicTable\Tests\Fixtures;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\HtmlString;
 use Shwaeki\DynamicTable\Actions\ToolbarAction;
 use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Support\Feature;
@@ -80,6 +81,7 @@ class ExtrasUsersTable extends DynamicTable
 
     public function rowDetail(Model $record): mixed
     {
-        return '<p data-detail>'.e($record->email).'</p>';
+        // Markup has to say so: a plain string is treated as text and escaped.
+        return new HtmlString('<p data-detail>'.e($record->email).'</p>');
     }
 }

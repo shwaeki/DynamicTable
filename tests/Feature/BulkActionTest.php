@@ -72,5 +72,5 @@ it('refuses actions on a table without the feature', function (): void {
         'table' => 'users',
         'action' => 'activate',
         'state' => ['selection' => ['mode' => 'include', 'ids' => [1]]],
-    ])->assertStatus(500);
+    ])->assertStatus(403);
 });
