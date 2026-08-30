@@ -4,6 +4,25 @@ All notable changes to Laravel DynamicTable are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Action icons written as icon-font markup — `->icon('<i class="far fa-edit"></i>')`
+  — were printed as escaped text. Icons that look like markup are now rendered as
+  markup (row actions, toolbar actions and menu items, server-rendered and in the
+  browser); anything else is still escaped.
+- A render closure returning an `Htmlable` had its markup escaped in the browser
+  unless the closure declared the return type. The rendered cell now carries that
+  decision per row, so an untyped closure works too, and exports keep stripping the
+  tags out.
+
+### Added
+
+- Virtual columns: a declared column with a `render` closure but no matching model
+  attribute — a thumbnail built from the record, an actions strip — is kept instead
+  of silently dropped. It is computed, so it is never sorted, filtered or searched.
+
 ## [1.1.0] — 2026-08-30
 
 ### Added

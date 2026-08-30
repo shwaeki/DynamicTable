@@ -49,6 +49,7 @@ class RowFormatter
     {
         $cells = [];
         $raw = [];
+        $html = [];
 
         foreach ($columns as $column) {
             $value = $this->extract($record, $column);
@@ -58,10 +59,15 @@ class RowFormatter
 
                 // Returning an Htmlable (e.g. a Blade view, or new HtmlString)
                 // is an explicit statement that the value is already safe HTML,
-                // so it does not also need the raw flag.
-                $cells[$column->key] = $rendered instanceof Htmlable
-                    ? $rendered->toHtml()
-                    : (string) $rendered;
+                // so it does not also need the raw flag. The cell is marked as
+                // markup for this row alone, so a closure that returns plain
+                // text for some records still has that text escaped.
+                if ($rendered instanceof Htmlable) {
+                    $cells[$column->key] = $rendered->toHtml();
+                    $html[$column->key] = true;
+                } else {
+                    $cells[$column->key] = (string) $rendered;
+                }
             } else {
                 $cells[$column->key] = $this->display($value, $column);
             }
@@ -78,6 +84,10 @@ class RowFormatter
 
         if ($raw !== []) {
             $row['r'] = $raw;
+        }
+
+        if ($html !== []) {
+            $row['h'] = $html;
         }
 
         if ($table->usesSoftDeletes() && method_exists($record, 'trashed') && $record->trashed()) {

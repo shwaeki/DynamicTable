@@ -9,7 +9,7 @@
  * that is imported the first time it is actually needed.
  */
 
-import { csrfToken, debounce, el, get } from './dom.js';
+import { csrfToken, debounce, el, get, iconContent } from './dom.js';
 
 export { debounce, el };
 
@@ -385,7 +385,9 @@ export class DynamicTable {
                 const shared = {
                     class: ['dt-row-action', action.destructive ? 'dt-row-action-danger' : null],
                     title: action.label,
-                    text: action.icon || action.label,
+                    // An icon may be markup — an icon font element — in which
+                    // case it is inserted as markup rather than printed.
+                    ...iconContent(action.icon || action.label),
                 };
 
                 cell.append(action.link
@@ -409,7 +411,8 @@ export class DynamicTable {
             return;
         }
 
-        if (column.raw || column.format === 'raw') {
+        // row.h marks the cells whose render closure returned an Htmlable.
+        if (column.raw || column.format === 'raw' || row?.h?.[column.key]) {
             td.innerHTML = value;
 
             return;

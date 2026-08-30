@@ -154,7 +154,7 @@ public function rowActions(): array
 
 | Method | |
 |---|---|
-| `label`, `icon` | The icon is shown when present, with the label as its tooltip |
+| `label`, `icon` | The icon is shown when present, with the label as its tooltip. Icon-font markup works too — `->icon('<i class="far fa-edit"></i>')` is rendered as markup, anything else as text |
 | `url(fn, $target)` | Makes it a link; the closure receives the record |
 | `handle(fn)` | Makes it a server action; receives the record and any input |
 | `visible(fn)` | Per record — hide an action that makes no sense for that row |

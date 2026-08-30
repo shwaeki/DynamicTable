@@ -434,6 +434,7 @@ export default function install(table) {
 
             menu(table, trigger, (table.boot.actions || []).map((action) => ({
                 label: action.label,
+                icon: action.icon,
                 danger: action.destructive,
                 onSelect: () => run(action),
             })));

@@ -4,6 +4,7 @@ namespace Shwaeki\DynamicTable\Columns;
 
 use Closure;
 use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Support\Str;
 use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Metadata\FieldMetadata;
 use Shwaeki\DynamicTable\Metadata\FieldType;
@@ -54,7 +55,8 @@ class ColumnResolver
                 continue;
             }
 
-            $field = $this->metadata->resolve($model, $path);
+            $field = $this->metadata->resolve($model, $path)
+                ?? $this->virtual($path, $options);
 
             if ($field === null) {
                 continue;
@@ -66,6 +68,38 @@ class ColumnResolver
         }
 
         return $columns;
+    }
+
+    /**
+     * A column the model has no field for.
+     *
+     * "image" is not an attribute, but a table that declares how to draw it —
+     * a thumbnail built from the record, a computed badge — still means it as
+     * a column. It is computed by definition: there is nothing to sort, filter
+     * or search on, and marking it computed keeps the SELECT wide enough for
+     * the closure to read whatever it needs off the record.
+     *
+     * Without a render closure it stays a typo, and is dropped as before.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    protected function virtual(string $path, array $options): ?FieldMetadata
+    {
+        $declared = ($options['render'] ?? null) instanceof Closure || ($options['virtual'] ?? false);
+
+        if (! $declared || ! preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $path)) {
+            return null;
+        }
+
+        return new FieldMetadata(
+            path: $path,
+            name: $path,
+            label: (string) ($options['label'] ?? Str::headline($path)),
+            type: isset($options['type']) && is_string($options['type'])
+                ? FieldType::from($options['type'])
+                : FieldType::String,
+            computed: true,
+        );
     }
 
     /**

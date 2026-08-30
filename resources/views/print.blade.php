@@ -250,6 +250,7 @@
                                     'column' => $column,
                                     'value' => $row['c'][$column['key']] ?? null,
                                     'classes' => $classes,
+                                    'html' => isset($row['h'][$column['key']]),
                                 ])
                             </td>
                         @endforeach

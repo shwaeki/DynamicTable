@@ -239,7 +239,7 @@ class ExportManager
                 // closure returning HTML — would otherwise put tags in the
                 // file. The renderers keep their text inside the markup, so
                 // stripping it leaves the value a reader wanted.
-                $column->raw && is_string($value) => $this->plainText($value),
+                ($column->raw || isset($row['h'][$column->key])) && is_string($value) => $this->plainText($value),
                 default => $value,
             };
         }

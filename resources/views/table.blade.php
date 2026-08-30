@@ -325,7 +325,7 @@
                                 data-label="{{ $column['label'] }}"
                                 @if (!empty($column['editable']) && ($features['inline_edit'] ?? false)) data-dt-editable @endif
                             >
-                                @include('dynamic-table::partials.cell', ['column' => $column, 'value' => $value, 'classes' => $classes])
+                                @include('dynamic-table::partials.cell', ['column' => $column, 'value' => $value, 'classes' => $classes, 'html' => isset($row['h'][$column['key']])])
                             </td>
                         @endforeach
 
@@ -344,14 +344,14 @@
                                             class="dt-row-action {{ !empty($action['destructive']) ? 'dt-row-action-danger' : '' }}"
                                             @if (!empty($action['target'])) target="{{ $action['target'] }}" rel="noopener" @endif
                                             title="{{ $action['label'] }}"
-                                        >{{ $action['icon'] ?? $action['label'] }}</a>
+                                        >{!! \Shwaeki\DynamicTable\Support\Icon::html($action['icon'] ?? $action['label']) !!}</a>
                                     @else
                                         <button
                                             type="button"
                                             class="dt-row-action {{ !empty($action['destructive']) ? 'dt-row-action-danger' : '' }}"
                                             data-dt-row-action="{{ $action['name'] }}"
                                             title="{{ $action['label'] }}"
-                                        >{{ $action['icon'] ?? $action['label'] }}</button>
+                                        >{!! \Shwaeki\DynamicTable\Support\Icon::html($action['icon'] ?? $action['label']) !!}</button>
                                     @endif
                                 @endforeach
                             </td>

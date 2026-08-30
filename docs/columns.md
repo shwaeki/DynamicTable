@@ -97,6 +97,28 @@ same values appear in exports.
 > that column only. Everything you interpolate into raw HTML must go through
 > `e()`.
 
+Returning an `Htmlable` — `new HtmlString(...)`, a Blade view — says the same
+thing without the flag, and only for the rows that actually returned one:
+
+```php
+'image' => [
+    'label' => __('manager.image'),
+    'sortable' => false,
+    'searchable' => false,
+    'render' => fn ($value, Category $category) => new HtmlString(
+        '<img src="'.e($category->image_path).'" alt="" height="56" width="56">'
+    ),
+],
+```
+
+### Columns the model has no attribute for
+
+`image` above is not a column on the table and not an accessor — it exists only
+because the closure draws it. A key with a `render` closure is kept as a virtual
+column: it is computed, so it is never sorted, filtered or searched on, and the
+closure gets the record to build the cell from. A key with no closure and no
+matching field is still treated as a typo and dropped.
+
 ## Built-in cell renderers
 
 The handful of presentations people write the same render closure for on every

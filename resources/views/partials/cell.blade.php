@@ -2,7 +2,8 @@
     /** Server-side cell rendering; the JS renderer mirrors this exactly. */
     $type = $column['type'] ?? 'string';
     $format = $column['format'] ?? null;
-    $raw = ($column['raw'] ?? false) || $format === 'raw';
+    /* $html: this row's render closure returned an Htmlable for this cell. */
+    $raw = ($column['raw'] ?? false) || $format === 'raw' || ($html ?? false);
 @endphp
 
 @if ($value === null || $value === '')
