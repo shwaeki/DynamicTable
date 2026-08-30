@@ -22,7 +22,6 @@
 
 **Experimental:**
 
-- The spreadsheet adapter contract
 - `SpreadsheetWriter` / `SpreadsheetReader`
 
 Do not build on internal classes. If you need something they do, open an issue —
@@ -84,19 +83,6 @@ can rebuild the UI. Prefer the PHP API where both exist.
 
 See [Themes](themes.md). A theme is one array; `Theme::register()` is the
 extension point.
-
-## Spreadsheet engine
-
-```js
-window.DynamicTableSpreadsheetAdapter = (table) => {
-    // mount your grid over table.root
-    return { save() {}, undo() {} };
-};
-```
-
-Defined before the core loads, this replaces the built-in implementation
-entirely. The server side is unchanged: post changes to `table.endpoints.edit`
-and they go through the same validation and authorisation.
 
 ## Excel adapters
 

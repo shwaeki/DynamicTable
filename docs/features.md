@@ -105,9 +105,9 @@ Only ticked fields are sent, so a bulk edit of one column cannot blank another.
 |---|---|---|---|
 | `inline_edit` | Double-click a cell, or Enter/F2 on the keyboard. Enter saves and moves down, Tab across, Escape cancels. | — | `inline-edit` |
 | `create` | A blank row at the top of the table, saved as one request. | `inline_edit` | `inline-edit` |
-| `spreadsheet` | Paste a block from Excel over the grid, with a diff to confirm. | `inline_edit`, `selection` | `spreadsheet` |
 | `import` | CSV/XLSX upload, mapped to columns, chunked and transactional. | — | `transfer` |
 | `export` | Streaming CSV/XLSX of the current view — the filters, not the page. | — | `transfer` |
+| `print` | A printable page for the current view, from an editable Blade template. | — | — |
 
 Inline editing, inline creating and bulk editing share one normaliser, so a
 value rejected by one is rejected by all three, and `rules()` applies to
@@ -139,13 +139,14 @@ public function newRecordDefaults(): array
 |---|---|---|---|
 | `row_detail` | A chevron per row that opens a panel underneath it, fetched on demand from `rowDetail()`. | — | `detail` |
 | `grouping` | Group rows by a column, with a heading row per value. | — | — |
-| `column_picker` | Choose visible columns, from the full metadata tree. | — | `columns` |
-| `column_reordering` | Drag columns into a new order. | `column_picker` | `columns` |
+| `column_picker` | *Which* columns are shown: the panel, and adding any field the metadata reaches. | — | `columns` |
+| `column_reordering` | *What order* they are in: drag handles in that panel, and Move left/right in the header menu. | `column_picker` | `columns` |
 | `column_resizing` | Drag the edge of a header, Excel style. | `column_picker` | `columns` |
 | `column_search` | A search input under each column header. | — | — |
 | `views` | Saved views: named, versioned, shareable, with a default per user. | `column_picker` | `views` |
 | `soft_deletes` | A trashed filter, restore and force-delete. | — | — |
 | `url_state` | Mirrors search, page, sort and filters into the query string. | — | — |
+| `remember_state` | Reopens the table the way this viewer last left it, with nothing to save or name. | — | — |
 
 `rowDetail()` may return a string, an `HtmlString`, or a Blade view:
 
@@ -205,6 +206,89 @@ Pages are appended instead of replaced, an `IntersectionObserver` on a sentinel
 below the last row asks for the next one, and no `COUNT(*)` runs — the footer
 reports the range rather than an invented total.
 
+### `column_picker` vs `column_reordering`
+
+They are the two halves of the same panel, and they are separate because plenty
+of tables want one without the other:
+
+| | `column_picker` | `column_reordering` |
+|---|---|---|
+| Answers | *Which* columns? | *In what order?* |
+| Gives you | The panel, Add column, Remove, Reset | Drag handles, `Alt`+arrows, Move left/right in the header menu |
+| Without it | No panel at all — the columns are what `columns()` said | The panel still opens; the list just cannot be dragged |
+
+`column_reordering` implies `column_picker`, because the place you reorder
+columns *is* that panel. Turning on the picker alone is the common case: let
+people choose the columns they need, but keep the order the designer chose.
+
+## Printing
+
+```php
+protected array $features = [Feature::PRINT];
+```
+
+A **Print** button opens a page built for paper rather than for a screen: the
+header repeats on every sheet, rows never split across two, and the search,
+filters and sort that produced the page are named at the top — so the printout
+still means something a week later.
+
+It is shaped like an export, not like a screenshot. The same scopes (`page`,
+`view`, `all`, `selected`), the same columns, the same server-side formatting,
+so a printout and a CSV of the same view agree. `print.max_rows` (2000 by
+default) caps it, because past that the reader wants a spreadsheet.
+
+By default the page prints itself: the dialog opens once images and fonts have
+loaded, and the tab closes when the dialog is dismissed — printed or cancelled,
+the page has done its job either way. The button opens the tab with a script
+rather than as a plain link, because a tab may only close itself if a script
+opened it.
+
+While you are working on the template, add `?auto=0` to any print URL to get
+the page without the dialog. Turn the behaviour off everywhere with
+`print.auto => false`.
+
+**The template is yours.** Publish it and edit it:
+
+```bash
+php artisan vendor:publish --tag=dynamic-table-views
+# resources/views/vendor/dynamic-table/print.blade.php
+```
+
+Or point one table at its own:
+
+```php
+protected ?string $printView = 'reports.orders-print';
+```
+
+The view is handed `$title`, `$columns`, `$rows`, `$summaries`, `$meta`,
+`$scope`, `$printedAt`, `$classes` and `$direction` — everything resolved, so
+the template only lays it out. Bootstrap and Tailwind class maps are supported:
+the template's own CSS stands alone, and the framework's stylesheet is loaded
+alongside it so a custom class map still looks like itself on paper. Control
+that with `print.stylesheets`, or `$printStylesheets` per table.
+
+## Remembering how a table was left
+
+```php
+protected array $features = [Feature::REMEMBER_STATE];
+```
+
+The table reopens the way this viewer last had it — same columns, sort, page
+size and filters — with nothing to name and nothing to save.
+
+This is not saved views, deliberately. A saved view is a *document*: named,
+shareable, versioned, kept because someone decided it should be. Remembered
+state is a *habit*: unnamed, private, and only ever the last thing you did. It
+lives in the session, so it needs no table and no migration.
+
+The page number and the selection are **not** remembered: returning to page 47,
+or to a selection made yesterday, is disorienting rather than helpful.
+
+Precedence, weakest first: table defaults → default saved view → remembered
+state → URL parameters → whatever the Blade call passed. A link someone sent
+you therefore beats your own habit, or shared links would stop meaning
+anything.
+
 ## Implications
 
 Declaring a feature that needs another turns that one on too, so the same idea
@@ -215,7 +299,6 @@ is never configured twice:
 | `bulk_actions` | `selection` |
 | `bulk_edit` | `selection` |
 | `create` | `inline_edit` |
-| `spreadsheet` | `inline_edit`, `selection` |
 | `views` | `column_picker` |
 | `column_reordering` / `column_resizing` | `column_picker` |
 
@@ -233,7 +316,6 @@ that never opens a filter never downloads the filter builder.
 | `columns` | `column_picker`, `column_reordering`, `column_resizing` |
 | `views` | `views` |
 | `transfer` | `export`, `import` |
-| `spreadsheet` | `spreadsheet` |
 | `detail` | `row_detail` |
 | `sticky` | `sticky_columns` |
 | `responsive` | `responsive` (collapse and cards modes) |

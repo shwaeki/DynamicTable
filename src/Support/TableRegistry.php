@@ -129,7 +129,7 @@ class TableRegistry
         $map = [];
 
         foreach ((array) config('dynamic-table.tables.register', []) as $key => $class) {
-            if (! is_string($class) || ! is_subclass_of($class, DynamicTable::class)) {
+            if (! is_string($class) || ! class_exists($class) || ! is_subclass_of($class, DynamicTable::class)) {
                 continue;
             }
 
@@ -137,6 +137,14 @@ class TableRegistry
         }
 
         foreach ($this->discover() as $class) {
+            // The cached list can name a class that has since been deleted or
+            // renamed. That is an ordinary thing to do, and it must not take
+            // every *other* table down with it while the cache is stale — the
+            // entry is skipped, and the next rebuild forgets it.
+            if (! class_exists($class)) {
+                continue;
+            }
+
             $key = app($class)->key();
 
             if (isset($map[$key]) && $map[$key] !== $class) {

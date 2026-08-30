@@ -81,11 +81,6 @@ return [
         'queue' => null,
     ],
 
-    'spreadsheet' => [
-        'engine' => 'tabulator',
-        'cdn' => null,
-    ],
-
     'security' => [
         'blocked_columns' => [
             'password', 'remember_token', 'secret', 'token',

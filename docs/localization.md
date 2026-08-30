@@ -59,7 +59,6 @@ properties throughout — `inset-inline-start`, `margin-inline-start`,
 - the filter builder's nesting indentation
 - pagination order
 - the column picker's drag affordances
-- spreadsheet cursor movement (arrow keys stay physical, as in Excel)
 
 ## Dates and numbers
 

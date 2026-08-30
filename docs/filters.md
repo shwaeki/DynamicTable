@@ -51,6 +51,18 @@ picker, grouped by model and relationship, respecting `$hiddenColumns`,
 first time the panel opens, so a table that never filters never pays for
 relationship introspection.
 
+## Filtering from a column header
+
+With `header_menu` on, a header's gear offers **Filter by this column**: a small
+popover with one operator and one value, plus Apply and Clear.
+
+It is a shortcut into the tree above, not a parallel feature. The condition it
+writes lands in the same filter tree, shows up in the filter panel, counts
+towards the toolbar badge and is saved with a view. Filtered columns are marked
+in their header, so a filter set that way is visible without opening anything.
+
+See [The column header menu](columns.md#the-column-header-menu).
+
 ## Operators by type
 
 | Type | Operators |

@@ -5,6 +5,7 @@ use Shwaeki\DynamicTable\Http\Controllers\ActionController;
 use Shwaeki\DynamicTable\Http\Controllers\BulkEditController;
 use Shwaeki\DynamicTable\Http\Controllers\CreateController;
 use Shwaeki\DynamicTable\Http\Controllers\EditController;
+use Shwaeki\DynamicTable\Http\Controllers\PrintController;
 use Shwaeki\DynamicTable\Http\Controllers\RowActionController;
 use Shwaeki\DynamicTable\Http\Controllers\RowDetailController;
 use Shwaeki\DynamicTable\Http\Controllers\TableController;
@@ -33,6 +34,9 @@ Route::post('views/{view}/shares', [ViewController::class, 'shares'])->name('vie
 Route::post('views/{view}/share', [ViewController::class, 'share'])->name('views.share');
 
 Route::post('export', [TransferController::class, 'export'])->name('export');
+
+// GET, so the browser can open it in a tab and a refresh reprints it.
+Route::get('print', PrintController::class)->name('print');
 Route::post('template', [TransferController::class, 'template'])->name('template');
 Route::post('import/analyze', [TransferController::class, 'analyze'])->name('import.analyze');
 Route::post('import', [TransferController::class, 'import'])->name('import');

@@ -12,6 +12,7 @@ use Shwaeki\DynamicTable\Metadata\FieldType;
 use Shwaeki\DynamicTable\Metadata\MetadataEngine;
 use Shwaeki\DynamicTable\Query\QueryEngine;
 use Shwaeki\DynamicTable\Support\Feature;
+use Shwaeki\DynamicTable\Support\StateMemory;
 use Shwaeki\DynamicTable\Support\TablePayload;
 use Shwaeki\DynamicTable\Support\TableState;
 use Shwaeki\DynamicTable\Views\ViewEngine;
@@ -24,6 +25,7 @@ class TableController extends Controller
         protected TablePayload $payload,
         protected MetadataEngine $metadata,
         protected QueryEngine $queries,
+        protected StateMemory $memory,
     ) {}
 
     /** One page of rows for the current state. */
@@ -31,6 +33,10 @@ class TableController extends Controller
     {
         $table = $this->table($request);
         $state = $this->state($request, $table);
+
+        // Every page of rows is also the answer to "how was it left?", so this
+        // is where the memory is kept up to date — not only on first paint.
+        $this->memory->remember($table, $state);
 
         return response()->json([
             'data' => $this->payload->data($table, $state),

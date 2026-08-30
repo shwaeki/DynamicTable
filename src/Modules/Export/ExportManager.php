@@ -203,6 +203,24 @@ class ExportManager
     }
 
     /**
+     * The readable text inside a cell that renders markup.
+     *
+     * A file gets the value, never the presentation. Decorative parts are
+     * dropped rather than transcribed — a rating exports as "3.7 / 5", not as
+     * four stars followed by "3.7 / 5" — and adjacent elements keep the space
+     * between them that the markup implied, so a list of chips does not arrive
+     * as one run-together word.
+     */
+    protected function plainText(string $value): string
+    {
+        $value = (string) preg_replace('/<([a-z]+)\b[^>]*aria-hidden="true"[^>]*>.*?<\/\1>/is', '', $value);
+        $value = str_replace('><', '> <', $value);
+        $value = html_entity_decode(strip_tags($value), ENT_QUOTES);
+
+        return trim((string) preg_replace('/\s+/u', ' ', $value));
+    }
+
+    /**
      * @param  list<ColumnDefinition>  $columns
      * @return list<mixed>
      */
@@ -217,6 +235,11 @@ class ExportManager
             $values[] = match (true) {
                 $value === true => (string) __('dynamic-table::table.yes'),
                 $value === false => (string) __('dynamic-table::table.no'),
+                // A column that renders markup — a progress bar, a render
+                // closure returning HTML — would otherwise put tags in the
+                // file. The renderers keep their text inside the markup, so
+                // stripping it leaves the value a reader wanted.
+                $column->raw && is_string($value) => $this->plainText($value),
                 default => $value,
             };
         }

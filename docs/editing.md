@@ -120,47 +120,6 @@ A toolbar action concerns the table rather than a row. Declared `fields()` are
 collected in a dialog and validated on the server; `ability()` and `visible()`
 decide whether the button exists, and the endpoint re-checks before running.
 
-## Spreadsheet mode
-
-```php
-protected array $features = ['spreadsheet'];   // implies inline_edit + selection
-```
-
-Adds a cell cursor and range selection on top of inline editing:
-
-| | |
-|---|---|
-| Arrow keys | move the cursor |
-| Shift + arrows | extend the selection |
-| `Ctrl/Cmd + C` | copy the range as TSV |
-| `Ctrl/Cmd + V` | paste a range, starting at the cursor |
-| `Ctrl/Cmd + D` | fill down from the first row of the selection |
-| `Ctrl/Cmd + Z` | undo an unsaved change |
-| `Delete` | clear the selection |
-| `Ctrl/Cmd + S` | save every pending change in one request |
-
-Pending changes are highlighted and counted in a save bar; nothing reaches the
-database until you save. Every pasted value goes through the same validation and
-authorisation as a single inline edit — the browser is never the source of
-truth.
-
-To swap in a third-party grid, define an adapter before the core loads:
-
-```html
-<script>
-window.DynamicTableSpreadsheetAdapter = (table) => {
-    // mount your grid against table.root, read table.data.rows,
-    // and post changes to table.endpoints.edit
-    return { save() {}, undo() {} };
-};
-</script>
-```
-
-See [Architecture](architecture.md#4-spreadsheet-engine-evaluation) for why the
-built-in implementation exists.
-
----
-
 ## Row actions
 
 Buttons on every row.

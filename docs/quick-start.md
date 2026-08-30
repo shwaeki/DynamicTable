@@ -78,3 +78,14 @@ protected function columns(): array
 - [Columns](columns.md) · [Filters](filters.md) · [Views](views.md)
 - [Themes](themes.md) · [Localization](localization.md)
 - [Performance](performance.md) · [Security](security.md)
+
+## Publishing the config
+
+Optional — the defaults work — but this is the command people look for:
+
+```bash
+php artisan vendor:publish --tag=dynamic-table-config
+php artisan vendor:publish --tag=dynamic-table-themes   # to define your own themes
+```
+
+See [Installation](installation.md#publishing-all-optional) for every tag.

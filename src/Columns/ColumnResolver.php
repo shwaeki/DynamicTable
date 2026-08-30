@@ -69,6 +69,22 @@ class ColumnResolver
     }
 
     /**
+     * One column, for a field the table did not declare.
+     *
+     * The column picker can add anything the metadata engine reaches, so those
+     * columns have to be built somewhere. They get the same treatment as a
+     * declared one — type, alignment, sortability, formatting all derived —
+     * because a column added from the picker should be indistinguishable from a
+     * column that was written down.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    public function one(DynamicTable $table, FieldMetadata $field, array $options = []): ColumnDefinition
+    {
+        return $this->build($table, $field, $options, true, 99);
+    }
+
+    /**
      * @param  array<string, mixed>  $options
      */
     protected function build(
@@ -118,7 +134,8 @@ class ColumnResolver
             minWidth: isset($options['minWidth']) ? (int) $options['minWidth'] : null,
             maxWidth: isset($options['maxWidth']) ? (int) $options['maxWidth'] : null,
             wrap: (bool) ($options['wrap'] ?? false),
-            raw: (bool) ($options['raw'] ?? ($render instanceof Closure && $this->returnsHtml($render))),
+            raw: (bool) ($options['raw'] ?? $this->rendersHtml($options, $render)),
+            summary: $this->summaryFor($options['summary'] ?? null),
             class: isset($options['class']) ? (string) $options['class'] : null,
             // Declaration order is a good proxy for importance: the leftmost
             // column identifies the row, so it collapses last.
@@ -127,6 +144,43 @@ class ColumnResolver
             badges: (array) ($options['badges'] ?? []),
             meta: (array) ($options['meta'] ?? []),
         );
+    }
+
+    /**
+     * Does this column produce markup rather than text?
+     *
+     * Two ways it can: a render closure typed to return an Htmlable, or one of
+     * the built-in cell renderers, which are markup by definition. Either way
+     * the cell is written out as HTML rather than escaped.
+     *
+     * @param  array<string, mixed>  $options
+     */
+    protected function rendersHtml(array $options, mixed $render): bool
+    {
+        $format = isset($options['format']) ? explode(':', (string) $options['format'], 2)[0] : null;
+
+        if ($format !== null && in_array($format, CellRenderers::FORMATS, true)) {
+            return true;
+        }
+
+        return $render instanceof Closure && $this->returnsHtml($render);
+    }
+
+    /**
+     * The aggregate a column asked for, if it is one we support.
+     *
+     * A closed list, because it ends up in SQL. `true` is accepted as a
+     * shorthand for the obvious choice — you almost always mean a sum.
+     */
+    protected function summaryFor(mixed $value): ?string
+    {
+        if ($value === true) {
+            return 'sum';
+        }
+
+        return is_string($value) && in_array($value, ['sum', 'avg', 'min', 'max', 'count'], true)
+            ? $value
+            : null;
     }
 
     /**

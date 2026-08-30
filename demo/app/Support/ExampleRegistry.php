@@ -91,6 +91,7 @@ class ExampleRegistry
                 table: DynamicTables\PaginationTable::class,
                 notes: [
                     'A page size that is not in $perPageOptions is rejected server-side, so a crafted request cannot ask for the whole table.',
+                    'Panels can be modals or side drawers — set $panels, or the panels.mode config key, and try both on the Builder page.',
                 ],
                 keywords: ['pages', 'per page', 'limit'],
             ),
@@ -240,6 +241,22 @@ class ExampleRegistry
                 keywords: ['header', 'menu', 'dynamics', 'group', 'sort', 'width', 'move', 'hide', 'chevron'],
             ),
             new Example(
+                id: 'renderers',
+                category: 'Columns',
+                title: 'Cell renderers & summary row',
+                description: 'Progress bars, ratings, sparklines and chips — each one word in the column definition — with totals underneath.',
+                table: DynamicTables\RenderersTable::class,
+                notes: [
+                    'These are formats, not a new concept: a column saying format progress:500 composes with everything a column already has.',
+                    'All rendered on the server as inline SVG or a span with a class — no chart library, no client work, and they survive with JavaScript disabled.',
+                    'A column using one is marked raw automatically, because the output is markup.',
+                    'The text lives inside the markup, so an export of this table reads "3.7 / 5" and "10 / 500" rather than HTML — try the Export button.',
+                    'A column saying summary sum puts an aggregate under it. It covers the whole filtered result, not the page, so filtering changes it and paging does not.',
+                    'Print opens a page built for paper: repeating header, rows that never split across sheets, and the filters that produced it named at the top.',
+                ],
+                keywords: ['renderer', 'progress', 'rating', 'sparkline', 'chips', 'avatar', 'summary', 'total', 'print'],
+            ),
+            new Example(
                 id: 'computed-columns',
                 category: 'Columns',
                 title: 'Computed attributes',
@@ -261,18 +278,6 @@ class ExampleRegistry
                     'Available formats: currency, number, percent, bytes, date, datetime, time, since, upper, lower, headline, truncate.',
                 ],
                 keywords: ['format', 'render', 'html', 'currency', 'badge'],
-            ),
-            new Example(
-                id: 'hidden-columns',
-                category: 'Columns',
-                title: 'Column security',
-                description: 'An exhaustive allowlist, enforced in one place and therefore everywhere.',
-                table: DynamicTables\HiddenColumnsTable::class,
-                notes: [
-                    'Open the column picker: only the four allowed fields exist. So does the filter builder.',
-                    'Posting a filter on "salary" straight to the endpoint is dropped server-side with a warning, not applied.',
-                ],
-                keywords: ['security', 'allowlist', 'hidden', 'expose'],
             ),
 
             // ---------------------------------------------------------- Views
@@ -319,20 +324,6 @@ class ExampleRegistry
                     'The value is never written when validation fails; the cell reverts to the stored value.',
                 ],
                 keywords: ['validation', 'rules', 'error', 'invalid'],
-            ),
-            new Example(
-                id: 'spreadsheet',
-                category: 'Editing',
-                title: 'Spreadsheet mode',
-                description: 'Range selection, copy/paste, fill-down, undo and one batched save.',
-                table: DynamicTables\SpreadsheetTable::class,
-                notes: [
-                    'Click a cell, then: arrows move · Shift+arrows select · Ctrl/Cmd+C and +V copy and paste ranges (pasting from Excel works) · Ctrl/Cmd+D fills down · Ctrl/Cmd+Z undoes · Delete clears · Ctrl/Cmd+S saves.',
-                    'Pending changes are highlighted and counted; nothing reaches the database until you save.',
-                    'Every pasted value is validated and authorised exactly like a single inline edit — the browser is never the source of truth.',
-                    'Built without a third-party grid, for licensing reasons documented in docs/architecture.md, behind an adapter seam so Tabulator or AG Grid can be dropped in.',
-                ],
-                keywords: ['spreadsheet', 'excel', 'paste', 'copy', 'range', 'grid'],
             ),
 
             new Example(
@@ -420,6 +411,7 @@ class ExampleRegistry
                 notes: [
                     'Only unpaid invoices exist as far as this table is concerned — for display, export, bulk actions and inline edits alike.',
                     'The delete action is not rendered *and* is rejected by the endpoint. Hiding UI is a courtesy; the server check is the control.',
+                    '$hiddenColumns and $allowedColumns are the other half of this: a path that is hidden or outside the allowlist cannot be filtered, sorted, exported, edited or added from the column picker, however the request is crafted.',
                     'authorize() returns true/false to decide, or null to fall through to the model policy.',
                 ],
                 keywords: ['auth', 'policy', 'gate', 'scope', 'permission'],
@@ -450,18 +442,6 @@ class ExampleRegistry
                     'Trashed rows are marked in the UI, and the mode is part of saved view state.',
                 ],
                 keywords: ['soft delete', 'trashed', 'restore', 'archive'],
-            ),
-            new Example(
-                id: 'media',
-                category: 'Data types',
-                title: 'Images, links & emails',
-                description: 'Detected from the column name and cast, with no configuration.',
-                table: DynamicTables\MediaTable::class,
-                notes: [
-                    'avatar_url renders a thumbnail, email a mailto link, a *_url column an external link.',
-                    'Every guess is overridable with an explicit "type".',
-                ],
-                keywords: ['image', 'avatar', 'link', 'url', 'email'],
             ),
             new Example(
                 id: 'json',
@@ -531,20 +511,9 @@ class ExampleRegistry
                     'Set $theme = \'minimal\' and you are done: every class it names is styled by the package’s own stylesheet.',
                     'It uses the same tokens as everything else, so it is readable in light and dark and obeys data-dt-scheme.',
                     'Nothing here is Tailwind or Bootstrap — this is the theme to reach for in an application that has neither.',
+                    'A second framework-free theme ships beside it: `bordered`, the same base ruled like a spreadsheet. Try it on the Builder page.',
                 ],
                 keywords: ['theme', 'minimal', 'no framework', 'plain css', 'ready'],
-            ),
-            new Example(
-                id: 'bordered-theme',
-                category: 'UI',
-                title: 'Bordered theme (spreadsheet grid)',
-                description: 'The same framework-free base, ruled like a spreadsheet.',
-                table: DynamicTables\BorderedThemeTable::class,
-                notes: [
-                    'Dense rows and a border on every cell: the right default for wide numeric grids.',
-                    'It builds on the minimal theme, so the two differ by one class — which is all a theme ever is.',
-                ],
-                keywords: ['theme', 'bordered', 'grid', 'excel', 'dense', 'ready'],
             ),
             new Example(
                 id: 'sticky-columns',
@@ -582,10 +551,11 @@ class ExampleRegistry
                 description: 'A complete theme in one array — no Blade files, no build step.',
                 table: DynamicTables\CustomThemeTable::class,
                 notes: [
-                    'Theme::register() takes a map of slot => classes. See AppServiceProvider in the source tabs.',
+                    'The whole theme is config/dynamic-table-themes.php — publish it with `php artisan vendor:publish --tag=dynamic-table-themes` and edit it there. Nothing is registered in a service provider.',
                     'Keep the structural dt-* classes: they carry behaviour (sticky header, resize handles, dialog layout, RTL mirroring), not looks.',
+                    'No colour in the map. The demo theme sets the CSS tokens (--dt-accent, --dt-radius …) under .dt-demo instead, which is what keeps it readable in light and dark.',
                 ],
-                extraFiles: ['app/Providers/AppServiceProvider.php'],
+                extraFiles: ['config/dynamic-table-themes.php'],
                 keywords: ['theme', 'custom', 'css', 'brand'],
             ),
             new Example(
@@ -615,21 +585,6 @@ class ExampleRegistry
                     'A third mode, "scroll", keeps the grid intact and scrolls horizontally; it loads no JavaScript at all.',
                 ],
                 keywords: ['responsive', 'cards', 'mobile', 'stacked'],
-            ),
-            new Example(
-                id: 'offcanvas',
-                category: 'UI',
-                title: 'Offcanvas panels',
-                description: 'The filter builder and column picker as a side drawer instead of a centred dialog.',
-                table: DynamicTables\OffcanvasTable::class,
-                notes: [
-                    'Open Filters or Columns and compare with any other example — the panel content is identical, only the presentation differs.',
-                    'Modal and offcanvas share the same markup, focus trap and Escape handling, so a panel never knows which one it is in and switching is always safe.',
-                    'Set it application-wide with config(\'dynamic-table.panels.mode\'), or per table with $panels.',
-                    '"side" accepts "end" and "start", which follow the reading direction — so a drawer opens from the right in English and from the left in Arabic with no extra configuration.',
-                    'Below 640px a drawer becomes a full-width sheet, which is the sensible shape for a phone.',
-                ],
-                keywords: ['offcanvas', 'drawer', 'panel', 'modal', 'sidebar', 'dialog'],
             ),
             new Example(
                 id: 'rtl',
@@ -685,53 +640,11 @@ class ExampleRegistry
                     'Search is pointed at one indexed column. Searching six text columns at this size would be a table scan on every keystroke.',
                     'The default sort is on an indexed column, which is what keeps deep pages cheap.',
                     'Watch the developer panel: the query count and response time do not move as you page.',
+                    'The same command seeds far larger sets — `dynamic-table:scale 1m` and `10m`. Past the pagination.count_threshold config value the table stops counting on its own and pages with previous/next and a row estimate, because at that size COUNT(*) costs more than the page does.',
                 ],
                 extraFiles: ['database/migrations/2026_01_01_000200_create_scale_tables.php'],
                 keywords: ['large', 'scale', '100k', 'performance', 'index'],
                 seedCommand: 'php artisan dynamic-table:scale 100k',
-            ),
-            new Example(
-                id: 'scale-1m',
-                category: 'Performance',
-                title: '1,000,000 rows',
-                description: 'Where counting the result set starts to cost more than fetching the page.',
-                table: DynamicTables\Scale1mTable::class,
-                notes: [
-                    'Pagination is on "auto": the package asks the database for its own row estimate — free, unlike COUNT(*) — and past the configured threshold it stops counting and shows previous/next.',
-                    'The threshold is config(\'dynamic-table.pagination.count_threshold\'), 250,000 by default. Set it to 0 to always count.',
-                    'Everything else is identical to the 100k example. Scale changed the pagination strategy, not the table class.',
-                ],
-                keywords: ['large', 'scale', '1m', 'million', 'count', 'performance'],
-                seedCommand: 'php artisan dynamic-table:scale 1m',
-            ),
-            new Example(
-                id: 'scale-10m',
-                category: 'Performance',
-                title: '10,000,000 rows',
-                description: 'Ten million rows, paged from the server without ever counting them.',
-                table: DynamicTables\Scale10mTable::class,
-                notes: [
-                    'Counting is switched off explicitly with $pagination = \'simple\'. A COUNT(*) over a filtered ten-million-row set costs far more than the page itself, and previous/next is a more honest answer than a total the user waited five seconds for.',
-                    'One extra row is fetched instead of a count — that is the whole cost of knowing whether a next page exists.',
-                    'Filtering and sorting stay fast only because the columns are indexed; the package generates efficient SQL but cannot create your indexes.',
-                    'Avoid deep pages: OFFSET 9,000,000 is slow in every database. Narrow with a filter instead — that is what the filter builder is for.',
-                    'The class is the same one you would write for ten rows, with three lines acknowledging the scale.',
-                ],
-                extraFiles: ['app/Console/Commands/ScaleCommand.php'],
-                keywords: ['large', 'scale', '10m', 'million', 'huge', 'performance', 'simple pagination'],
-                seedCommand: 'php artisan dynamic-table:scale 10m',
-            ),
-            new Example(
-                id: 'scoped-query',
-                category: 'Performance',
-                title: 'Custom query & scopes',
-                description: 'query(), $scopes and $with — the escape hatches, kept small.',
-                table: DynamicTables\ScopedQueryTable::class,
-                notes: [
-                    'query() receives and returns an ordinary Eloquent builder and runs before anything the user can influence.',
-                    '$with eager loads a relation needed by a render closure even though no column path references it.',
-                ],
-                keywords: ['query', 'scope', 'with', 'eager', 'custom'],
             ),
 
             // ---------------------------------------------------------- Everything

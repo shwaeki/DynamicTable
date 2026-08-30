@@ -21,19 +21,35 @@ class UsersTable extends DynamicTable
 That's it. No `Column::make()` chain per field. No Livewire tag. No custom Blade
 component. No route-as-table. No build step.
 
-```
-┌────────────────────────────────────────────────────────────┐
-│ Search…              Filters ②        Columns   Views  ⬇︎  │
-├──────────┬─────────────────┬────────────┬──────────────────┤
-│ Name     │ Email           │ Department │ Status           │
-├──────────┼─────────────────┼────────────┼──────────────────┤
-│ Ahmad    │ a@test.com      │ IT         │ ● Active         │
-│ Omar     │ o@test.com      │ HR         │ ● Active         │
-│ Sara     │ s@test.com      │ Sales      │ ○ Inactive       │
-├──────────┴─────────────────┴────────────┴──────────────────┤
-│ Showing 1–25 of 1,204                    ‹ 1 2 3 … 49 ›    │
-└────────────────────────────────────────────────────────────┘
-```
+<!--
+    Screenshots. Drop the files into docs/screenshots/ using these exact
+    names and they appear here — nothing else needs editing. See
+    docs/screenshots/README.md for what each one should show.
+-->
+
+![A DynamicTable in its ordinary state](docs/screenshots/table.png)
+
+
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/filters.png" alt="The filter builder, with a nested AND/OR group"></td>
+<td width="50%"><img src="docs/screenshots/columns.png" alt="The Edit columns panel, adding a relationship column"></td>
+</tr>
+<tr>
+<td align="center"><em>Nested AND/OR filters</em></td>
+<td align="center"><em>Add any column, including through relations</em></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/header-menu.png" alt="A column header menu"></td>
+<td><img src="docs/screenshots/views.png" alt="The saved views picker"></td>
+</tr>
+<tr>
+<td align="center"><em>Dynamics-style column menu</em></td>
+<td align="center"><em>Saved views, shared per user</em></td>
+</tr>
+
+</table>
 
 ---
 
@@ -75,7 +91,7 @@ JavaScript, registers no state and runs no queries.
 protected array $features = [
     'views', 'export', 'import',
     'bulk-actions', 'inline_edit',
-    'column_picker', 'spreadsheet',
+    'column_picker', 'bulk_edit',
 ];
 ```
 
@@ -100,10 +116,11 @@ protected function columns(): array
 
 | | |
 |---|---|
-| **Columns** | Automatic discovery · type detection · relationship columns · computed attributes · formatting · picker · drag reordering · resizing |
+| **Columns** | Automatic discovery · type detection · relationship columns · computed attributes · formatting · built-in renderers (progress, rating, sparkline, chips, avatar) · picker that can add any column, including through relations · drag reordering · resizing |
 | **Querying** | Global search · per-column search · Dynamics-style filter builder with nested AND/OR groups · multi-column sorting · server-side pagination · soft deletes |
 | **Views** | User views · system views · developer presets · default-view precedence · versioned JSON state · optional URL sync |
-| **Editing** | Inline editing with validation · inline create · bulk edit over a selection · spreadsheet mode with range copy/paste and fill-down · bulk actions · row actions · toolbar actions |
+| **Editing** | Inline editing with validation · inline create · bulk edit over a selection · bulk actions · row actions · toolbar actions |
+| **Output** | Print view from an editable Blade template · summary row (sum, avg, min, max, count) over the filtered set |
 | **Data** | CSV and XLSX export (current page / view / all / selected) · import with mapping, preview, per-row errors and a downloadable error report · queued transfers with progress |
 | **UI** | Bootstrap 5 · Tailwind · two framework-free themes (minimal, bordered) · custom themes in one array · sticky columns · row detail panels · infinite scroll · faceted filter counts · RTL and LTR · Arabic, Hebrew, English, Russian · responsive · keyboard accessible · ARIA |
 | **Engineering** | No N+1 · constant query count · streaming exports · metadata caching · strict server-side validation of every client input · 120 tests · PHPStan level 5 |

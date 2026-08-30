@@ -28,6 +28,15 @@ class HeaderMenuTable extends DynamicTable
         'column_resizing',
     ];
 
+    /*
+     * No responsive collapsing here.
+     *
+     * Collapsing hides the columns that do not fit, which is exactly what this
+     * example is about arranging by hand — the two would be fighting over the
+     * same thing in front of the reader.
+     */
+    protected ?string $responsive = 'none';
+
     protected int $relationDepth = 2;
 
     protected function columns(): array

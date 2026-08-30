@@ -38,6 +38,14 @@ trait ResolvesTable
     {
         $input = $request->input('state');
 
+        // The print page is a GET, so its state arrives as JSON in the query
+        // string rather than as a decoded body. It is validated by
+        // TableState either way — this only gets it into array shape.
+        if (is_string($input)) {
+            $decoded = json_decode($input, true);
+            $input = is_array($decoded) ? $decoded : [];
+        }
+
         return TableState::fromArray(is_array($input) ? $input : [], $table);
     }
 }

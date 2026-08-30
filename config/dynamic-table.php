@@ -184,9 +184,37 @@ return [
         'queue' => null,
     ],
 
-    'spreadsheet' => [
-        'engine' => 'tabulator',
-        'cdn' => null,
+    /*
+    |--------------------------------------------------------------------------
+    | Print
+    |--------------------------------------------------------------------------
+    | The Blade view the print button opens, and the most rows one printout may
+    | contain. Publish the views to edit the template:
+    |
+    |     php artisan vendor:publish --tag=dynamic-table-views
+    |
+    | then edit resources/views/vendor/dynamic-table/print.blade.php, or point
+    | "view" at a template of your own.
+    */
+    'print' => [
+        'view' => 'dynamic-table::print',
+        'max_rows' => 2000,
+        'paper' => 'A4',
+
+        /*
+        | Open the print dialog as soon as the page is ready, and close the tab
+        | once it is dismissed. Add ?auto=0 to any print URL to look at the page
+        | instead — which is how you work on the template.
+        */
+        'auto' => true,
+
+        /*
+        | Stylesheets the print page loads before its own, keyed by theme. The
+        | print template stands on its own, so this exists only to keep a
+        | Bootstrap or Tailwind class map looking like itself on paper. Set it
+        | to [] to load nothing, or point it at your compiled CSS.
+        */
+        'stylesheets' => null,
     ],
 
     'security' => [

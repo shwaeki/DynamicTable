@@ -224,6 +224,70 @@
 
 .dt-table { width: 100%; border-collapse: separate; border-spacing: 0; }
 
+/*
+ * A table whose columns have been given widths.
+ *
+ * Auto layout treats a width as a suggestion and pays for a wider column by
+ * narrowing its neighbours, which is how dragging one edge ends up hiding
+ * somebody else's content. Fixed layout honours the widths instead, and the
+ * table grows past its container and scrolls rather than squeezing.
+ *
+ * The width is 100%, not auto with a floor of 100%. A fixed layout on an auto
+ * width still sizes the table from its content and then shares the difference
+ * out over every column in proportion — so a column asked for 25px came back
+ * at 125, and no amount of dragging could get it under that. A definite width
+ * gives the columns exactly what they asked for and hands the slack to the
+ * columns that asked for nothing; when the widths add up to more than the
+ * container, the table grows past it and the scroller scrolls.
+ */
+.dt-table.dt-sized { table-layout: fixed; width: 100%; }
+
+/*
+ * A sized column shows what fits and says so with an ellipsis — in the header
+ * as well as in the cells. The header keeps its sort and menu affordances: only
+ * the label itself is allowed to shrink.
+ */
+.dt-table.dt-sized :where(.dt-th, .dt-cell) {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.dt-table.dt-sized :where(.dt-header-trigger, .dt-sort) { max-width: 100%; }
+
+/* The sort arrow and the menu cog keep their size; the label gives way. */
+.dt-table.dt-sized :where(.dt-header-trigger, .dt-sort) > :not(:first-child) { flex: none; }
+
+/*
+ * Narrow enough that the padding would be the whole column.
+ *
+ * Important, because the padding it is overruling comes from whatever utility
+ * class the theme map put on the cell — and a page carrying Bootstrap's own
+ * .px-3 (padding: 1rem !important) would otherwise hold every column at 32px
+ * no matter what width it was given.
+ */
+.dt-table.dt-sized :where(.dt-th, .dt-cell).dt-narrow { padding-inline: .25rem !important; }
+
+.dt-table.dt-sized :where(.dt-header-trigger, .dt-sort) > span:first-child,
+.dt-table.dt-sized .dt-cell > :where(span, a, div) {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/*
+ * The cells that are not columns of data — the checkbox, the expander, the row
+ * buttons — are sized by what they hold, never by the share of the table a
+ * fixed layout would otherwise hand them. Truncating a row's actions would be
+ * truncating the only way to act on it.
+ */
+.dt-table.dt-sized :where(.dt-select-cell, .dt-expand-cell, .dt-control-cell, .dt-row-actions-cell) {
+    width: max-content;
+    overflow: visible;
+    text-overflow: clip;
+}
+
 /* separate borders, so the header keeps its rule while stuck */
 .dt-thead th {
     position: sticky;
@@ -231,6 +295,19 @@
     z-index: 3;
     background: var(--dt-surface-2);
     box-shadow: inset 0 -1px 0 var(--dt-border);
+}
+
+/*
+ * The column-search row sticks *under* the header rather than on top of it.
+ *
+ * Both rows are sticky and both would otherwise stop at the top of the
+ * scroller, which is how the search row ends up covering the column names. The
+ * offset is the header's measured height, written by the runtime; the fallback
+ * keeps the two apart before the first measurement.
+ */
+.dt-thead .dt-filter-row th {
+    top: var(--dt-head-offset, 2.5rem);
+    z-index: 2;
 }
 
 .dt-th { position: relative; user-select: none; }
@@ -278,7 +355,51 @@
 .dt-align-end { text-align: end; }
 
 .dt-cell { vertical-align: middle; }
-.dt-select-cell { width: 2.5rem; text-align: center; }
+.dt-select-cell { width: 2.75rem; text-align: center; }
+
+/*
+ * Selection checkboxes.
+ *
+ * A default 13px checkbox is a poor target for the one control people click
+ * dozens of times in a row, and everything bulk — select all, bulk edit, bulk
+ * delete — starts here. Bigger, in the table's accent colour, with the padding
+ * around it part of the hit area.
+ */
+.dt :where(.dt-select-cell) input[type='checkbox'],
+.dt :where(.dt-bulk-field, .dt-column-item) input[type='checkbox'] {
+    inline-size: 1.05rem;
+    block-size: 1.05rem;
+    margin: 0;
+    accent-color: var(--dt-accent);
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.dt .dt-select-cell {
+    /* The whole cell is the target, not just the box inside it. */
+    padding-inline: .5rem;
+    line-height: 0;
+}
+
+.dt .dt-select-cell input[type='checkbox']:focus-visible {
+    outline: 2px solid var(--dt-accent);
+    outline-offset: 2px;
+}
+
+/* A selected row says so on its checkbox column as well as its background. */
+.dt .dt-row-selected .dt-select-cell { box-shadow: inset 3px 0 0 var(--dt-accent); }
+
+.dt[dir='rtl'] .dt-row-selected .dt-select-cell { box-shadow: inset -3px 0 0 var(--dt-accent); }
+
+/* Touch: a 1rem box with 44px of cell around it is the reachable version. */
+@media (hover: none) {
+    .dt :where(.dt-select-cell) input[type='checkbox'] {
+        inline-size: 1.2rem;
+        block-size: 1.2rem;
+    }
+
+    .dt .dt-select-cell { min-height: 2.75rem; }
+}
 
 /* ---------------------------------------------------------------- */
 /* Row actions                                                      */
@@ -425,7 +546,16 @@
 /* Dialogs and menus                                                */
 /* ---------------------------------------------------------------- */
 
-.dt-modal {
+/*
+ * Panels — modal and offcanvas alike — are the package's, not the theme's.
+ *
+ * A theme may add a shadow or a radius, but the overlay, the box layout and
+ * the drawer geometry are structure, and they have to survive whatever utility
+ * classes the theme's class map brings with it. Tailwind's `p-4 max-w-2xl` and
+ * Bootstrap's `.card` are both single-class selectors, so scoping these under
+ * .dt is enough to win without a single !important.
+ */
+.dt .dt-modal {
     position: fixed;
     inset: 0;
     z-index: 1000;
@@ -436,13 +566,19 @@
     background: rgba(0, 0, 0, .45);
 }
 
-.dt-modal-box {
+.dt .dt-modal-box {
     background: var(--dt-surface);
+    color: var(--dt-ink);
     border-radius: var(--dt-radius);
     width: 100%;
     max-height: 85vh;
+    min-width: 0;
+    /* The head, body and foot own the padding; a theme adding its own here
+       would double it and misalign the drawer's edges. */
+    padding: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* ---------------------------------------------------------------- */
@@ -454,18 +590,19 @@
  * changes — the focus trap, Escape handling and markup are shared, so a panel
  * never knows which presentation it is in.
  */
-.dt-offcanvas { padding: 0; align-items: stretch; }
-.dt-offcanvas.dt-offcanvas-right { justify-content: flex-end; }
-.dt-offcanvas.dt-offcanvas-left { justify-content: flex-start; }
+.dt .dt-offcanvas { padding: 0; align-items: stretch; }
+.dt .dt-offcanvas.dt-offcanvas-right { justify-content: flex-end; }
+.dt .dt-offcanvas.dt-offcanvas-left { justify-content: flex-start; }
 
-.dt-offcanvas .dt-offcanvas-box {
+.dt .dt-offcanvas .dt-offcanvas-box {
     height: 100%;
     max-height: 100%;
+    margin: 0;
     border-radius: 0;
     animation: dt-slide-from-right .18s ease-out;
 }
 
-.dt-offcanvas-left .dt-offcanvas-box { animation-name: dt-slide-from-left; }
+.dt .dt-offcanvas-left .dt-offcanvas-box { animation-name: dt-slide-from-left; }
 
 @keyframes dt-slide-from-right {
     from { transform: translateX(100%); }
@@ -478,12 +615,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .dt-offcanvas .dt-offcanvas-box { animation: none; }
+    .dt .dt-offcanvas .dt-offcanvas-box { animation: none; }
 }
 
 /* On a phone a side drawer is just a full-height sheet. */
 @media (max-width: 640px) {
-    .dt-offcanvas .dt-offcanvas-box { width: 100% !important; }
+    .dt .dt-offcanvas .dt-offcanvas-box { width: 100% !important; }
 }
 
 .dt-modal-head {
@@ -496,11 +633,19 @@
 
 .dt-modal-title { margin: 0; font-size: 1rem; font-weight: 600; }
 .dt-modal-close { margin-inline-start: auto; background: none; border: 0; font-size: 1.25rem; line-height: 1; cursor: pointer; }
-.dt-modal-body { padding: 1rem; overflow: auto; }
+.dt .dt-modal-body { padding: 1rem; overflow: auto; flex: 1 1 auto; min-height: 0; }
 .dt-modal-foot { padding: .75rem 1rem; border-top: 1px solid var(--dt-border); }
 .dt-modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 
-.dt-menu { z-index: 900; max-height: 26rem; display: flex; flex-direction: column; min-width: 15rem; }
+/*
+ * Anchored layers live on <body>, inside a .dt wrapper that adds no box of its
+ * own — so they keep the table's tokens, direction and scheme while escaping
+ * every ancestor that clips or scrolls.
+ */
+.dt-portal { display: contents; }
+
+/* Scoped, so a theme's own z-index utility (Tailwind's z-40) cannot bury it. */
+.dt .dt-menu { z-index: 900; max-height: 26rem; display: flex; flex-direction: column; min-width: 15rem; }
 .dt-menu-list { overflow: auto; }
 .dt-menu-search { padding: .35rem; border-bottom: 1px solid var(--dt-border); }
 .dt-menu-heading { padding: .35rem .5rem; font-size: .75rem; text-transform: uppercase; opacity: .6; }
@@ -534,51 +679,177 @@
 /* Column header menu                                               */
 /* ---------------------------------------------------------------- */
 
-.dt-header-menu {
-    margin-inline-start: .2rem;
-    padding: 0 .2rem;
-    border: 0;
+/*
+ * The whole header is the menu trigger when the header menu is on, so it needs
+ * the full width — a label people have to hit exactly is a worse target than
+ * the cell they can see.
+ */
+.dt-header-trigger {
+    display: flex;
+    align-items: center;
+    gap: .35rem;
+    width: 100%;
     background: none;
-    color: inherit;
+    border: 0;
+    padding: 0;
     font: inherit;
-    line-height: 1;
+    color: inherit;
+    text-align: start;
     cursor: pointer;
+}
+
+/* A gear, centred on the text's own middle: the glyph's box is taller than the
+   mark, so it is centred by the flex line rather than by its own line-height. */
+.dt-header-cog {
+    margin-inline-start: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    width: 1.15em;
+    height: 1.15em;
+    font-size: 1.05em;
+    line-height: 1;
     opacity: 0;
     transition: opacity .12s ease;
 }
 
-.dt-th:hover .dt-header-menu,
-.dt-header-menu:focus-visible,
-.dt-header-menu[aria-expanded='true'] { opacity: .85; }
+.dt-th:hover .dt-header-cog,
+.dt-header-trigger:focus-visible .dt-header-cog,
+.dt-header-trigger[aria-expanded='true'] .dt-header-cog { opacity: .75; }
 
-/* Touch devices have no hover, so the affordance must always be visible. */
+.dt-header-trigger:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
+
 @media (hover: none) {
-    .dt-header-menu { opacity: .7; }
+    .dt-header-cog { opacity: .6; }
 }
+
+/* A column carrying a condition says so, the way Dynamics marks a filtered
+   header — otherwise a filter set from the header menu is invisible until the
+   filter panel is opened. */
+.dt-filtered-icon {
+    font-size: .6em;
+    color: var(--dt-accent);
+}
+
+.dt [data-dt-filtered] { background: color-mix(in srgb, var(--dt-accent) 8%, transparent); }
+
+/* One condition, one column: the small card the header menu opens. It is a
+   popover rather than a dialog — a modal would take over the screen to ask a
+   question the size of a dropdown. */
+.dt-popover { padding: 0; }
+
+.dt-popover-head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .55rem .65rem;
+    border-bottom: 1px solid var(--dt-border);
+}
+
+.dt-popover-title { font-weight: 600; font-size: .9em; }
+
+.dt-popover-close {
+    margin-inline-start: auto;
+    border: 0;
+    background: none;
+    color: var(--dt-muted);
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+    padding: .15rem .25rem;
+    border-radius: 4px;
+}
+
+.dt-popover-close:hover { color: var(--dt-ink); background: var(--dt-hover); }
+
+.dt-popover-body { padding: .65rem; }
+
+.dt-popover-foot {
+    padding: .55rem .65rem;
+    border-top: 1px solid var(--dt-border);
+}
+
+.dt-popover-actions { display: flex; justify-content: flex-end; gap: .4rem; }
+
+.dt-quick-filter { gap: .5rem; }
+.dt-quick-filter .dt-quick-value { display: grid; gap: .35rem; }
+.dt-quick-filter select,
+.dt-quick-filter input { width: 100%; }
+
+
 
 /* ---------------------------------------------------------------- */
 /* View picker                                                      */
 /* ---------------------------------------------------------------- */
 
+/*
+ * The view picker doubles as the table's heading, the way a Dynamics view does:
+ * the current view's name *is* the title, and it happens to be clickable.
+ */
 .dt-view-picker {
     display: inline-flex;
     align-items: center;
-    gap: .35rem;
+    gap: .45rem;
     max-width: 22rem;
-    padding: .15rem .35rem;
-    border: 0;
-    border-radius: 6px;
+    padding: .25rem .5rem;
+    border: 1px solid transparent;
+    border-radius: var(--dt-radius);
     background: none;
     color: inherit;
     font: inherit;
     font-size: 1.05rem;
     font-weight: 600;
+    line-height: 1.3;
     cursor: pointer;
+    transition: background-color .12s ease, border-color .12s ease;
 }
 
-.dt-view-picker > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dt-view-picker:hover { background: var(--dt-hover); }
-.dt-caret { font-size: .85em; opacity: .7; }
+.dt-view-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.dt-view-picker:hover,
+.dt-view-picker[aria-expanded='true'] {
+    background: var(--dt-hover);
+    border-color: var(--dt-border);
+}
+
+.dt-view-picker:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
+
+/*
+ * The chevron is drawn, not typed.
+ *
+ * "⌄" is a modifier letter: its position inside its own box varies by font, so
+ * it lands high in one and low in the next — which is exactly the drifting
+ * arrow this replaces. Two borders rotated 45° are centred by the flex line and
+ * behave the same everywhere.
+ */
+.dt-caret {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 1em;
+    block-size: 1em;
+    color: var(--dt-muted);
+}
+
+.dt-caret::before {
+    content: '';
+    inline-size: 6px;
+    block-size: 6px;
+    /* The arrow's visual mass sits below its box's middle once rotated. */
+    margin-block-start: -3px;
+    border-inline-end: 1.5px solid currentColor;
+    border-block-end: 1.5px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform .15s ease;
+}
+
+/* Open: point at the menu it opened. */
+.dt-view-picker[aria-expanded='true'] .dt-caret::before {
+    margin-block-start: 1px;
+    transform: rotate(-135deg);
+}
 
 /* ---------------------------------------------------------------- */
 /* Grouping                                                         */
@@ -658,6 +929,78 @@
 .dt-column-item:hover { background: color-mix(in srgb, var(--dt-accent) 6%, transparent); }
 .dt-column-label { display: flex; align-items: center; gap: .5rem; flex: 1; cursor: pointer; }
 .dt-column-hint { font-size: .7rem; opacity: .6; }
+
+.dt-column-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .9rem;
+    padding-bottom: .5rem;
+    margin-bottom: .35rem;
+    border-bottom: 1px solid var(--dt-border);
+}
+
+.dt-column-actions .dt-link-button { display: inline-flex; align-items: center; gap: .35rem; }
+
+/* A type glyph per column, as Dynamics marks its list. Fixed width so the
+   names line up rather than stepping in and out. */
+.dt-column-icon {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    min-width: 2.1rem;
+    padding: .05rem .3rem;
+    border: 1px solid var(--dt-border);
+    border-radius: 4px;
+    font-size: .62rem;
+    font-weight: 600;
+    color: var(--dt-muted);
+}
+
+.dt-column-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.dt-column-remove {
+    flex: none;
+    border: 0;
+    background: none;
+    color: var(--dt-muted);
+    font: inherit;
+    line-height: 1;
+    padding: .15rem .3rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.dt-column-remove:hover { color: var(--dt-danger); background: color-mix(in srgb, var(--dt-danger) 10%, transparent); }
+
+.dt-column-add { display: grid; gap: .5rem; }
+
+.dt-column-add-results { max-height: 24rem; overflow: auto; display: grid; gap: .05rem; }
+
+.dt-column-group {
+    margin: .5rem 0 .15rem;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--dt-muted);
+}
+
+.dt-column-add-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    width: 100%;
+    padding: .35rem .4rem;
+    border: 0;
+    border-radius: var(--dt-radius);
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: start;
+    cursor: pointer;
+}
+
+.dt-column-add-item:hover { background: color-mix(in srgb, var(--dt-accent) 8%, transparent); }
 .dt-drag-handle { cursor: grab; opacity: .5; }
 .dt-dragging { opacity: .4; }
 .dt-drop-target { box-shadow: inset 0 2px 0 var(--dt-accent); }
@@ -674,8 +1017,6 @@
 .dt-cell-invalid { outline: 2px solid var(--dt-danger); outline-offset: -2px; }
 .dt-cell-error { display: block; font-size: .7rem; color: var(--dt-danger); }
 
-/* ---------------------------------------------------------------- */
-/* Spreadsheet mode                                                 */
 /* ---------------------------------------------------------------- */
 
 .dt-sheet { outline: none; }
@@ -871,6 +1212,108 @@
 .dt[dir='rtl'] .dt-sort-icon { transform: scaleX(-1); }
 
 /* ---------------------------------------------------------------- */
+/* Empty states                                                     */
+/* ---------------------------------------------------------------- */
+
+.dt .dt-empty-state { display: grid; justify-items: center; gap: .5rem; }
+.dt .dt-empty-title { margin: 0; font-weight: 600; }
+.dt .dt-empty-hint { margin: 0; color: var(--dt-muted); font-size: .9em; }
+
+/* ---------------------------------------------------------------- */
+/* Cell renderers                                                   */
+/* ---------------------------------------------------------------- */
+
+/* All server-rendered, all built from tokens, none of them needing a library
+   or a line of JavaScript. */
+
+.dt .dt-progress { display: flex; align-items: center; gap: .5rem; min-inline-size: 7rem; }
+
+.dt .dt-progress-track {
+    flex: 1;
+    block-size: .45rem;
+    border-radius: 999px;
+    background: var(--dt-border);
+    overflow: hidden;
+}
+
+.dt .dt-progress-bar {
+    display: block;
+    block-size: 100%;
+    border-radius: 999px;
+    background: var(--dt-accent);
+}
+
+.dt .dt-progress-value { font-variant-numeric: tabular-nums; font-size: .85em; color: var(--dt-muted); }
+
+.dt .dt-rating-stars { color: var(--dt-warning); letter-spacing: .05em; }
+
+.dt .dt-sparkline { display: inline-flex; align-items: center; gap: .5rem; }
+
+.dt .dt-sparkline svg {
+    inline-size: 4.5rem;
+    block-size: 1.25rem;
+    overflow: visible;
+}
+
+.dt .dt-sparkline polyline {
+    fill: none;
+    stroke: var(--dt-accent);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+}
+
+.dt .dt-sparkline-value { font-variant-numeric: tabular-nums; font-size: .85em; color: var(--dt-muted); }
+
+.dt .dt-chips { display: inline-flex; flex-wrap: wrap; gap: .25rem; }
+
+.dt .dt-chips .dt-chip {
+    padding: .05rem .45rem;
+    border: 1px solid var(--dt-border);
+    border-radius: 999px;
+    background: var(--dt-surface-2);
+    font-size: .78em;
+}
+
+.dt .dt-chip-more { color: var(--dt-muted); }
+
+.dt .dt-avatar {
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+}
+
+/* ---------------------------------------------------------------- */
+/* Summary row                                                      */
+/* ---------------------------------------------------------------- */
+
+/* Sticky to the bottom of the scroll area: a total you have to scroll to find
+   is a total nobody reads. */
+.dt .dt-tfoot .dt-summary-row > td {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: var(--dt-surface-2);
+    border-top: 1px solid var(--dt-border);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.dt .dt-summary-label {
+    display: block;
+    font-size: .68em;
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--dt-muted);
+}
+
+.dt .dt-summary-value { font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- */
 /* Row detail expander                                              */
 /* ---------------------------------------------------------------- */
 
@@ -943,6 +1386,9 @@
     z-index: 4;
     background: var(--dt-surface-2);
 }
+
+/* Frozen and sticky at once, but still below the header row it hangs from. */
+.dt .dt-thead .dt-filter-row .dt-sticky-cell { z-index: 3; }
 
 .dt .dt-row:hover .dt-sticky-cell {
     background: var(--dt-hover);

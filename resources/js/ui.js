@@ -120,6 +120,123 @@ export function closeDialogs(table) {
     table._dialog = null;
 }
 
+
+/**
+ * The scheme the table is *currently* showing, not the one it booted with.
+ *
+ * A layer on <body> inherits nothing from the table, so it has to be told. The
+ * boot payload is not enough: an application that forces a scheme does it by
+ * setting data-dt-scheme on the element — the demo's light/dark switch is
+ * exactly this — and that happens long after boot. Read from the DOM and a
+ * menu matches the table it belongs to; read from the payload and it follows
+ * the operating system instead, which is how you get a dark menu over a light
+ * table.
+ */
+function schemeOf(table) {
+    const owner = table.root.closest('[data-dt-scheme]');
+
+    return owner?.getAttribute('data-dt-scheme') || table.boot.scheme || null;
+}
+
+/** Remove any anchored layer currently on the page, portal and all. */
+function closeLayers() {
+    document.querySelectorAll('.dt-portal, .dt-menu-open').forEach((node) => node.remove());
+}
+
+/**
+ * Put an anchored layer on the page and place it under its trigger.
+ *
+ * It goes on <body>, not inside the table.
+ *
+ * A menu positioned inside the table is absolutely positioned against the
+ * table's box, which breaks the moment anything between them clips or scrolls
+ * — a card with overflow:hidden, the table's own scroll container, a preview
+ * pane. Fixed coordinates against the viewport are the same everywhere.
+ *
+ * The layer keeps the .dt class (and the table's direction and scheme) so the
+ * colour tokens and the `.dt .dt-menu` rules still apply, and uses
+ * display:contents so it adds no box of its own.
+ */
+function place(table, trigger, node) {
+    const layer = el('div', {
+        class: 'dt dt-portal',
+        dir: table.boot.direction,
+        'data-dt-scheme': schemeOf(table),
+    }, [node]);
+
+    document.body.append(layer);
+
+    position(table, trigger, node);
+
+    /*
+     * Measure again on the next frame.
+     *
+     * The first measurement happens the instant the layer is in the document,
+     * which is right for the common case but can be a frame early: a web font
+     * arriving, or a scrollbar appearing inside a long list, changes the size
+     * after it was read. Correcting once is cheap and invisible; leaving it is
+     * how a menu ends up in the right place only the *second* time it opens.
+     */
+    requestAnimationFrame(() => {
+        if (node.isConnected) position(table, trigger, node);
+    });
+
+    /*
+     * Stay with the trigger.
+     *
+     * The layer is fixed to the viewport while the trigger sits in a page — and
+     * often in the table's own scroll container — so anything that scrolls
+     * moves one and not the other. The listener removes itself once the layer
+     * is gone, which needs no bookkeeping at the call sites.
+     */
+    const follow = () => {
+        if (! node.isConnected) {
+            window.removeEventListener('scroll', follow, true);
+            window.removeEventListener('resize', follow);
+
+            return;
+        }
+
+        position(table, trigger, node);
+    };
+
+    window.addEventListener('scroll', follow, true);
+    window.addEventListener('resize', follow);
+
+    return layer;
+}
+
+/** Put one layer under its trigger, inside the viewport. */
+function position(table, trigger, node) {
+    const bounds = trigger.getBoundingClientRect();
+    const size = node.getBoundingClientRect();
+    const margin = 8;
+
+    node.style.position = 'fixed';
+
+    // Flip above the trigger when there is no room below it — the last row of a
+    // long table is near the bottom of the screen, which is exactly where a
+    // header menu would otherwise open off-screen.
+    const below = window.innerHeight - bounds.bottom;
+    const above = bounds.top;
+    const flip = below < size.height + margin && above > below;
+
+    node.style.top = flip
+        ? `${Math.max(margin, bounds.top - size.height - 4)}px`
+        : `${bounds.bottom + 4}px`;
+
+    node.style.maxHeight = `${Math.max(160, (flip ? above : below) - margin * 2)}px`;
+
+    // Aligned to the trigger's leading edge, then pulled back inside the
+    // viewport if that would push it off.
+    const start = table.boot.direction === 'rtl'
+        ? Math.min(window.innerWidth - margin, bounds.right) - size.width
+        : bounds.left;
+
+    node.style.left = `${Math.max(margin, Math.min(start, window.innerWidth - size.width - margin))}px`;
+    node.style.right = 'auto';
+}
+
 /**
  * An anchored menu.
  *
@@ -130,10 +247,12 @@ export function closeDialogs(table) {
  */
 export function menu(table, trigger, items, options = {}) {
     // Same single-instance rule as dialogs, across every table on the page.
-    document.querySelectorAll('.dt-menu-open').forEach((node) => node.remove());
+    closeLayers();
+
+    let layer = null;
 
     const close = () => {
-        node.remove();
+        (layer ?? node).remove();
         document.removeEventListener('click', onDocumentClick, true);
         document.removeEventListener('keydown', onKeydown, true);
         trigger?.setAttribute?.('aria-expanded', 'false');
@@ -242,26 +361,81 @@ export function menu(table, trigger, items, options = {}) {
     }, [search, list]);
 
     trigger?.setAttribute?.('aria-expanded', 'true');
-    table.root.append(node);
-
-    const bounds = trigger.getBoundingClientRect();
-    const host = table.root.getBoundingClientRect();
-
-    node.style.position = 'absolute';
-    node.style.top = `${bounds.bottom - host.top + 4}px`;
-
-    if (table.boot.direction === 'rtl') {
-        node.style.right = `${host.right - bounds.right}px`;
-    } else {
-        node.style.left = `${bounds.left - host.left}px`;
-    }
+    layer = place(table, trigger, node);
 
     setTimeout(() => {
         document.addEventListener('click', onDocumentClick, true);
         document.addEventListener('keydown', onKeydown, true);
     }, 0);
 
-    (node.querySelector('input') || node.querySelector('button'))?.focus();
+    (node.querySelector('input') || node.querySelector('button'))?.focus({ preventScroll: true });
+
+    return { node, close };
+}
+
+/**
+ * A small card anchored to what opened it, rather than a modal.
+ *
+ * The header menu's "Filter by this column" belongs here and not in a dialog:
+ * it is one control about one column, opened from that column, and a modal
+ * would take over the screen to ask a question the size of a dropdown.
+ *
+ * It shares the menu's anchoring, single-instance rule and dismissal — click
+ * outside or press Escape — so a popover and a menu can never be open at once.
+ */
+export function popover(table, trigger, { title = null, body = null, footer = null, width = '17rem' } = {}) {
+    closeLayers();
+
+    let layer = null;
+
+    const close = () => {
+        (layer ?? node).remove();
+        document.removeEventListener('click', onDocumentClick, true);
+        document.removeEventListener('keydown', onKeydown, true);
+        trigger?.setAttribute?.('aria-expanded', 'false');
+    };
+
+    const onDocumentClick = (event) => {
+        if (!node.contains(event.target) && event.target !== trigger && !trigger?.contains?.(event.target)) close();
+    };
+
+    const onKeydown = (event) => {
+        if (event.key === 'Escape') {
+            close();
+            trigger?.focus?.();
+        }
+    };
+
+    const node = el('div', {
+        class: [table.classes.menu, 'dt-menu-open', 'dt-popover'],
+        dir: table.boot.direction,
+        style: `width:${width}`,
+    }, [
+        title
+            ? el('div', { class: 'dt-popover-head' }, [
+                el('span', { class: 'dt-popover-title', text: title }),
+                el('button', {
+                    type: 'button',
+                    class: 'dt-popover-close',
+                    'aria-label': table.t('close'),
+                    text: '✕',
+                    onclick: () => close(),
+                }),
+            ])
+            : null,
+        el('div', { class: 'dt-popover-body' }, [body]),
+        footer ? el('div', { class: 'dt-popover-foot' }, [footer]) : null,
+    ]);
+
+    trigger?.setAttribute?.('aria-expanded', 'true');
+    layer = place(table, trigger, node);
+
+    setTimeout(() => {
+        document.addEventListener('click', onDocumentClick, true);
+        document.addEventListener('keydown', onKeydown, true);
+    }, 0);
+
+    (node.querySelector('select') || node.querySelector('input') || node.querySelector('button'))?.focus({ preventScroll: true });
 
     return { node, close };
 }

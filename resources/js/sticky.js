@@ -48,6 +48,29 @@ export default function install(table) {
         const frozen = [...head.children].filter((th) => th.classList.contains('dt-sticky-cell'));
         frozen.at(-1)?.toggleAttribute('data-dt-sticky-last', true);
 
+        // The column-search row is part of the header, cell for cell, so it
+        // freezes with it — a search box that slides out from under its own
+        // column is the same bug as a header that scrolls away.
+        const searchRow = table.root.querySelector('[data-dt-table] [data-dt-search-row]');
+
+        if (searchRow) {
+            [...searchRow.children].forEach((th, index) => {
+                const source = head.children[index];
+
+                if (index >= frozen.length || ! source) {
+                    th.classList.remove('dt-sticky-cell');
+                    th.toggleAttribute('data-dt-sticky-last', false);
+                    th.style.insetInlineStart = '';
+
+                    return;
+                }
+
+                th.style.insetInlineStart = source.style.insetInlineStart;
+                th.classList.add('dt-sticky-cell');
+                th.toggleAttribute('data-dt-sticky-last', index === frozen.length - 1);
+            });
+        }
+
         for (const row of table.root.querySelectorAll('[data-dt-body] > tr')) {
             let position = 0;
 
@@ -87,6 +110,7 @@ export default function install(table) {
     }
 
     table.on('rows-rendered', schedule);
+    table.on('header-rendered', schedule);
     table.on('columns-changed', schedule);
     table.on('updated', schedule);
 

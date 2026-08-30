@@ -75,7 +75,7 @@ Model::preventLazyLoading(! app()->isProduction());
 ## Browser testing
 
 The interactive parts — the filter builder, the column picker, inline editing,
-selection, spreadsheet mode — deserve browser coverage. With Dusk:
+selection, inline editing — deserve browser coverage. With Dusk:
 
 ```php
 $browser->visit('/users')

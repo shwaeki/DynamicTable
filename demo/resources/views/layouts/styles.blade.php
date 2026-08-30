@@ -368,6 +368,71 @@
 
     .demo-doc-source { color: var(--muted); font-size: .8rem; }
 
+    /* ---------------------------------------------------------- builder */
+
+    /* No sidebar means one column, not an empty one: without this the main
+       content stays in the grid's 16rem sidebar track. */
+    .demo-shell-wide {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: 1800px;
+    }
+
+    .builder { display: grid; grid-template-columns: 19rem minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+
+    .builder-controls { position: sticky; top: 4.5rem; max-height: calc(100vh - 6rem); overflow: auto; display: grid; gap: 1.1rem; }
+
+    .builder-group { border: 0; margin: 0; padding: 0; }
+    .builder-group legend { padding: 0; }
+
+    .builder-checks { display: grid; gap: .15rem; }
+
+    .builder-check {
+        display: flex; align-items: center; gap: .5rem;
+        padding: .25rem .35rem; border-radius: 7px;
+        font-size: .85rem; cursor: pointer;
+    }
+
+    .builder-check:hover { background: var(--ground); }
+    .builder-check input { inline-size: 1rem; block-size: 1rem; accent-color: var(--accent); cursor: pointer; }
+    .builder-check span:first-of-type { text-transform: capitalize; }
+
+    .builder-tag {
+        margin-inline-start: auto;
+        font-size: .65rem; color: var(--muted);
+        border: 1px solid var(--line); border-radius: 999px; padding: 0 .4rem;
+    }
+
+    .builder-fields { display: grid; gap: .6rem; }
+    .builder-field { display: grid; gap: .25rem; font-size: .82rem; color: var(--muted); }
+    .builder-field select { color: var(--ink); }
+    .builder-note { margin: 0; font-size: .8rem; }
+
+    .builder-output { display: grid; gap: 1.25rem; min-width: 0; }
+
+    /*
+     * The preview is the page. It gets the width the sidebar used to take, and
+     * the card clips the table's corners so the header and the footer sit
+     * inside the frame rather than against it.
+     */
+    .builder-preview {
+        padding: 0;
+        overflow: hidden;
+        transition: opacity .15s ease;
+        box-shadow: 0 1px 2px rgb(15 23 42 / .06), 0 8px 24px -18px rgb(15 23 42 / .5);
+    }
+
+    .builder-preview[aria-busy='true'] { opacity: .55; }
+
+    /* A table inside the preview owns the card: no double border, no gap. */
+    .builder-preview .dt { border: 0; border-radius: 0; }
+
+    .builder-code pre { max-height: 24rem; }
+
+    @media (max-width: 1100px) {
+        .builder { grid-template-columns: minmax(0, 1fr); }
+        .builder-controls { position: static; max-height: none; }
+    }
+
     /* ---------------------------------------------------------- responsive */
 
     .demo-nav-toggle { display: none; }

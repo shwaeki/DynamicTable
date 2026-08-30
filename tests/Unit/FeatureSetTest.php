@@ -15,7 +15,7 @@ it('enables cheap features by default', function (): void {
 it('keeps expensive features off until asked for', function (): void {
     $features = new FeatureSet;
 
-    foreach ([Feature::EXPORT, Feature::IMPORT, Feature::SPREADSHEET, Feature::INLINE_EDIT, Feature::VIEWS] as $feature) {
+    foreach ([Feature::EXPORT, Feature::IMPORT, Feature::INLINE_EDIT, Feature::VIEWS] as $feature) {
         expect($features->has($feature))->toBeFalse();
     }
 });
@@ -29,7 +29,6 @@ it('normalises hyphenated and camel cased names', function (): void {
 
 it('expands implied features', function (): void {
     expect((new FeatureSet(['bulk_actions']))->has(Feature::SELECTION))->toBeTrue()
-        ->and((new FeatureSet(['spreadsheet']))->has(Feature::INLINE_EDIT))->toBeTrue()
         ->and((new FeatureSet(['views']))->has(Feature::COLUMN_PICKER))->toBeTrue();
 });
 

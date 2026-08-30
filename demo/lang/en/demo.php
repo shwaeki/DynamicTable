@@ -26,6 +26,29 @@ return [
     'next' => 'Next',
     'doc_source' => 'Rendered from :file in the repository, so it cannot drift from what ships.',
 
+    'search_builder' => 'Search…',
+
+    'builder' => [
+        'nav' => 'Builder',
+        'title' => 'Build a table',
+        'lede' => 'Switch options on and off and watch the real table change. The code beside it is the class that would produce exactly what you see.',
+        'default' => 'on by default',
+        'presentation' => 'Presentation',
+        'implies' => 'Some features turn others on: bulk actions and bulk edit imply selection, create implies inline editing, and views implies the column picker.',
+        'fields' => [
+            'theme' => 'Theme',
+            'panels' => 'Panels',
+            'responsive' => 'Small screens',
+            'pagination' => 'Pagination',
+            'perPage' => 'Rows per page',
+            'maxHeight' => 'Table height',
+            'direction' => 'Direction',
+            'scheme' => 'Colour scheme',
+            'summary' => 'Total under the money column',
+            'sticky' => 'Freeze the first column and the row actions',
+        ],
+    ],
+
     'detail' => [
         'customer' => 'Customer',
         'placed' => 'Placed',

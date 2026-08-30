@@ -15,7 +15,16 @@ class ColumnPickerTable extends DynamicTable
 {
     protected string $model = User::class;
 
-    protected array $features = ['column_picker', 'column_reordering', 'column_resizing'];
+    protected array $features = ['column_picker', 'column_reordering', 'column_resizing', 'remember_state'];
+
+    /*
+     * No responsive collapsing here.
+     *
+     * Collapsing hides the columns that do not fit, which is exactly what this
+     * example is about arranging by hand — the two would be fighting over the
+     * same thing in front of the reader.
+     */
+    protected ?string $responsive = 'none';
 
     protected int $relationDepth = 2;
 }

@@ -25,6 +25,7 @@ final class TableState
      * @param  array<string, string>  $columnSearch
      * @param  array<string, int>  $widths
      * @param  array<string, mixed>  $selection
+     * @param  array<string, mixed>  $params  declared, table-specific parameters
      */
     private function __construct(
         public readonly string $search = '',
@@ -40,6 +41,7 @@ final class TableState
         public readonly string $trashed = 'without',
         public readonly array $selection = [],
         public readonly ?string $view = null,
+        public readonly array $params = [],
     ) {}
 
     /**
@@ -48,7 +50,6 @@ final class TableState
     public static function fromArray(array $input, DynamicTable $table): self
     {
         $features = $table->features();
-        $resolved = $table->resolvedColumns();
 
         $search = $features->has(Feature::SEARCH) ? trim((string) ($input['search'] ?? '')) : '';
         $search = mb_substr($search, 0, 200);
@@ -57,7 +58,7 @@ final class TableState
 
         if ($features->has(Feature::COLUMN_SEARCH) && is_array($input['columnSearch'] ?? null)) {
             foreach ($input['columnSearch'] as $key => $value) {
-                if (! is_string($key) || ! isset($resolved[$key]) || ! is_scalar($value)) {
+                if (! is_string($key) || $table->columnFor($key) === null || ! is_scalar($value)) {
                     continue;
                 }
 
@@ -92,8 +93,10 @@ final class TableState
 
         if ($features->has(Feature::COLUMN_RESIZING) && is_array($input['widths'] ?? null)) {
             foreach ($input['widths'] as $key => $width) {
-                if (isset($resolved[$key]) && is_numeric($width)) {
-                    $widths[$key] = max(40, min(1200, (int) $width));
+                if (is_string($key) && $table->columnFor($key) !== null && is_numeric($width)) {
+                    // Only wide enough to stay grabbable: a narrow column is a
+                    // legitimate choice, and its content is ellipsised, not fitted.
+                    $widths[$key] = max(24, min(1200, (int) $width));
                 }
             }
         }
@@ -105,7 +108,8 @@ final class TableState
 
             // Grouping by a computed accessor would mean ordering by something
             // that does not exist in SQL, so it is refused rather than faked.
-            $group = isset($resolved[$candidate]) && ! $resolved[$candidate]->isComputed() ? $candidate : null;
+            $groupColumn = $table->columnFor($candidate);
+            $group = $groupColumn !== null && ! $groupColumn->isComputed() ? $candidate : null;
         }
 
         $trashed = 'without';
@@ -128,9 +132,15 @@ final class TableState
             trashed: $trashed,
             selection: self::normalizeSelection($input['selection'] ?? null),
             view: isset($input['view']) && is_scalar($input['view']) ? (string) $input['view'] : null,
+            params: self::normalizeParams($input['params'] ?? null, $table),
         );
 
         $state->warnings = $filterEngine->warnings();
+
+        // The table reads its own parameters — $this->param('from_date') inside
+        // query() — so the validated values are handed back to it here, where
+        // every entry point (data, export, print, actions) passes through.
+        $table->useParams($state->params);
 
         return $state;
     }
@@ -144,7 +154,6 @@ final class TableState
             return self::defaultSort($table);
         }
 
-        $resolved = $table->resolvedColumns();
         $entries = [];
 
         if (is_string($input) && $input !== '') {
@@ -170,7 +179,7 @@ final class TableState
 
         foreach (array_slice($entries, 0, 3) as $entry) {
             $key = str_replace('.', '__', $entry['field']);
-            $column = $resolved[$key] ?? null;
+            $column = $table->columnFor($key);
 
             if ($column === null || ! $column->sortable) {
                 continue;
@@ -208,7 +217,11 @@ final class TableState
             $columns = [];
 
             foreach ($input as $key) {
-                if (is_string($key) && isset($resolved[$key]) && ! in_array($key, $columns, true)) {
+                // columnFor() also accepts a column the table never declared —
+                // the picker can add any field the metadata engine reaches —
+                // and returns null for anything hidden, disallowed, too deep or
+                // simply non-existent.
+                if (is_string($key) && $table->columnFor($key) !== null && ! in_array($key, $columns, true)) {
                     $columns[] = $key;
                 }
             }
@@ -227,6 +240,63 @@ final class TableState
         }
 
         return $columns;
+    }
+
+    /**
+     * Keep only the parameters the table declares, with values a query can
+     * safely consume: a scalar, or a flat list of scalars.
+     *
+     * @return array<string, mixed>
+     */
+    private static function normalizeParams(mixed $input, DynamicTable $table): array
+    {
+        $declared = $table->declaredParams();
+
+        if ($declared === []) {
+            return [];
+        }
+
+        $input = is_array($input) ? $input : [];
+        $params = [];
+
+        foreach ($declared as $name => $default) {
+            $value = self::normalizeParamValue($input[$name] ?? null);
+
+            if ($value === null) {
+                $value = self::normalizeParamValue($default);
+            }
+
+            if ($value !== null) {
+                $params[$name] = $value;
+            }
+        }
+
+        return $params;
+    }
+
+    private static function normalizeParamValue(mixed $value): string|int|float|bool|array|null
+    {
+        if (is_array($value)) {
+            $values = [];
+
+            foreach (array_slice(array_values($value), 0, 200) as $entry) {
+                $entry = self::normalizeParamValue($entry);
+
+                if (! is_array($entry) && $entry !== null) {
+                    $values[] = $entry;
+                }
+            }
+
+            return $values !== [] ? $values : null;
+        }
+
+        if (is_string($value)) {
+            $value = mb_substr(trim($value), 0, 500);
+
+            return $value !== '' ? $value : null;
+        }
+
+        return is_scalar($value) ? $value : null;
     }
 
     /** @return array<string, mixed> */
@@ -260,6 +330,7 @@ final class TableState
         return $this->search === ''
             && $this->columnSearch === []
             && $this->filters->isEmpty()
+            && $this->params === []
             && $this->trashed === 'without';
     }
 
@@ -283,6 +354,7 @@ final class TableState
             'group' => $this->group,
             'trashed' => $this->trashed === 'without' ? null : $this->trashed,
             'view' => $this->view,
+            'params' => $this->params,
         ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
     }
 

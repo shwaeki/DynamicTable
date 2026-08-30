@@ -79,43 +79,9 @@ core.js          always        ~14 KB
   transfer.js    when export/import opens
   actions.js     when selection is enabled
   inline-edit.js when inline editing is enabled
-  spreadsheet.js when spreadsheet mode is enabled
 ```
 
 A plain table therefore downloads one file.
-
----
-
-## 4. Spreadsheet engine evaluation
-
-The brief required an explicit comparison before choosing, with licensing
-treated as a first-class concern.
-
-| Engine | Licence | Excel-like editing | Verdict |
-|---|---|---|---|
-| **AG Grid** | Community MIT, but range selection, fill handle, clipboard ranges, grouping and pivot are **Enterprise (commercial)** | Only with Enterprise | Rejected: the features that make it a spreadsheet are the paid ones. Shipping it would make a core feature of this package depend on a commercial licence. |
-| **Handsontable** | Free for non-commercial only; commercial licence required for business use | Excellent | Rejected outright on licence grounds. |
-| **Tabulator** | MIT | Range selection, clipboard, keyboard nav, virtual DOM, RTL | Viable. Strong second choice. |
-| **SlickGrid** | MIT | Fast, virtualised, but a lot of assembly required | Viable but high integration cost. |
-| **RevoGrid** | MIT | Good Excel-like behaviour | Viable, smaller ecosystem. |
-
-None of the MIT options are *small*: Tabulator is ~400 KB minified, which is
-more than the entire rest of this package, and pulling it from a CDN conflicts
-with the "no external dependencies" goal.
-
-**Decision:** spreadsheet mode is implemented on the package's own table DOM —
-cell cursor, rectangular range selection, keyboard navigation, copy/paste of
-ranges, fill-down, undo, and a single batched save. That covers the requested
-behaviour in ~9 KB with no licence exposure.
-
-The seam is explicit and documented: define
-`window.DynamicTableSpreadsheetAdapter = (table) => ({ ... })` before the core
-loads and it replaces the built-in implementation entirely. Swapping in
-Tabulator later is an adapter, not a rewrite.
-
-The server side is engine-agnostic either way: pasted values go through the same
-validation and authorization path as a single inline edit. The browser is never
-the source of truth.
 
 ---
 

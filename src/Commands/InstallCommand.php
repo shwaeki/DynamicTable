@@ -10,6 +10,7 @@ class InstallCommand extends Command
         {--config : Publish the configuration file}
         {--lang : Publish the translation files}
         {--views : Publish the theme templates}
+        {--themes : Publish the theme file, to define your own themes}
         {--migrations : Publish the migrations}
         {--all : Publish everything}';
 
@@ -26,6 +27,7 @@ class InstallCommand extends Command
             'config' => 'dynamic-table-config',
             'lang' => 'dynamic-table-lang',
             'views' => 'dynamic-table-views',
+            'themes' => 'dynamic-table-themes',
             'migrations' => 'dynamic-table-migrations',
         ] as $option => $tag) {
             if ($all || $this->option($option)) {
@@ -37,7 +39,7 @@ class InstallCommand extends Command
 
         if (! $published) {
             $this->components->info('Nothing published — the package works with its bundled defaults.');
-            $this->line('  Use <comment>--config</comment>, <comment>--lang</comment>, <comment>--views</comment>, <comment>--migrations</comment> or <comment>--all</comment> to publish files.');
+            $this->line('  Use <comment>--config</comment>, <comment>--lang</comment>, <comment>--views</comment>, <comment>--themes</comment>, <comment>--migrations</comment> or <comment>--all</comment> to publish files.');
         }
 
         $this->newLine();

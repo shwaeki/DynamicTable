@@ -67,6 +67,25 @@ abstract class DynamicTable
     /** @var list<string> Eloquent scopes always applied to the base query. */
     protected array $scopes = [];
 
+    /**
+     * External parameters this table accepts — the values behind your own
+     * controls: a date range, a branch picker, a report id.
+     *
+     * Declare them as a list of names, or as a map of name => default:
+     *
+     *     protected array $params = ['from_date', 'to_date', 'status' => 'open'];
+     *
+     * Only declared names are accepted, from the page request on first paint
+     * and from the browser on every refresh afterwards. Read them inside
+     * query() with $this->param('from_date').
+     *
+     * @var array<int|string, mixed>
+     */
+    protected array $params = [];
+
+    /** @var array<string, mixed> The validated values for this request. */
+    private array $resolvedParams = [];
+
     /** @var list<string> Relations to always eager load in addition to the detected ones. */
     protected array $with = [];
 
@@ -93,6 +112,12 @@ abstract class DynamicTable
      * the rest of the page.
      */
     protected ?string $maxHeight = null;
+
+    /** A print template for this table only. Null follows the config. */
+    protected ?string $printView = null;
+
+    /** @var list<string> Stylesheets the print page should load, before its own. */
+    protected array $printStylesheets = [];
 
     protected ?string $theme = null;
 
@@ -259,6 +284,14 @@ abstract class DynamicTable
     /** @var array<string, ColumnDefinition>|null */
     private ?array $resolvedColumns = null;
 
+    /**
+     * Columns the picker added that the table never declared, memoised per
+     * request so one page does not resolve the same path repeatedly.
+     *
+     * @var array<string, ColumnDefinition|null>
+     */
+    private array $adHocColumns = [];
+
     private ?ModelMetadata $metadataCache = null;
 
     public function key(): string
@@ -336,6 +369,66 @@ abstract class DynamicTable
     public function column(string $key): ?ColumnDefinition
     {
         return $this->resolvedColumns()[$key] ?? null;
+    }
+
+    /**
+     * A column by key, including one the table never declared.
+     *
+     * The column picker offers everything the metadata engine can reach — the
+     * model's own fields and those of its singular relations — the way a
+     * Dynamics view lets you add any column of the entity or its lookups. A
+     * column chosen that way was never in columns(), so it is built on demand
+     * here rather than being rejected.
+     *
+     * The same three gates as everywhere else still apply, and they are the
+     * reason this is safe: the path must resolve through the metadata engine
+     * (so it exists, is not hidden by the model, and is within the relation
+     * depth), it must not be in $hiddenColumns, and it must pass
+     * $allowedColumns when that list is set. A crafted key gets nothing that a
+     * filter or a sort could not already have reached.
+     */
+    public function columnFor(string $key): ?ColumnDefinition
+    {
+        $declared = $this->resolvedColumns()[$key] ?? null;
+
+        if ($declared !== null) {
+            return $declared;
+        }
+
+        if (! $this->hasFeature(Feature::COLUMN_PICKER)) {
+            return null;
+        }
+
+        return $this->adHocColumns[$key] ??= $this->buildAdHocColumn($key);
+    }
+
+    protected function buildAdHocColumn(string $key): ?ColumnDefinition
+    {
+        $path = str_replace('__', '.', $key);
+
+        if (in_array($path, $this->hiddenColumnPaths(), true)) {
+            return null;
+        }
+
+        $allowed = $this->allowedColumnPaths();
+
+        if ($allowed !== [] && ! in_array($path, $allowed, true)) {
+            return null;
+        }
+
+        // Depth is checked against this table's own limit, not just the global
+        // one the metadata engine enforces.
+        if (substr_count($path, '.') > $this->relationDepth()) {
+            return null;
+        }
+
+        $field = app(MetadataEngine::class)->resolve($this->modelClass(), $path);
+
+        if ($field === null) {
+            return null;
+        }
+
+        return app(ColumnResolver::class)->one($this, $field);
     }
 
     /** @return list<string> */
@@ -452,6 +545,24 @@ abstract class DynamicTable
      * Infinite scrolling is a presentation choice on top of the same
      * server-side paging — there is no separate "load everything" path.
      */
+    /**
+     * The Blade view the print button opens.
+     *
+     * Publishing the views puts an editable copy at
+     * resources/views/vendor/dynamic-table/print.blade.php; override this to
+     * give one table a template of its own.
+     */
+    public function printView(): string
+    {
+        return $this->printView ?? (string) config('dynamic-table.print.view', 'dynamic-table::print');
+    }
+
+    /** @return list<string> */
+    public function printStylesheets(): array
+    {
+        return $this->printStylesheets;
+    }
+
     /** The scroll area's height, or null to let the page own the scrolling. */
     public function maxHeight(): ?string
     {
@@ -612,6 +723,62 @@ abstract class DynamicTable
     public function scopes(): array
     {
         return $this->scopes;
+    }
+
+    /**
+     * The parameters this table declares, as name => default.
+     *
+     * @return array<string, mixed>
+     */
+    public function declaredParams(): array
+    {
+        $declared = [];
+
+        foreach ($this->params as $name => $default) {
+            if (is_int($name)) {
+                $declared[(string) $default] = null;
+            } else {
+                $declared[$name] = $default;
+            }
+        }
+
+        return $declared;
+    }
+
+    /**
+     * Adopt the validated parameters for this request.
+     *
+     * Called by TableState once the incoming values have been checked against
+     * declaredParams(), so query() and the action hooks can read them from the
+     * table itself rather than from the request.
+     *
+     * @param  array<string, mixed>  $params
+     */
+    public function useParams(array $params): static
+    {
+        $this->resolvedParams = $params;
+
+        return $this;
+    }
+
+    /** @return array<string, mixed> */
+    public function params(): array
+    {
+        return $this->resolvedParams + $this->declaredParams();
+    }
+
+    /** One parameter, falling back to its declared default. */
+    public function param(string $name, mixed $default = null): mixed
+    {
+        $value = $this->params()[$name] ?? null;
+
+        return $value === null || $value === '' || $value === [] ? $default : $value;
+    }
+
+    /** Whether a parameter arrived with a usable value. */
+    public function hasParam(string $name): bool
+    {
+        return $this->param($name) !== null;
     }
 
     public function usesSoftDeletes(): bool

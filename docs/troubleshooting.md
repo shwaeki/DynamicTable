@@ -89,6 +89,49 @@ In `update` mode, rows with no matching record are skipped by design. Use
 `filters` is disabled, or `$allowedColumns` excludes everything, or every
 candidate field is computed.
 
+### The table says "no records" when there clearly are some
+
+It should not, and if it does the state is filtered rather than empty. The two
+are different messages: "No records found" is a fact about the data with
+nothing to do about it, while "Nothing matches these filters" is a fact about
+the *state* — so only the second one appears, and only it carries a **Clear
+filters** button.
+
+Clearing removes the search, the column searches, the filter tree and the
+trashed scope. It deliberately leaves the columns, the sort and the page size
+alone: those are how the reader likes to look at the table and did not cause
+the empty result.
+
+### The table loses all its styling after I re-render it with AJAX
+
+`@dynamicTable` injects the stylesheet and the core module **at the point of
+use**, once per response. If that point is inside the element you replace, the
+`<link>` goes with it — and removing a stylesheet removes its rules, so the
+table loses its padding, its spacing and its menu positioning the moment the
+container is swapped.
+
+Emit the assets outside the region you replace:
+
+```blade
+@dynamicTableStyles
+@dynamicTableScripts
+
+<div id="table-container">
+    @dynamicTable(OrdersTable::class)   {{-- emits nothing extra now --}}
+</div>
+```
+
+After swapping the HTML in, point the runtime at it:
+
+```js
+container.innerHTML = html;
+window.DynamicTable.boot(container);
+```
+
+The previous instance for that table key is released automatically when its
+element is no longer in the document, so its observers and any in-flight
+request do not outlive it.
+
 ### The header does not stay visible when I scroll
 
 A sticky header can only stick inside a box that scrolls, and by default the

@@ -32,6 +32,8 @@ final class ColumnDefinition
         public readonly ?int $maxWidth = null,
         public readonly bool $wrap = false,
         public readonly bool $raw = false,
+        /** An aggregate shown under the column: sum, avg, min, max or count. */
+        public readonly ?string $summary = null,
         public readonly ?string $class = null,
         /** Lower survives longer when columns are collapsed on a narrow screen. */
         public readonly int $priority = 100,
@@ -55,6 +57,18 @@ final class ColumnDefinition
         return $this->field->isRelational();
     }
 
+    /**
+     * Can this column carry an aggregate?
+     *
+     * It has to be one GROUP-less aggregate over a real column: a computed
+     * accessor does not exist in SQL, and a relationship column would need a
+     * join this package deliberately never makes.
+     */
+    public function isSummable(): bool
+    {
+        return $this->summary !== null && ! $this->isComputed() && ! $this->isRelational();
+    }
+
     /** @return array<string, mixed> The client-side description of this column. */
     public function toArray(): array
     {
@@ -76,6 +90,7 @@ final class ColumnDefinition
             'priority' => $this->priority,
             'format' => $this->format,
             'raw' => $this->raw,
+            'summary' => $this->summary,
             'input' => $this->type->input(),
             'options' => $this->field->options ?: null,
             'relation' => $this->field->relationKey(),
@@ -112,6 +127,7 @@ final class ColumnDefinition
             maxWidth: $overrides['maxWidth'] ?? $this->maxWidth,
             wrap: $overrides['wrap'] ?? $this->wrap,
             raw: $overrides['raw'] ?? $this->raw,
+            summary: $overrides['summary'] ?? $this->summary,
             class: $overrides['class'] ?? $this->class,
             priority: $overrides['priority'] ?? $this->priority,
             render: $overrides['render'] ?? $this->render,

@@ -20,6 +20,25 @@ class Theme
         static::$registered[$name] = $classes;
     }
 
+    /**
+     * Every theme name that resolves to something: the built-ins, whatever the
+     * theme file defines, and anything registered in code.
+     *
+     * @return list<string>
+     */
+    public static function names(): array
+    {
+        return array_values(array_unique([
+            'tailwind',
+            'bootstrap',
+            'minimal',
+            'bordered',
+            ...array_keys((array) config('dynamic-table-themes', [])),
+            ...array_keys((array) config('dynamic-table.themes', [])),
+            ...array_keys(static::$registered),
+        ]));
+    }
+
     /** @return array<string, string> */
     public static function classes(string $name): array
     {
@@ -29,7 +48,11 @@ class Theme
             return array_merge($base, static::$registered[$name]);
         }
 
-        $fromConfig = config('dynamic-table.themes.'.$name);
+        // config/dynamic-table-themes.php is the intended home for a project's
+        // own themes: publish it and edit it there, rather than registering a
+        // map from a service provider. The legacy 'dynamic-table.themes' key
+        // still works for anyone already using it.
+        $fromConfig = config('dynamic-table-themes.'.$name) ?? config('dynamic-table.themes.'.$name);
 
         if (is_array($fromConfig)) {
             return array_merge($base, $fromConfig);

@@ -42,6 +42,50 @@ theme is at all.
 
 ## Writing a theme
 
+Publish the theme file once, and every theme you write lives in it:
+
+```bash
+php artisan vendor:publish --tag=dynamic-table-themes
+```
+
+```php
+// config/dynamic-table-themes.php
+return [
+    'brand' => [
+        'wrapper' => 'rounded-2xl border shadow',
+        'toolbar' => 'dt-toolbar flex items-center gap-2 p-4 border-b',
+        'button' => 'btn btn-sm',
+        'buttonPrimary' => 'btn btn-sm btn-primary',
+        'cell' => 'dt-cell px-3 py-2',
+        // …anything you leave out keeps the structural default
+    ],
+];
+```
+
+```php
+protected ?string $theme = 'brand';
+```
+
+That is the whole workflow: one file, no service provider, no Blade files, no
+build step. Every slot is optional, so a theme can be three lines.
+
+Two rules, and only two:
+
+1. **Keep the structural `dt-*` classes.** They carry behaviour — sticky
+   header, resize handles, dialog layout, RTL mirroring — not looks.
+2. **Do not put colour in the map.** Surfaces, text and borders come from the
+   CSS tokens, which is what keeps every theme legible in light and dark and
+   obedient to `data-dt-scheme`. Set the tokens in your own stylesheet:
+
+   ```css
+   .dt-brand { --dt-accent: #7c3aed; --dt-radius: 14px; }
+   ```
+
+### Registering one from code
+
+Still supported, for a theme that has to be computed — from a tenant's brand
+settings, say. For anything static, prefer the file above.
+
 ```php
 // AppServiceProvider::boot()
 use Shwaeki\DynamicTable\Support\Theme;
@@ -75,19 +119,18 @@ Theme::register('brand', [
 'theme' => 'brand',
 ```
 
-Or without any code, in the config file:
+Note the colours in that older example: `bg-white`, `text-slate-500`. They work,
+but they are the reason a theme can look wrong in dark mode — prefer the tokens.
 
-```php
-'themes' => [
-    'brand' => [ /* the same map */ ],
-],
-```
+Resolution order, if a name is defined in more than one place: a theme
+registered in code wins, then `config/dynamic-table-themes.php`, then the
+legacy `dynamic-table.themes` key, then the built-ins.
 
 ## Keep the `dt-*` classes
 
 Every slot has a structural default like `dt-table` or `dt-row`. Those classes
 carry *behaviour* from the package stylesheet — sticky headers, resize handles,
-dialog layout, loading overlay, RTL mirroring, spreadsheet selection — and they
+dialog layout, loading overlay, RTL mirroring — and they
 are what the colour tokens paint. Keep them in your values (as above) and add
 your own alongside.
 

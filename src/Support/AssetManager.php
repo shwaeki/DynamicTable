@@ -32,7 +32,6 @@ class AssetManager
         'header-menu.js' => 'application/javascript; charset=utf-8',
         'detail.js' => 'application/javascript; charset=utf-8',
         'sticky.js' => 'application/javascript; charset=utf-8',
-        'spreadsheet.js' => 'application/javascript; charset=utf-8',
         'dynamic-table.css' => 'text/css; charset=utf-8',
     ];
 

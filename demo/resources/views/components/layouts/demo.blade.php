@@ -2,6 +2,9 @@
     'title' => 'Laravel DynamicTable',
     'nav' => [],
     'section' => 'examples',
+    // A page with nothing to navigate — the builder — gets the whole width
+    // instead of an empty column beside it.
+    'sidebar' => true,
 ])
 
 <!DOCTYPE html>
@@ -49,6 +52,8 @@
     <nav class="demo-sections" aria-label="{{ __('demo.sections') }}">
         <a href="{{ route('examples.index') }}" class="{{ $section === 'examples' ? 'is-active' : '' }}"
            @if ($section === 'examples') aria-current="page" @endif>{{ __('demo.examples') }}</a>
+        <a href="{{ route('builder.show') }}" class="{{ $section === 'builder' ? 'is-active' : '' }}"
+           @if ($section === 'builder') aria-current="page" @endif>{{ __('demo.builder.nav') }}</a>
         <a href="{{ route('docs.index') }}" class="{{ $section === 'docs' ? 'is-active' : '' }}"
            @if ($section === 'docs') aria-current="page" @endif>{{ __('demo.docs') }}</a>
     </nav>
@@ -73,16 +78,27 @@
             @endforeach
         </nav>
 
-        <button type="button" class="demo-btn demo-nav-toggle" data-nav-toggle aria-expanded="false">☰</button>
+        @if ($sidebar)
+            <button type="button" class="demo-btn demo-nav-toggle" data-nav-toggle aria-expanded="false">☰</button>
+        @endif
     </div>
 </header>
 
-<div class="demo-shell">
+@php
+    // A section's label is normally one string, but a section with its own
+    // strings (the builder) has a group instead — take its 'nav' entry rather
+    // than trying to print an array.
+    $sectionLabel = __('demo.'.$section);
+    $sectionLabel = is_array($sectionLabel) ? ($sectionLabel['nav'] ?? $section) : $sectionLabel;
+@endphp
+
+<div class="demo-shell {{ $sidebar ? '' : 'demo-shell-wide' }}">
+    @if ($sidebar)
     <aside class="demo-sidebar" data-sidebar>
         <label class="demo-visually-hidden" for="nav-search">{{ __('demo.search_'.$section) }}</label>
         <input id="nav-search" type="search" class="demo-input" placeholder="{{ __('demo.search_'.$section) }}" data-example-search autocomplete="off">
 
-        <nav class="demo-nav" aria-label="{{ __('demo.'.$section) }}">
+        <nav class="demo-nav" aria-label="{{ $sectionLabel }}">
             @foreach ($nav as $group)
                 <div class="demo-nav-group" data-nav-group>
                     <h2 class="demo-nav-heading">{{ $group['label'] }}</h2>
@@ -102,6 +118,7 @@
             <p class="demo-nav-empty" data-nav-empty hidden>{{ __('demo.no_match') }}</p>
         </nav>
     </aside>
+    @endif
 
     <main class="demo-main" id="demo-main">
         {{ $slot }}

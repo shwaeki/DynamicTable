@@ -75,6 +75,54 @@ class QueryEngine
      *
      * @return Builder<Model>
      */
+    /**
+     * Aggregates for the columns that asked for one.
+     *
+     * Deliberately over the *whole filtered result*, not the page: a total that
+     * changes when you turn the page is not a total. It is one extra query, and
+     * only when at least one visible column opted in, so a table with no
+     * summary row runs exactly what it ran before.
+     *
+     * @return array<string, float|int|null>
+     */
+    public function summaries(DynamicTable $table, TableState $state): array
+    {
+        $columns = array_filter(
+            $this->activeColumns($table, $state),
+            static fn (ColumnDefinition $column): bool => $column->isSummable(),
+        );
+
+        if ($columns === []) {
+            return [];
+        }
+
+        $query = $this->build($table, $state)->reorder();
+        $selects = [];
+        $grammar = $query->getQuery()->getGrammar();
+
+        foreach ($columns as $column) {
+            $name = (string) ($column->field->column ?? $column->field->name);
+            $qualified = $grammar->wrap($query->qualifyColumn($name));
+
+            // The aggregate name comes from a closed list in the resolver, and
+            // the column is wrapped by the grammar, so nothing here is user
+            // text however the request was crafted.
+            $selects[] = strtoupper($column->summary)."({$qualified}) as ".$grammar->wrap('dt_'.$column->key);
+        }
+
+        $row = (array) $query->selectRaw(implode(', ', $selects))->first()?->getAttributes();
+
+        $summaries = [];
+
+        foreach ($columns as $column) {
+            $value = $row['dt_'.$column->key] ?? null;
+
+            $summaries[$column->key] = $value === null ? null : $value + 0;
+        }
+
+        return $summaries;
+    }
+
     public function selectionQuery(DynamicTable $table, TableState $state): Builder
     {
         $query = $this->baseQuery($table, $state);
@@ -230,12 +278,13 @@ class QueryEngine
     /** @return list<ColumnDefinition> */
     public function activeColumns(DynamicTable $table, TableState $state): array
     {
-        $resolved = $table->resolvedColumns();
         $columns = [];
 
         foreach ($state->columns as $key) {
-            if (isset($resolved[$key])) {
-                $columns[] = $resolved[$key];
+            $column = $table->columnFor($key);
+
+            if ($column !== null) {
+                $columns[] = $column;
             }
         }
 
@@ -287,10 +336,8 @@ class QueryEngine
 
     protected function applyColumnSearch(Builder $query, DynamicTable $table, TableState $state): void
     {
-        $resolved = $table->resolvedColumns();
-
         foreach ($state->columnSearch as $key => $term) {
-            $column = $resolved[$key] ?? null;
+            $column = $table->columnFor($key);
 
             if ($column === null || $column->isComputed()) {
                 continue;
@@ -355,15 +402,14 @@ class QueryEngine
             return;
         }
 
-        $resolved = $table->resolvedColumns();
         $applied = 0;
 
         // Grouping is expressed as a leading sort, so the database does the
         // work and the browser only has to notice where the value changes.
         // Nothing is ever loaded into PHP just to be grouped.
-        if ($state->group !== null && isset($resolved[$state->group])) {
-            $group = $resolved[$state->group];
+        $group = $state->group === null ? null : $table->columnFor($state->group);
 
+        if ($group !== null) {
             if (! $group->isComputed()) {
                 $name = (string) ($group->field->column ?? $group->field->name);
 
@@ -377,7 +423,7 @@ class QueryEngine
         }
 
         foreach ($state->sort as $entry) {
-            $column = $resolved[$entry['field']] ?? null;
+            $column = $table->columnFor($entry['field']);
 
             if ($column === null || $column->isComputed()) {
                 continue;

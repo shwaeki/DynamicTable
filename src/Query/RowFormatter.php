@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Shwaeki\DynamicTable\Columns\CellRenderers;
 use Shwaeki\DynamicTable\Columns\ColumnDefinition;
 use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Metadata\FieldType;
@@ -140,6 +141,42 @@ class RowFormatter
         return $current instanceof Model ? $current->getAttribute($attribute) : null;
     }
 
+    /**
+     * A column's aggregate, formatted the way that column's values are.
+     *
+     * A total under a currency column has to read as currency, or the reader
+     * has to do the conversion in their head. A count is the exception: it
+     * counts rows, not money, so it is only ever a plain number.
+     *
+     * @param  array<string, float|int|null>  $summaries
+     * @param  list<ColumnDefinition>  $columns
+     * @return array<string, string>
+     */
+    public function summaries(array $summaries, array $columns): array
+    {
+        $formatted = [];
+
+        foreach ($columns as $column) {
+            if (! array_key_exists($column->key, $summaries)) {
+                continue;
+            }
+
+            $value = $summaries[$column->key];
+
+            if ($value === null) {
+                $formatted[$column->key] = '—';
+
+                continue;
+            }
+
+            $formatted[$column->key] = $column->summary === 'count'
+                ? $this->number((float) $value, 0)
+                : (string) $this->display($value, $column);
+        }
+
+        return $formatted;
+    }
+
     protected function display(mixed $value, ColumnDefinition $column): string|bool|null
     {
         if ($value === null) {
@@ -195,6 +232,16 @@ class RowFormatter
             'lower' => Str::lower((string) $value),
             'headline' => Str::headline((string) $value),
             'truncate' => Str::limit((string) $value, $argument !== null ? (int) $argument : 60),
+
+            // The built-in cell renderers. They return markup, which is why the
+            // resolver marks a column using one of them as raw.
+            'progress' => CellRenderers::progress($value, $argument),
+            'rating' => CellRenderers::rating($value, $argument),
+            'sparkline' => CellRenderers::sparkline($value, $argument),
+            'chips' => CellRenderers::chips($value, $argument),
+            'avatar' => CellRenderers::avatar($value, $argument),
+            'duration' => CellRenderers::duration($value, $argument),
+
             default => null,
         };
     }

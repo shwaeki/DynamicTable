@@ -6,7 +6,7 @@
  */
 
 import { el } from './dom.js';
-import { dialog, select } from './ui.js';
+import { dialog, popover, select } from './ui.js';
 
 export default function install(table) {
     let catalogue = null;
@@ -276,6 +276,110 @@ export default function install(table) {
         return group;
     }
 
+    /* ------------------------------------------------------------------ */
+    /* Quick filter, from the column header menu                           */
+    /* ------------------------------------------------------------------ */
+
+    /** Every condition anywhere in the tree that is about this field. */
+    function conditionsOn(node, path, found = []) {
+        for (const child of node?.conditions || []) {
+            if (child.conditions) conditionsOn(child, path, found);
+            else if (child.field === path) found.push(child);
+        }
+
+        return found;
+    }
+
+    /** The same tree with this field's conditions taken out, at any depth. */
+    function without(node, path) {
+        const conditions = [];
+
+        for (const child of node?.conditions || []) {
+            if (child.conditions) {
+                const inner = without(child, path);
+
+                if (inner.conditions.length) conditions.push(inner);
+            } else if (child.field !== path) {
+                conditions.push(child);
+            }
+        }
+
+        return { logic: node?.logic || 'and', conditions };
+    }
+
+    /**
+     * One column, one condition, in a small panel — the Dynamics "Filter by".
+     *
+     * It writes into the same filter tree the builder edits, so a filter set
+     * here appears in the filter panel, counts towards the badge, is saved with
+     * a view and is applied by exactly the same code on the server. This is a
+     * shortcut to the tree, never a second kind of filter.
+     */
+    async function quick(path, trigger) {
+        await ensureCatalogue();
+
+        const field = findField(path);
+
+        if (! field) return;
+
+        const existing = conditionsOn(table.state.filters, path)[0];
+        const condition = {
+            field: path,
+            operator: existing?.operator || field.operators?.[0] || 'equals',
+            value: existing ? existing.value : '',
+        };
+
+        const control = el('div', { class: 'dt-quick-value' });
+
+        const paintValue = () => {
+            control.replaceChildren(valueInput(field, condition, (value) => { condition.value = value; }));
+        };
+
+        paintValue();
+
+        const apply = () => {
+            const tree = without(table.state.filters, path);
+
+            if (arity(condition.operator) === 0 || `${condition.value}` !== '') {
+                tree.conditions.push({ ...condition });
+            }
+
+            table.state.filters = tree.conditions.length ? tree : null;
+            instance.close();
+            updateBadge();
+            table.refresh({ resetPage: true });
+        };
+
+        const instance = popover(table, trigger, {
+            title: table.t('header.filter_by'),
+            body: el('div', { class: 'dt-form dt-quick-filter' }, [
+                select(table, operatorsFor(field), condition.operator, (value) => {
+                    condition.operator = value;
+                    condition.value = '';
+                    paintValue();
+                }, { 'aria-label': table.t('filter.operator') }),
+                control,
+            ]),
+            footer: el('div', { class: 'dt-popover-actions' }, [
+                el('button', {
+                    type: 'button',
+                    class: table.classes.button,
+                    text: table.t('filters_panel.clear'),
+                    disabled: ! existing,
+                    onclick: () => {
+                        const tree = without(table.state.filters, path);
+
+                        table.state.filters = tree.conditions.length ? tree : null;
+                        instance.close();
+                        updateBadge();
+                        table.refresh({ resetPage: true });
+                    },
+                }),
+                el('button', { type: 'button', class: table.classes.buttonPrimary, text: table.t('apply'), onclick: apply }),
+            ]),
+        });
+    }
+
     function updateBadge() {
         const badge = table.root.querySelector('[data-dt-filter-count]');
         if (!badge) return;
@@ -290,6 +394,7 @@ export default function install(table) {
     updateBadge();
 
     return {
+        quick,
         /**
          * @param {string|null} seedPath opened from a column header menu, so
          *        the builder starts with a condition on that column rather

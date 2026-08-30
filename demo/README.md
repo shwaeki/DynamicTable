@@ -74,7 +74,8 @@ Until you run one, its example page tells you which command to run. Add
 | [`/spreadsheet`](http://127.0.0.1:8000/dynamic-table/examples/spreadsheet) | Range selection, paste from Excel, batched save. |
 | [`/validation`](http://127.0.0.1:8000/dynamic-table/examples/validation) | Break a rule and watch the error land on the cell. |
 | [`/performance`](http://127.0.0.1:8000/dynamic-table/examples/performance) | Change the page size; the query count does not move. |
-| [`/scale-10m`](http://127.0.0.1:8000/dynamic-table/examples/scale-10m) | Ten million rows, paged without ever counting them. |
+| [`/scale-100k`](http://127.0.0.1:8000/dynamic-table/examples/scale-100k) | A hundred thousand rows, with nothing special configured. |
+| [`/builder`](http://127.0.0.1:8000/dynamic-table/builder) | Switch features on and off; copy the class that produces what you see. |
 | [`/rtl`](http://127.0.0.1:8000/dynamic-table/examples/rtl) | Switch to AR or HE in the header. |
 | [`/everything`](http://127.0.0.1:8000/dynamic-table/examples/everything) | Every feature at once — still one small class. |
 

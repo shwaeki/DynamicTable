@@ -51,6 +51,39 @@ class TablePayload
             'to' => $paginator->lastItem(),
         ];
 
+        // Columns the picker added were never in the boot payload, so the
+        // browser has a key in its state with no definition to paint. Send the
+        // definition with the rows — only for the ones it cannot already have,
+        // so an ordinary table pays nothing for this.
+        $declared = $table->resolvedColumns();
+        $added = [];
+
+        foreach ($columns as $column) {
+            if (! isset($declared[$column->key])) {
+                $added[] = $column->toArray() + ['visible' => true, 'added' => true];
+            }
+        }
+
+        if ($added !== []) {
+            $payload['columns'] = $added;
+        }
+
+        // "No records" and "no matches" are different sentences, and only the
+        // second one has an action attached. The distinction is made here,
+        // where the state is known, rather than guessed at in the browser.
+        if ($paginator->isEmpty()) {
+            $payload['emptyReason'] = $state->isUnfiltered() ? 'none' : 'filtered';
+        }
+
+        // Aggregates for the columns that asked for one, over the whole
+        // filtered set rather than the page — a total that changes when you
+        // turn the page is not a total.
+        $summaries = $this->queries->summaries($table, $state);
+
+        if ($summaries !== []) {
+            $payload['summaries'] = $this->formatter->summaries($summaries, $columns);
+        }
+
         if ($state->warnings !== []) {
             $payload['warnings'] = array_values(array_unique($state->warnings));
         }
@@ -104,6 +137,21 @@ class TablePayload
             $columns[] = $column->toArray() + ['visible' => in_array($key, $state->columns, true)];
         }
 
+        // Columns the picker added are not in the declared set, so they are
+        // appended here — otherwise the browser would have a key in its state
+        // with no definition to paint.
+        foreach ($state->columns as $key) {
+            if (isset($resolved[$key])) {
+                continue;
+            }
+
+            $added = $table->columnFor($key);
+
+            if ($added !== null) {
+                $columns[] = $added->toArray() + ['visible' => true, 'added' => true];
+            }
+        }
+
         return array_filter([
             'key' => $table->key(),
             'title' => $table->title(),
@@ -145,6 +193,7 @@ class TablePayload
                 'create' => $features->has(Feature::CREATE) && $table->can('create'),
                 'bulkEdit' => $features->has(Feature::BULK_EDIT) && $table->can('update'),
                 'export' => $features->has(Feature::EXPORT) && $table->can('export'),
+                'print' => $features->has(Feature::PRINT) && $table->can('export'),
                 'import' => $features->has(Feature::IMPORT) && $table->can('import'),
                 'views' => $features->has(Feature::VIEWS),
                 'systemViews' => $features->has(Feature::VIEWS) && $table->can('manage-system-views'),
@@ -185,6 +234,7 @@ class TablePayload
             'data' => route('dynamic-table.data'),
             'fields' => route('dynamic-table.fields'),
             'options' => route('dynamic-table.options'),
+            'print' => route('dynamic-table.print'),
             'edit' => route('dynamic-table.edit'),
             'action' => route('dynamic-table.action'),
             'rowAction' => route('dynamic-table.row-action'),

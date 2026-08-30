@@ -54,13 +54,15 @@ final class Feature
 
     public const GROUPING = 'grouping';
 
+    public const PRINT = 'print';
+
     public const EXPORT = 'export';
 
     public const IMPORT = 'import';
 
-    public const SPREADSHEET = 'spreadsheet';
-
     public const SOFT_DELETES = 'soft_deletes';
+
+    public const REMEMBER_STATE = 'remember_state';
 
     public const URL_STATE = 'url_state';
 
@@ -97,10 +99,11 @@ final class Feature
         self::FACETS,
         self::INLINE_EDIT,
         self::GROUPING,
+        self::PRINT,
         self::EXPORT,
         self::IMPORT,
-        self::SPREADSHEET,
         self::SOFT_DELETES,
+        self::REMEMBER_STATE,
         self::URL_STATE,
     ];
 
@@ -113,7 +116,6 @@ final class Feature
         self::BULK_ACTIONS => [self::SELECTION],
         self::BULK_EDIT => [self::SELECTION],
         self::CREATE => [self::INLINE_EDIT],
-        self::SPREADSHEET => [self::INLINE_EDIT, self::SELECTION],
         self::COLUMN_REORDERING => [self::COLUMN_PICKER],
         self::COLUMN_RESIZING => [self::COLUMN_PICKER],
         self::VIEWS => [self::COLUMN_PICKER],
@@ -141,7 +143,6 @@ final class Feature
         self::STICKY_COLUMNS => ['sticky'],
         self::EXPORT => ['transfer'],
         self::IMPORT => ['transfer'],
-        self::SPREADSHEET => ['spreadsheet'],
     ];
 
     /** Normalise "bulk-actions", "bulkActions" and "BULK_ACTIONS" to "bulk_actions". */

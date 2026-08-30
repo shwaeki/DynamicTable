@@ -8,6 +8,9 @@ return [
     'filters' => 'Filters',
     'columns' => 'Columns',
     'loading' => 'Loading...',
+    'empty_filtered' => 'Nothing matches these filters',
+    'empty_filtered_hint' => 'Try removing a condition, or clear them all.',
+    'clear_filters' => 'Clear filters',
     'empty' => 'No records found',
     'error' => 'Something went wrong while loading data.',
     'retry' => 'Retry',
@@ -24,6 +27,7 @@ return [
     'yes' => 'Yes',
     'no' => 'No',
     'apply' => 'Apply',
+    'back' => 'Back',
     'cancel' => 'Cancel',
     'save' => 'Save',
     'close' => 'Close',
@@ -44,6 +48,10 @@ return [
         'datetime' => 'd M Y H:i',
     ],
 
+    'filters_panel' => [
+        'clear' => 'Clear',
+    ],
+
     'filter' => [
         'add' => 'Add filter',
         'add_group' => 'Add group',
@@ -60,6 +68,9 @@ return [
     ],
 
     'columns_panel' => [
+        'add' => 'Add column',
+        'remove' => 'Remove :column',
+        'none_left' => 'Every field is already a column.',
         'title' => 'Choose columns',
         'search' => 'Search columns...',
         'reset' => 'Reset to default',
@@ -197,6 +208,30 @@ return [
     'detail' => [
         'title' => 'Details',
         'toggle' => 'Show details',
+    ],
+
+    'print' => [
+        'title' => 'Print',
+        'action' => 'Print',
+        'search' => 'Search: :term',
+        'sorted' => 'Sorted by :columns',
+        'filters' => '{1} 1 filter applied|[2,*] :count filters applied',
+        'rows' => '{0} No rows|{1} 1 row|[2,*] :count rows',
+        'truncated' => 'Only the first :limit rows are printed. Export the view for the complete set.',
+        'scopes' => [
+            'page' => 'This page',
+            'view' => 'Current view',
+            'all' => 'All records',
+            'selected' => 'Selected records',
+        ],
+    ],
+
+    'summary' => [
+        'sum' => 'Total',
+        'avg' => 'Average',
+        'min' => 'Lowest',
+        'max' => 'Highest',
+        'count' => 'Count',
     ],
 
     'errors' => [

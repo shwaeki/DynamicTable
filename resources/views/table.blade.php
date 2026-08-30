@@ -17,6 +17,27 @@
     $sticky = array_flip($boot['sticky'] ?? []);
     $toolbarActions = collect($boot['toolbarActions'] ?? []);
     $leading = ($selectable ? 1 : 0) + ($expandable ? 1 : 0);
+    $headerMenu = in_array('header-menu', $boot['modules'] ?? [], true);
+    $summaries = $data['summaries'] ?? [];
+
+    // Which columns a filter is about, at any depth of the condition tree. The
+    // marker is derived from the tree rather than stored beside it, so the
+    // builder, the header menu and a saved view all light up the same way.
+    $filteredKeys = (function (array $node) use (&$filteredKeys): array {
+        $keys = [];
+
+        foreach ($node['conditions'] ?? [] as $child) {
+            if (isset($child['conditions'])) {
+                $keys = array_merge($keys, $filteredKeys($child));
+            } elseif (! empty($child['field'])) {
+                $keys[] = str_replace('.', '__', (string) $child['field']);
+            }
+        }
+
+        return $keys;
+    })($boot['state']['filters'] ?? []);
+
+    $filtered = array_flip($filteredKeys);
     $t = fn (string $key, array $replace = []) => __('dynamic-table::table.'.$key, $replace);
 @endphp
 
@@ -74,8 +95,8 @@
                     aria-expanded="false"
                     title="{{ $t('views.title') }}"
                 >
-                    <span data-dt-view-label>{{ $boot['viewName'] ?? $t('views.title') }}</span>
-                    <span class="dt-caret" aria-hidden="true">⌄</span>
+                    <span class="dt-view-name" data-dt-view-label>{{ $boot['viewName'] ?? $t('views.title') }}</span>
+                    <span class="dt-caret" aria-hidden="true"></span>
                 </button>
             @endif
 
@@ -89,6 +110,16 @@
                 <button type="button" class="{{ $classes['button'] ?? '' }}" data-dt-open="export">
                     {{ $t('export.title') }}
                 </button>
+            @endif
+
+            @if (($features['print'] ?? false) && ($boot['permissions']['print'] ?? false))
+                {{-- A link, not a fetch: printing is a page, and a page is a URL. --}}
+                <a
+                    class="{{ $classes['button'] ?? '' }}"
+                    href="{{ $boot['endpoints']['print'] }}?table={{ $boot['key'] }}"
+                    target="_blank"
+                    data-dt-print
+                >{{ $t('print.title') }}</a>
             @endif
 
             @if (($features['import'] ?? false) && ($boot['permissions']['import'] ?? false))
@@ -133,7 +164,34 @@
         data-dt-scroller
         @if (! empty($boot['maxHeight'])) style="--dt-max-height: {{ $boot['maxHeight'] }}" @endif
     >
-        <table class="{{ $classes['table'] }}" data-dt-table>
+        @php
+            /*
+             * Sized columns switch the table to fixed layout; see .dt-sized.
+             *
+             * A width declared on the column counts, not only one the reader
+             * dragged: auto layout treats a width as a suggestion and refuses
+             * to go under the header's own min-content width, which is how a
+             * column asked for 25px comes out at 180.
+             */
+            $sizes = collect($visible)
+                ->mapWithKeys(fn ($column) => [
+                    $column['key'] => $state->widths[$column['key']] ?? ($column['width'] ?? null),
+                ])
+                ->filter()
+                ->all();
+
+            $sized = $sizes !== [];
+
+            /*
+             * A column narrowed to the width of "$2" cannot also carry a
+             * cell's worth of padding: border-box means the padding would eat
+             * the whole column and leave no room even for the ellipsis. The
+             * same threshold as syncSizedLayout() in core.js.
+             */
+            $narrow = array_filter($sizes, fn ($width) => $width < 64);
+        @endphp
+
+        <table class="{{ $classes['table'] }} @if ($sized) dt-sized @endif" data-dt-table>
             <thead class="{{ $classes['thead'] }}">
                 <tr class="{{ $classes['headRow'] }}">
                     @if ($expandable)
@@ -149,34 +207,49 @@
                     @endif
 
                     @foreach ($visible as $column)
-                        @php $current = $sort->get($column['key']); @endphp
+                        @php
+                            $current = $sort->get($column['key']);
+                            $width = $sizes[$column['key']] ?? null;
+                        @endphp
                         <th
-                            class="{{ $classes['th'] }} @if(!empty($column['sortable'])) {{ $classes['thSortable'] }} @endif dt-align-{{ $column['align'] ?? 'start' }}"
+                            class="{{ $classes['th'] }} @if(!empty($column['sortable']) && ! $headerMenu) {{ $classes['thSortable'] }} @endif dt-align-{{ $column['align'] ?? 'start' }} @if (isset($narrow[$column['key']])) dt-narrow @endif"
                             scope="col"
                             data-dt-column="{{ $column['key'] }}"
                             @if (isset($sticky[$column['key']])) data-dt-sticky @endif
-                            @if (!empty($column['width'])) style="width: {{ $column['width'] }}px" @endif
+                            @if (isset($filtered[$column['key']])) data-dt-filtered @endif
+                            @if (! empty($width)) style="width: {{ $width }}px" @endif
                             @if (!empty($column['sortable'])) aria-sort="{{ $current ? ($current['direction'] === 'asc' ? 'ascending' : 'descending') : 'none' }}" @endif
                         >
-                            @if (!empty($column['sortable']))
+                            @if ($headerMenu)
+                                {{--
+                                    With the header menu on, the header opens the
+                                    menu instead of sorting: Dynamics puts both
+                                    sort directions in that menu, and a header
+                                    that both sorts and opens a menu makes one of
+                                    the two an accident.
+                                --}}
+                                <button
+                                    type="button"
+                                    class="dt-header-trigger"
+                                    data-dt-header-menu="{{ $column['key'] }}"
+                                    aria-haspopup="menu"
+                                    aria-expanded="false"
+                                    aria-label="{{ $t('header.menu', ['column' => $column['label']]) }}"
+                                >
+                                    <span>{{ $column['label'] }}</span>
+                                    <span class="dt-sort-icon" aria-hidden="true">{{ $current ? ($current['direction'] === 'asc' ? '▲' : '▼') : '' }}</span>
+                                    @if (isset($filtered[$column['key']]))
+                                        <span class="dt-filtered-icon" aria-hidden="true">▼</span>
+                                    @endif
+                                    <span class="dt-header-cog" aria-hidden="true">⚙</span>
+                                </button>
+                            @elseif (!empty($column['sortable']))
                                 <button type="button" class="dt-sort" data-dt-sort="{{ $column['key'] }}">
                                     <span>{{ $column['label'] }}</span>
                                     <span class="dt-sort-icon" aria-hidden="true">{{ $current ? ($current['direction'] === 'asc' ? '▲' : '▼') : '' }}</span>
                                 </button>
                             @else
                                 <span>{{ $column['label'] }}</span>
-                            @endif
-
-                            @if (in_array('header-menu', $boot['modules'] ?? [], true))
-                                {{-- Dynamics-style header menu: sort, group, filter, width, move, hide. --}}
-                                <button
-                                    type="button"
-                                    class="dt-header-menu"
-                                    data-dt-header-menu="{{ $column['key'] }}"
-                                    aria-haspopup="menu"
-                                    aria-expanded="false"
-                                    aria-label="{{ $t('header.menu', ['column' => $column['label']]) }}"
-                                >⌄</button>
                             @endif
 
                             @if ($features['column_resizing'] ?? false)
@@ -193,10 +266,16 @@
                 </tr>
 
                 @if ($features['column_search'] ?? false)
-                    <tr class="{{ $classes['filterRow'] }}">
-                        @if ($selectable)<th class="{{ $classes['th'] }}"></th>@endif
+                    {{--
+                        One cell per cell of the row above it, expander and row
+                        buttons included. A search row that skips them is a
+                        search row whose inputs sit under the wrong columns.
+                    --}}
+                    <tr class="{{ $classes['filterRow'] }}" data-dt-search-row>
+                        @if ($expandable)<th class="{{ $classes['th'] }} dt-expand-cell"></th>@endif
+                        @if ($selectable)<th class="{{ $classes['th'] }} dt-select-cell"></th>@endif
                         @foreach ($visible as $column)
-                            <th class="{{ $classes['th'] }}">
+                            <th class="{{ $classes['th'] }} @if (isset($narrow[$column['key']])) dt-narrow @endif" data-dt-search-cell="{{ $column['key'] }}">
                                 @if (!empty($column['filterable']))
                                     <input
                                         type="text"
@@ -208,6 +287,10 @@
                                 @endif
                             </th>
                         @endforeach
+
+                        @if ($boot['rowActions'] ?? [])
+                            <th class="{{ $classes['th'] }} dt-row-actions-cell"></th>
+                        @endif
                     </tr>
                 @endif
             </thead>
@@ -236,7 +319,7 @@
                         @foreach ($visible as $column)
                             @php $value = $row['c'][$column['key']] ?? null; @endphp
                             <td
-                                class="{{ $classes['cell'] }} dt-align-{{ $column['align'] ?? 'start' }} {{ $column['class'] ?? '' }}"
+                                class="{{ $classes['cell'] }} dt-align-{{ $column['align'] ?? 'start' }} @if (isset($narrow[$column['key']])) dt-narrow @endif {{ $column['class'] ?? '' }}"
                                 data-dt-cell="{{ $column['key'] }}"
                                 @if (isset($sticky[$column['key']])) data-dt-sticky @endif
                                 data-label="{{ $column['label'] }}"
@@ -277,11 +360,53 @@
                 @empty
                     <tr>
                         <td class="{{ $classes['empty'] }}" colspan="{{ count($visible) + $leading + (($boot['rowActions'] ?? []) ? 1 : 0) }}">
-                            {{ $t('empty') }}
+                            {{-- Mirrored by the JS renderer; see renderEmpty(). --}}
+                            <div class="dt-empty-state" data-dt-empty>
+                                <p class="dt-empty-title">
+                                    {{ ($data['emptyReason'] ?? 'none') === 'filtered' ? $t('empty_filtered') : $t('empty') }}
+                                </p>
+
+                                @if (($data['emptyReason'] ?? null) === 'filtered')
+                                    <p class="dt-empty-hint">{{ $t('empty_filtered_hint') }}</p>
+
+                                    <button type="button" class="{{ $classes['button'] ?? '' }}" data-dt-clear-filters>
+                                        {{ $t('clear_filters') }}
+                                    </button>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @endforelse
             </tbody>
+
+            @if ($summaries !== [])
+                {{--
+                    The summary row.
+
+                    In <tfoot>, which is where a table's totals belong: screen
+                    readers announce it as such, and it prints on every page.
+                --}}
+                <tfoot class="dt-tfoot" data-dt-summary-row>
+                    <tr class="dt-summary-row">
+                        @if ($expandable)<td class="{{ $classes['cell'] }}"></td>@endif
+                        @if ($selectable)<td class="{{ $classes['cell'] }}"></td>@endif
+
+                        @foreach ($visible as $column)
+                            <td
+                                class="{{ $classes['cell'] }} dt-align-{{ $column['align'] ?? 'start' }}"
+                                data-dt-summary="{{ $column['key'] }}"
+                            >
+                                @if (isset($summaries[$column['key']]))
+                                    <span class="dt-summary-label">{{ $t('summary.'.$column['summary']) }}</span>
+                                    <span class="dt-summary-value">{{ $summaries[$column['key']] }}</span>
+                                @endif
+                            </td>
+                        @endforeach
+
+                        @if ($boot['rowActions'] ?? [])<td class="{{ $classes['cell'] }}"></td>@endif
+                    </tr>
+                </tfoot>
+            @endif
         </table>
 
         @if (($boot['paginationStyle'] ?? 'pages') === 'infinite')

@@ -65,7 +65,7 @@ export default function install(table) {
 
         const input = el('input', {
             type: 'number',
-            min: '60',
+            min: '24',
             max: '1200',
             step: '10',
             class: table.classes.input,
@@ -92,6 +92,7 @@ export default function install(table) {
                         delete widths[column.key];
                         table.state.widths = widths;
                         if (th) th.style.width = '';
+                        table.syncSizedLayout();
                         instance.close();
                     },
                 }),
@@ -101,10 +102,11 @@ export default function install(table) {
                     class: table.classes.buttonPrimary,
                     text: table.t('apply'),
                     onclick: () => {
-                        const width = Math.max(60, Math.min(1200, Number(input.value) || currentWidth));
+                        const width = Math.max(24, Math.min(1200, Number(input.value) || currentWidth));
 
                         table.state.widths = { ...table.state.widths, [column.key]: width };
                         if (th) th.style.width = `${width}px`;
+                        table.syncSizedLayout();
                         instance.close();
                     },
                 }),
@@ -148,12 +150,18 @@ export default function install(table) {
         }
 
         if (features.filters && column.filterable) {
+            const filtered = table.filteredColumns().includes(key);
+
+            // One column, one condition, right here — the whole builder is a
+            // click away in the toolbar and would be a heavy answer to "show me
+            // the active ones".
             items.push({
                 label: table.t('header.filter_by'),
                 icon: '▽',
+                active: filtered,
                 onSelect: async () => {
                     const filters = await table.load('filters');
-                    filters?.open?.('filters', trigger, column.path);
+                    filters?.quick?.(column.path, trigger);
                 },
             });
         }

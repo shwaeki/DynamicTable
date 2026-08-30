@@ -5,7 +5,7 @@
  * so this module's job is to keep the table in sync afterwards: it owns the
  * state object, talks to one JSON endpoint, and repaints only the parts that
  * changed. Everything beyond a plain table (filter builder, views, column
- * picker, editing, actions, transfer, spreadsheet) lives in a separate module
+ * picker, editing, actions, transfer) lives in a separate module
  * that is imported the first time it is actually needed.
  */
 
@@ -51,8 +51,12 @@ export class DynamicTable {
         this.loadingMore = false;
 
         this.bind();
+        this.syncSizedLayout();
+        this.syncHeaderOffset();
         this.watchSentinel();
         this.renderPagination();
+        this.renderFilterIndicators();
+        this.syncPrintLink();
         this.emit('ready', this);
     }
 
@@ -144,15 +148,25 @@ export class DynamicTable {
 
             this.data = response.data;
 
+            // Definitions for columns the picker added. They have to be learned
+            // *before* the state is normalised, because normalising drops keys
+            // this runtime has no definition for.
+            const learned = this.learnColumns(response.data.columns);
+
             // Appending keeps every row already on screen, so the range starts
             // at the first row of the first page, not of this one.
             if (this.appending) this.data.from = 1;
             this.state = { ...this.state, ...normalizeState(response.state || {}, this.columns) };
 
+            if (learned) this.renderHeader();
+
             this.renderRows();
+            this.renderSummaryRow();
+            this.syncPrintLink();
             this.renderPagination();
             this.renderSummary();
             this.renderSortIndicators();
+            this.renderFilterIndicators();
             this.syncUrl();
             this.showWarnings(response.data.warnings);
             this.renderDebug(response.data.debug);
@@ -182,6 +196,7 @@ export class DynamicTable {
             group: this.state.group || undefined,
             trashed: this.state.trashed && this.state.trashed !== 'without' ? this.state.trashed : undefined,
             view: this.state.view || undefined,
+            params: Object.keys(this.state.params || {}).length ? this.state.params : undefined,
         };
 
         if (this.selection.mode === 'exclude' || this.selection.ids.size) {
@@ -215,11 +230,9 @@ export class DynamicTable {
             + ((this.boot.rowActions || []).length ? 1 : 0);
 
         if (!this.data.rows.length) {
-            fragment.append(
-                el('tr', {}, [
-                    el('td', { class: this.classes.empty, colspan: span, text: this.t('empty') }),
-                ]),
-            );
+            fragment.append(el('tr', {}, [
+                el('td', { class: this.classes.empty, colspan: span }, [this.renderEmpty()]),
+            ]));
         }
 
         const groupKey = this.features.grouping ? this.state.group : null;
@@ -245,7 +258,55 @@ export class DynamicTable {
         if (this.appending) body.append(fragment);
         else body.replaceChildren(fragment);
 
+        this.syncSizedLayout();
         this.emit('rows-rendered', this.data.rows);
+    }
+
+    /**
+     * The empty state, which is two different messages.
+     *
+     * "There are no records" is a fact about the data and there is nothing to
+     * do about it. "Nothing matches your filters" is a fact about the *state*,
+     * and the useful thing is a way out of it — so that one, and only that
+     * one, gets a button.
+     */
+    renderEmpty() {
+        const filtered = this.data.emptyReason === 'filtered';
+
+        return el('div', { class: 'dt-empty-state', 'data-dt-empty': '' }, [
+            el('p', { class: 'dt-empty-title', text: this.t(filtered ? 'empty_filtered' : 'empty') }),
+            filtered ? el('p', { class: 'dt-empty-hint', text: this.t('empty_filtered_hint') }) : null,
+            filtered
+                ? el('button', {
+                    type: 'button',
+                    class: this.classes.button,
+                    text: this.t('clear_filters'),
+                    'data-dt-clear-filters': '',
+                })
+                : null,
+        ]);
+    }
+
+    /**
+     * Undo everything that narrowed the result, and nothing else.
+     *
+     * The columns, the sort and the page size are how the reader likes to look
+     * at the table; they did not cause the empty result and are left alone.
+     */
+    clearFilters() {
+        this.state.search = '';
+        this.state.columnSearch = {};
+        this.state.filters = null;
+        this.state.trashed = 'without';
+
+        const search = this.root.querySelector('[data-dt-search]');
+
+        if (search) search.value = '';
+
+        this.root.querySelectorAll('[data-dt-column-search]').forEach((input) => { input.value = ''; });
+
+        this.refresh({ resetPage: true });
+        this.emit('filters-cleared');
     }
 
     renderGroupRow(key, value, span) {
@@ -433,6 +494,58 @@ export class DynamicTable {
         nav.append(button('›', page + 1, { disabled: page >= lastPage }));
     }
 
+    /**
+     * The aggregate row under the table.
+     *
+     * The server sends it already formatted — a total under a currency column
+     * has to read as currency, and that formatting lives in one place, on the
+     * server, so the export and the screen cannot disagree.
+     */
+    /**
+     * Keep the print link pointing at what the reader is actually looking at.
+     *
+     * It stays a plain link — printing is a page, and a page is a URL, so it
+     * opens in a tab, can be reloaded, and can be sent to someone. That means
+     * the current state has to travel in the href rather than in a fetch body.
+     */
+    syncPrintLink() {
+        const link = this.root.querySelector('[data-dt-print]');
+
+        if (! link) return;
+
+        const url = new URL(link.href, window.location.origin);
+
+        url.searchParams.set('table', this.key);
+        url.searchParams.set('state', JSON.stringify(this.serializeState()));
+
+        link.href = url.toString();
+    }
+
+    renderSummaryRow() {
+        const foot = this.root.querySelector('[data-dt-summary-row]');
+
+        if (! foot) return;
+
+        const summaries = this.data.summaries || {};
+
+        foot.hidden = Object.keys(summaries).length === 0;
+
+        for (const cell of foot.querySelectorAll('[data-dt-summary]')) {
+            const key = cell.getAttribute('data-dt-summary');
+            const column = this.columns.find((candidate) => candidate.key === key);
+            const value = summaries[key];
+
+            cell.replaceChildren();
+
+            if (value === undefined) continue;
+
+            cell.append(
+                el('span', { class: 'dt-summary-label', text: this.t(`summary.${column?.summary || 'sum'}`) }),
+                el('span', { class: 'dt-summary-value', text: String(value) }),
+            );
+        }
+    }
+
     renderSummary() {
         const summary = this.root.querySelector('[data-dt-summary]');
 
@@ -452,6 +565,47 @@ export class DynamicTable {
         summary.textContent = this.data.estimate
             ? this.t('showing_estimated', { ...replace, total: number(this.data.estimate) })
             : this.t('showing_uncounted', replace);
+    }
+
+    /**
+     * Column keys that some condition in the filter tree is about, at any depth.
+     *
+     * The header marker is derived from the tree rather than tracked alongside
+     * it, so a filter set in the builder, in the header menu or by a saved view
+     * all light up the same way and none of them can drift.
+     */
+    filteredColumns() {
+        const keys = new Set();
+
+        const walk = (node) => {
+            for (const child of node?.conditions || []) {
+                if (child.conditions) walk(child);
+                else if (child.field) keys.add(String(child.field).replace(/\./g, '__'));
+            }
+        };
+
+        walk(this.state.filters);
+
+        return [...keys];
+    }
+
+    renderFilterIndicators() {
+        const filtered = new Set(this.filteredColumns());
+
+        this.root.querySelectorAll('[data-dt-column]').forEach((th) => {
+            const on = filtered.has(th.getAttribute('data-dt-column'));
+
+            th.toggleAttribute('data-dt-filtered', on);
+
+            let marker = th.querySelector('.dt-filtered-icon');
+
+            if (on && ! marker) {
+                marker = el('span', { class: 'dt-filtered-icon', 'aria-hidden': 'true', text: '▼' });
+                (th.querySelector('.dt-header-trigger') || th).append(marker);
+            } else if (! on && marker) {
+                marker.remove();
+            }
+        });
     }
 
     renderSortIndicators() {
@@ -485,42 +639,57 @@ export class DynamicTable {
         const selectable = !!this.features.selection;
         const cells = [];
 
+        // The expander and the row buttons are cells of the header too. Leaving
+        // them out here would shift every column one place the first time the
+        // header is repainted.
+        if (this.features.row_detail) {
+            cells.push(el('th', { class: `${this.classes.th} dt-expand-cell`, scope: 'col' }, [
+                el('span', { class: 'dt-visually-hidden', text: this.t('detail.title') }),
+            ]));
+        }
+
         if (selectable) {
             cells.push(el('th', { class: `${this.classes.th} dt-select-cell`, scope: 'col' }, [
                 el('input', { type: 'checkbox', 'data-dt-select-all': '', 'aria-label': this.t('select_all') }),
             ]));
         }
 
+        const headerMenu = (this.boot.modules || []).includes('header-menu');
+
         for (const column of columns) {
             const width = this.state.widths?.[column.key] || column.width;
 
             const th = el('th', {
-                class: [this.classes.th, column.sortable ? this.classes.thSortable : null, `dt-align-${column.align || 'start'}`],
+                class: [this.classes.th, column.sortable && ! headerMenu ? this.classes.thSortable : null, `dt-align-${column.align || 'start'}`],
                 scope: 'col',
                 'data-dt-column': column.key,
                 style: width ? `width:${width}px` : null,
                 'aria-sort': column.sortable ? 'none' : null,
             });
 
-            if (column.sortable) {
+            // With the header menu on, the header opens the menu rather than
+            // sorting: both sort directions are in that menu, and a header that
+            // does both makes one of them an accident. Mirrors the template.
+            if (headerMenu) {
+                th.append(el('button', {
+                    type: 'button',
+                    class: 'dt-header-trigger',
+                    'data-dt-header-menu': column.key,
+                    'aria-haspopup': 'menu',
+                    'aria-expanded': 'false',
+                    'aria-label': this.t('header.menu', { column: column.label }),
+                }, [
+                    el('span', { text: column.label }),
+                    el('span', { class: 'dt-sort-icon', 'aria-hidden': 'true' }),
+                    el('span', { class: 'dt-header-cog', 'aria-hidden': 'true', text: '⚙' }),
+                ]));
+            } else if (column.sortable) {
                 th.append(el('button', { type: 'button', class: 'dt-sort', 'data-dt-sort': column.key }, [
                     el('span', { text: column.label }),
                     el('span', { class: 'dt-sort-icon', 'aria-hidden': 'true' }),
                 ]));
             } else {
                 th.append(el('span', { text: column.label }));
-            }
-
-            if ((this.boot.modules || []).includes('header-menu')) {
-                th.append(el('button', {
-                    type: 'button',
-                    class: 'dt-header-menu',
-                    'data-dt-header-menu': column.key,
-                    'aria-haspopup': 'menu',
-                    'aria-expanded': 'false',
-                    'aria-label': this.t('header.menu', { column: column.label }),
-                    text: '⌄',
-                }));
             }
 
             if (this.features.column_resizing) {
@@ -535,9 +704,124 @@ export class DynamicTable {
             cells.push(th);
         }
 
+        if ((this.boot.rowActions || []).length) {
+            cells.push(el('th', { class: `${this.classes.th} dt-row-actions-cell`, scope: 'col' }, [
+                el('span', { class: 'dt-visually-hidden', text: this.t('actions.title') }),
+            ]));
+        }
+
         headRow.replaceChildren(...cells);
+        this.renderSearchRow();
+        this.syncSizedLayout();
+        this.syncHeaderOffset();
         this.renderSortIndicators();
+        this.renderFilterIndicators();
         this.emit('header-rendered');
+    }
+
+    /**
+     * The column-search row, rebuilt to match the header above it.
+     *
+     * One cell per header cell — expander, checkbox and row buttons included —
+     * so the inputs stay under the columns they search. The values come from
+     * the state rather than from the DOM, so a search survives a column change.
+     */
+    renderSearchRow() {
+        const row = this.root.querySelector('[data-dt-table] [data-dt-search-row]');
+        if (!row) return;
+
+        const cells = [];
+
+        if (this.features.row_detail) cells.push(el('th', { class: `${this.classes.th} dt-expand-cell` }));
+        if (this.features.selection) cells.push(el('th', { class: `${this.classes.th} dt-select-cell` }));
+
+        for (const column of this.visibleColumns()) {
+            const cell = el('th', { class: this.classes.th, 'data-dt-search-cell': column.key });
+
+            if (column.filterable) {
+                cell.append(el('input', {
+                    type: 'text',
+                    class: this.classes.input || '',
+                    'data-dt-column-search': column.key,
+                    value: this.state.columnSearch?.[column.key] || '',
+                    'aria-label': this.t('search_column', { column: column.label }),
+                }));
+            }
+
+            cells.push(cell);
+        }
+
+        if ((this.boot.rowActions || []).length) cells.push(el('th', { class: `${this.classes.th} dt-row-actions-cell` }));
+
+        row.replaceChildren(...cells);
+    }
+
+    /**
+     * How far down the second header row has to stick.
+     *
+     * Both rows are sticky, and both would otherwise stop at the top of the
+     * scroller — one on top of the other. The offset is measured rather than
+     * guessed because a header's height depends on its font, its padding and
+     * whether a label wrapped.
+     */
+    syncHeaderOffset() {
+        const element = this.root.querySelector('[data-dt-table]');
+        const headRow = element?.querySelector('thead tr');
+
+        if (!element || !headRow) return;
+
+        element.style.setProperty('--dt-head-offset', `${Math.round(headRow.getBoundingClientRect().height)}px`);
+    }
+
+    /**
+     * Once a column has been given a width, the table stops sharing the
+     * container out between columns and honours the widths it was given: fixed
+     * layout, sized to its content, scrolling sideways when the total no longer
+     * fits. Without this, widening one column can only come out of another.
+     */
+    syncSizedLayout() {
+        const element = this.root.querySelector('[data-dt-table]');
+        if (!element) return;
+
+        /*
+         * Both kinds of width count: the ones the reader dragged and the ones
+         * the column declared. A declared width is rendered as an inline style
+         * on the header, and it needs fixed layout just as much — auto layout
+         * would refuse to take the column under the width of its own label.
+         */
+        const widths = { ...(this.state.widths || {}) };
+
+        element.querySelectorAll('thead th[data-dt-column]').forEach((th) => {
+            const key = th.getAttribute('data-dt-column');
+            const declared = parseInt(th.style.width, 10);
+
+            if (!widths[key] && Number.isFinite(declared)) widths[key] = declared;
+        });
+
+        element.classList.toggle('dt-sized', Object.keys(widths).length > 0);
+
+        // The widths go back onto the headers, so a re-render that arrives
+        // without them cannot leave the state and the table disagreeing.
+        element.querySelectorAll('thead th[data-dt-column]').forEach((th) => {
+            const width = widths[th.getAttribute('data-dt-column')];
+
+            if (width) th.style.width = `${width}px`;
+        });
+
+        // A column narrowed to the width of "$2" cannot also carry a cell's
+        // worth of padding — border-box means the padding would eat the whole
+        // column and leave no room even for the ellipsis.
+        element.querySelectorAll('.dt-narrow').forEach((cell) => cell.classList.remove('dt-narrow'));
+
+        for (const [key, width] of Object.entries(widths)) {
+            if (width >= 64) continue;
+
+            const escaped = CSS.escape(key);
+
+            element.querySelectorAll(
+                `th[data-dt-column="${escaped}"], th[data-dt-search-cell="${escaped}"], td[data-dt-cell="${escaped}"]`,
+            ).forEach((cell) => cell.classList.add('dt-narrow'));
+        }
     }
 
     setLoading(loading) {
@@ -588,16 +872,21 @@ export class DynamicTable {
             search.addEventListener('search', run);
         }
 
-        this.root.querySelectorAll('[data-dt-column-search]').forEach((input) => {
-            input.addEventListener('input', debounce(() => {
-                const key = input.getAttribute('data-dt-column-search');
-                this.state.columnSearch = this.state.columnSearch || {};
+        // Delegated, because the search row is rebuilt whenever the columns
+        // change — a listener bound to the input would go with it.
+        const columnSearch = debounce(() => this.refresh({ resetPage: true }), 350);
 
-                if (input.value.trim() === '') delete this.state.columnSearch[key];
-                else this.state.columnSearch[key] = input.value.trim();
+        this.root.addEventListener('input', (event) => {
+            const input = event.target.closest?.('[data-dt-column-search]');
+            if (!input || !this.root.contains(input)) return;
 
-                this.refresh({ resetPage: true });
-            }, 350));
+            const key = input.getAttribute('data-dt-column-search');
+            this.state.columnSearch = { ...(this.state.columnSearch || {}) };
+
+            if (input.value.trim() === '') delete this.state.columnSearch[key];
+            else this.state.columnSearch[key] = input.value.trim();
+
+            columnSearch();
         });
 
         const perPage = this.root.querySelector('[data-dt-per-page]');
@@ -621,6 +910,30 @@ export class DynamicTable {
                 return;
             }
 
+            const print = event.target.closest('[data-dt-print]');
+
+            if (print && this.root.contains(print)) {
+                /*
+                 * Opened by script, deliberately.
+                 *
+                 * A tab may only close itself if a script opened it, and the
+                 * print page closes itself once the dialog is dismissed. A
+                 * plain target="_blank" tab would print and then sit there.
+                 * Without JavaScript the link still works — it just stays open.
+                 */
+                event.preventDefault();
+                window.open(print.href, `dt-print-${this.key}`);
+
+                return;
+            }
+
+            if (event.target.closest('[data-dt-clear-filters]')) {
+                event.preventDefault();
+                this.clearFilters();
+
+                return;
+            }
+
             const opener = event.target.closest('[data-dt-open]');
 
             if (opener && this.root.contains(opener)) {
@@ -633,8 +946,57 @@ export class DynamicTable {
             if (event.key === 'Escape') this.emit('escape', event);
         });
 
+        this.bindParams();
+
+        // A header row that wraps at one width does not wrap at another, and
+        // the row below it sticks to whatever it measures now.
+        window.addEventListener('resize', debounce(() => this.syncHeaderOffset(), 150));
+
         window.addEventListener('popstate', () => {
             if (this.features.url_state) this.readUrl();
+        });
+    }
+
+    /**
+     * Controls outside the table that feed query().
+     *
+     * They live wherever the page puts them — a filter bar above the table, a
+     * card in the sidebar — so the listeners are on the document, matched by
+     * the table key, rather than on the table's own element.
+     */
+    bindParams() {
+        const scope = this.root.ownerDocument;
+
+        const apply = (options = {}) => this.setParams(this.readParamControls(), options);
+        const applyLater = debounce(() => apply(), this.boot.searchDebounce || 350);
+
+        scope.addEventListener('change', (event) => {
+            if (event.target.closest?.(this.paramSelector())) apply();
+        });
+
+        // Typing is debounced; a date or select fires "change" and applies at once.
+        scope.addEventListener('input', (event) => {
+            const control = event.target.closest?.(this.paramSelector());
+
+            if (control && ['text', 'search', 'number'].includes(control.type)) applyLater();
+        });
+
+        scope.addEventListener('submit', (event) => {
+            const form = event.target.closest?.(`form[data-dt-params="${CSS.escape(this.key)}"]`);
+
+            if (form) {
+                event.preventDefault();
+                apply();
+            }
+        });
+
+        scope.addEventListener('click', (event) => {
+            const reset = event.target.closest?.(`[data-dt-params-reset="${CSS.escape(this.key)}"]`);
+
+            if (reset) {
+                event.preventDefault();
+                this.resetParams();
+            }
         });
     }
 
@@ -659,6 +1021,22 @@ export class DynamicTable {
 
         this.state.sort = sort.slice(0, 3);
         this.refresh({ resetPage: true });
+    }
+
+    /**
+     * Let go of everything this table holds.
+     *
+     * Called when a table's element is replaced — an AJAX swap, a Livewire or
+     * Turbo navigation — so its observers and in-flight request do not outlive
+     * the DOM they were watching.
+     */
+    destroy() {
+        this.observer?.disconnect();
+        this.pending?.abort();
+        this.listeners.clear();
+        this.modules.clear();
+        registry.delete(this.root);
+        registry.delete(this.key);
     }
 
     /**
@@ -759,7 +1137,36 @@ export class DynamicTable {
         });
     }
 
-    setColumns(keys, { widths = null } = {}) {
+    /**
+     * Teach this runtime about columns it was not booted with.
+     *
+     * @returns {boolean} whether anything was new, so the caller can repaint.
+     */
+    learnColumns(definitions) {
+        let learned = false;
+
+        for (const definition of definitions || []) {
+            const at = this.columns.findIndex((column) => column.key === definition.key);
+
+            if (at === -1) {
+                this.columns.push(definition);
+                learned = true;
+            } else {
+                this.columns[at] = { ...this.columns[at], ...definition };
+            }
+        }
+
+        return learned;
+    }
+
+    /**
+     * @param {Array|null} definitions for keys this runtime does not know yet —
+     *        the picker has them from the field catalogue, so the header can be
+     *        drawn at once rather than after the round trip.
+     */
+    setColumns(keys, { widths = null, definitions = null } = {}) {
+        this.learnColumns(definitions);
+
         this.state.columns = keys;
         if (widths) this.state.widths = widths;
 
@@ -780,6 +1187,86 @@ export class DynamicTable {
 
         this.renderHeader();
         this.refresh();
+    }
+
+    /* ---------------------------------------------------------- */
+    /* Parameters (the table's own toolbar controls)               */
+    /* ---------------------------------------------------------- */
+
+    /** The parameters the next request will carry. */
+    getParams() {
+        return { ...(this.state.params || {}) };
+    }
+
+    /**
+     * Set the table's parameters and reload.
+     *
+     * Merges by default, so one control can set its own value without knowing
+     * about the others. A value of null, undefined or "" clears the parameter,
+     * which is how "any status" is expressed.
+     */
+    setParams(params, { merge = true, refresh = true, resetPage = true } = {}) {
+        const next = merge ? { ...(this.state.params || {}) } : {};
+
+        for (const [name, value] of Object.entries(params || {})) {
+            if (value === null || value === undefined || value === '' || (Array.isArray(value) && !value.length)) {
+                delete next[name];
+            } else {
+                next[name] = value;
+            }
+        }
+
+        this.state.params = next;
+        this.emit('params-changed', next);
+
+        if (refresh) this.refresh({ resetPage });
+
+        return next;
+    }
+
+    setParam(name, value, options = {}) {
+        return this.setParams({ [name]: value }, options);
+    }
+
+    /** Drop every parameter the controls have set, and reload. */
+    resetParams(options = {}) {
+        this.root.ownerDocument.querySelectorAll(this.paramSelector()).forEach((input) => {
+            if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
+            else input.value = '';
+        });
+
+        return this.setParams({}, { ...options, merge: false });
+    }
+
+    paramSelector() {
+        return `[data-dt-param][data-dt-table="${CSS.escape(this.key)}"], [data-dt-params="${CSS.escape(this.key)}"] [data-dt-param]`;
+    }
+
+    /**
+     * Read every bound control at once.
+     *
+     * Controls are read as a set rather than one at a time so a form that
+     * changes two fields — a from/to pair, say — still makes one request.
+     */
+    readParamControls() {
+        const params = {};
+
+        this.root.ownerDocument.querySelectorAll(this.paramSelector()).forEach((input) => {
+            const name = input.getAttribute('data-dt-param');
+            if (!name) return;
+
+            let value = input.type === 'checkbox' ? (input.checked ? (input.value || true) : '') : input.value;
+
+            if (input.multiple && input.tagName === 'SELECT') {
+                value = [...input.selectedOptions].map((option) => option.value).filter(Boolean);
+            }
+
+            if (input.type === 'radio' && !input.checked) return;
+
+            params[name] = value;
+        });
+
+        return params;
     }
 
     /* ---------------------------------------------------------- */
@@ -944,6 +1431,7 @@ function normalizeState(state, columns) {
         group: state.group || null,
         trashed: state.trashed || 'without',
         view: state.view || null,
+        params: state.params || {},
     };
 }
 
@@ -984,6 +1472,15 @@ export function mount(root) {
 
     root.dataset.dtMounted = 'true';
 
+    // A table of this key may already exist with an element that has since
+    // been replaced. Its observers would otherwise keep running against a
+    // detached tree for the life of the page.
+    const previous = registry.get(boot.key);
+
+    if (previous && previous.root !== root && ! previous.root.isConnected) {
+        previous.destroy();
+    }
+
     const table = new DynamicTable(root, boot);
     registry.set(root, table);
     registry.set(boot.key, table);
@@ -991,8 +1488,13 @@ export function mount(root) {
     // Only modules that must be live before any user interaction are warmed;
     // panels (filters, views, columns, transfer) load when first opened.
     for (const name of boot.modules || []) {
-        if (['actions', 'inline-edit', 'spreadsheet', 'responsive', 'header-menu', 'detail', 'sticky'].includes(name)) table.load(name);
+        if (['actions', 'inline-edit', 'responsive', 'header-menu', 'detail', 'sticky'].includes(name)) table.load(name);
     }
+
+    // Resizing lives in the columns module but is not a panel: its handles are
+    // in the header from first paint, so the module has to be there before the
+    // first drag rather than when the picker is opened.
+    if (boot.features?.column_resizing) table.load('columns');
 
     return table;
 }

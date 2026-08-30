@@ -26,7 +26,7 @@ class UsersTable extends DynamicTable
 - [Columns](columns.md) — discovery, types, formatting, relationships
 - [Search and filters](filters.md) — global search, column search, the filter builder
 - [Saved views](views.md) — user views, system views, defaults, URL state
-- [Editing and actions](editing.md) — inline editing, spreadsheet mode, bulk actions
+- [Editing and actions](editing.md) — inline editing, inline create, bulk edit, actions
 - [Export and import](export-import.md)
 
 ## Presentation
@@ -45,7 +45,7 @@ class UsersTable extends DynamicTable
 ## Going deeper
 
 - [Architecture & decisions](architecture.md) — why Livewire is not a
-  dependency, how the spreadsheet and Excel libraries were chosen, the query
+  dependency, how the Excel libraries were chosen, the query
   strategy
 - [Extending](extending.md) — events, DOM API, adapters, public vs internal API
 

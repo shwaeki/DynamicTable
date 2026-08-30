@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BuilderController;
 use App\Http\Controllers\DocController;
 use App\Http\Controllers\ExampleController;
 use Illuminate\Support\Facades\Route;
@@ -19,4 +20,11 @@ Route::prefix('dynamic-table/docs')->group(function (): void {
 
     // One route per docs/*.md file, so a documentation link is a real URL.
     Route::get('/{page}', [DocController::class, 'show'])->name('docs.show');
+});
+
+Route::prefix('dynamic-table/builder')->group(function (): void {
+    Route::get('/', [BuilderController::class, 'show'])->name('builder.show');
+
+    // One option changed: re-render the table and the code, nothing else.
+    Route::post('/preview', [BuilderController::class, 'preview'])->name('builder.preview');
 });

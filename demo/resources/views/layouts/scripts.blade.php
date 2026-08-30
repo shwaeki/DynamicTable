@@ -43,6 +43,27 @@
         });
     })();
 
+    /*
+     * Bring the current page's entry into view in the sidebar.
+     *
+     * With fifty examples the active one is usually below the fold, and "which
+     * one am I looking at" should not require scrolling to find out. The
+     * sidebar's own scrollTop is set rather than scrollIntoView(), which would
+     * also scroll the page and move the reader away from the table.
+     */
+    (() => {
+        const sidebar = document.querySelector('[data-sidebar]');
+        const active = sidebar?.querySelector('.demo-nav-link.is-active');
+
+        if (! sidebar || ! active) return;
+
+        const centred = active.offsetTop - (sidebar.clientHeight / 2) + (active.offsetHeight / 2);
+
+        if (sidebar.scrollHeight > sidebar.clientHeight) {
+            sidebar.scrollTop = Math.max(0, centred);
+        }
+    })();
+
     // Source tabs + copy.
     (() => {
         const tabs = [...document.querySelectorAll('[data-source-tab]')];
@@ -106,6 +127,19 @@
                 button.setAttribute('aria-pressed', String(active));
             }
         };
+
+        /*
+         * A table that appears after the choice was made — the builder swaps
+         * one in on every change — has none of these attributes yet. The
+         * package announces each table as it mounts, which is the moment to
+         * bring it in line.
+         */
+        document.addEventListener('dynamic-table:ready', (event) => {
+            const choice = root.dataset.schemeChoice || 'auto';
+
+            if (choice === 'auto') event.target.removeAttribute('data-dt-scheme');
+            else event.target.setAttribute('data-dt-scheme', choice);
+        });
 
         for (const button of buttons) {
             button.addEventListener('click', () => apply(button.dataset.schemeChoice));

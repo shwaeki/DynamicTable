@@ -251,3 +251,23 @@ it('uses the bootstrap class map when the theme is bootstrap', function (): void
     expect($html)->toContain('table table-hover')
         ->and($html)->not->toContain('divide-gray-200');
 });
+
+it('honours a width declared on a column, not only one the reader dragged', function (): void {
+    $table = new class extends DynamicTable
+    {
+        protected string $model = User::class;
+
+        protected function columns(): array
+        {
+            return ['name' => ['width' => 25], 'email'];
+        }
+    };
+
+    $html = app(TableRenderer::class)->render($table)->toHtml();
+
+    // Without fixed layout the width is a suggestion the header's own label overrules.
+    expect($html)
+        ->toContain('dt-sized')
+        ->toContain('style="width: 25px"')
+        ->toContain('dt-narrow');
+});
