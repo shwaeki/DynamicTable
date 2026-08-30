@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'equals' => 'equals',
+    'not_equals' => 'does not equal',
+    'contains' => 'contains',
+    'not_contains' => 'does not contain',
+    'starts_with' => 'starts with',
+    'ends_with' => 'ends with',
+    'greater_than' => 'greater than',
+    'greater_or_equal' => 'greater than or equal',
+    'less_than' => 'less than',
+    'less_or_equal' => 'less than or equal',
+    'between' => 'between',
+    'not_between' => 'not between',
+    'in' => 'is any of',
+    'not_in' => 'is none of',
+    'is_empty' => 'is empty',
+    'is_not_empty' => 'is not empty',
+    'before' => 'before',
+    'after' => 'after',
+    'today' => 'today',
+    'yesterday' => 'yesterday',
+    'tomorrow' => 'tomorrow',
+    'this_week' => 'this week',
+    'last_week' => 'last week',
+    'next_week' => 'next week',
+    'this_month' => 'this month',
+    'last_month' => 'last month',
+    'next_month' => 'next month',
+    'this_year' => 'this year',
+    'last_year' => 'last year',
+    'last_n_days' => 'in the last N days',
+    'next_n_days' => 'in the next N days',
+];

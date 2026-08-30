@@ -1,0 +1,23 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+    excludePaths:
+        - src/Commands/stubs
+
+    # PHPDoc array shapes describe intent; the runtime input is untrusted, so
+    # defensive checks that PHPStan considers redundant are deliberate.
+    treatPhpDocTypesAsCertain: false
+
+    reportUnmatchedIgnoredErrors: false
+
+    ignoreErrors:
+        # Optional Excel adapters: openspout and phpspreadsheet are suggested,
+        # not required, and every use is guarded by class_exists().
+        - identifier: class.notFound
+          paths:
+              - src/Modules/Export/Writers/XlsxWriter.php
+              - src/Modules/Import/Readers/XlsxReader.php

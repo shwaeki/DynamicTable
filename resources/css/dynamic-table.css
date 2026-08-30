@@ -1,0 +1,1149 @@
+/**
+ * Laravel DynamicTable — structural stylesheet.
+ *
+ * This file carries behaviour, not looks: sticky headers, resize handles,
+ * dialog layout, RTL mirroring and states. Colours and spacing come from the
+ * chosen theme's class map, so a Bootstrap app never inherits Tailwind styling
+ * and vice versa. Everything is namespaced under .dt to stay out of the
+ * host application's way.
+ */
+
+/*
+ * Colour lives here and only here.
+ *
+ * Themes contribute layout, spacing and radii; surfaces, text and borders come
+ * from these tokens. That is what lets Bootstrap and Tailwind both look right
+ * in light and dark, and lets an application force a scheme per table with
+ * data-dt-scheme without either framework disagreeing.
+ */
+
+.dt {
+    --dt-ink: #0f172a;
+    --dt-muted: #64748b;
+    --dt-border: #e2e8f0;
+    --dt-surface: #ffffff;
+    --dt-surface-2: #f8fafc;
+    --dt-hover: #f8fafc;
+    --dt-selected: #eef2ff;
+    --dt-accent: #4f46e5;
+    --dt-accent-ink: #ffffff;
+    --dt-danger: #dc2626;
+    --dt-success: #16a34a;
+    --dt-warning: #d97706;
+    --dt-radius: 6px;
+
+    position: relative;
+    box-sizing: border-box;
+    color: var(--dt-ink);
+    color-scheme: light;
+
+    /* Where the table comes to rest when paging scrolls it back into view.
+       Raise it if your application has a fixed header: .dt { scroll-margin-top: 5rem } */
+    scroll-margin-top: 1rem;
+}
+
+/* Follow the operating system unless the page has asked for a scheme. */
+@media (prefers-color-scheme: dark) {
+    .dt:not([data-dt-scheme='light']) {
+        --dt-ink: #e2e8f0;
+        --dt-muted: #94a3b8;
+        --dt-border: #1e293b;
+        --dt-surface: #0f172a;
+        --dt-surface-2: #1e293b;
+        --dt-hover: #1e293b;
+        --dt-selected: #312e81;
+        --dt-accent: #818cf8;
+        --dt-accent-ink: #0f172a;
+        --dt-danger: #f87171;
+        --dt-success: #4ade80;
+        --dt-warning: #fbbf24;
+
+        color-scheme: dark;
+    }
+}
+
+/* An explicit choice always wins, in both directions. */
+.dt[data-dt-scheme='dark'] {
+    --dt-ink: #e2e8f0;
+    --dt-muted: #94a3b8;
+    --dt-border: #1e293b;
+    --dt-surface: #0f172a;
+    --dt-surface-2: #1e293b;
+    --dt-hover: #1e293b;
+    --dt-selected: #312e81;
+    --dt-accent: #818cf8;
+    --dt-accent-ink: #0f172a;
+    --dt-danger: #f87171;
+    --dt-success: #4ade80;
+    --dt-warning: #fbbf24;
+
+    color-scheme: dark;
+}
+
+/*
+ * Painted with :where() so every rule here has the specificity of .dt alone.
+ * A theme class map, or any application stylesheet, overrides it without
+ * needing !important.
+ */
+.dt:where(.dt-surface, [class*='dt-']),
+.dt :where(.dt-table, .dt-toolbar, .dt-footer, .dt-thead, .dt-row, .dt-cell, .dt-th) {
+    border-color: var(--dt-border);
+}
+
+.dt { background: var(--dt-surface); }
+.dt :where(.dt-thead) { background: var(--dt-surface-2); }
+.dt :where(.dt-th) { color: var(--dt-muted); }
+.dt :where(.dt-row) > :where(td, th) { border-top: 1px solid var(--dt-border); }
+.dt :where(.dt-row:hover) { background: var(--dt-hover); }
+.dt :where(.dt-row-selected) { background: var(--dt-selected); }
+.dt :where(.dt-toolbar, .dt-footer) { border-color: var(--dt-border); }
+
+/* Native controls follow the resolved scheme via color-scheme; give them the
+   surface colour too so they never sit on a mismatched background. */
+.dt :where(input, select, textarea) {
+    color: var(--dt-ink);
+    background-color: var(--dt-surface);
+    border-color: var(--dt-border);
+}
+
+.dt :where(button) { color: inherit; }
+
+/* Surfaces that float above the table. */
+.dt :where(.dt-menu, .dt-modal-box, .dt-sheet-bar) {
+    background: var(--dt-surface);
+    border-color: var(--dt-border);
+    color: var(--dt-ink);
+}
+
+.dt :where(.dt-menu-item:hover, .dt-menu-item:focus-visible) { background: var(--dt-hover); }
+
+.dt :where(.dt-badge) {
+    background: var(--dt-surface-2);
+    border: 1px solid var(--dt-border);
+    color: var(--dt-ink);
+}
+
+.dt :where(.dt-chip) {
+    background: var(--dt-selected);
+    color: var(--dt-accent);
+}
+
+.dt :where(.dt-btn-primary) { background: var(--dt-accent); color: var(--dt-accent-ink); border: 1px solid var(--dt-accent); }
+.dt :where(.dt-btn-danger) { background: var(--dt-danger); color: #fff; border: 1px solid var(--dt-danger); }
+.dt :where(.dt-empty, .dt-hint, .dt-field-label, .dt-column-hint) { color: var(--dt-muted); }
+
+/*
+ * Bootstrap bridge.
+ *
+ * Bootstrap paints its table through CSS variables. Mapping them to the
+ * package tokens means a Bootstrap table is readable in dark mode even when
+ * the host page never sets data-bs-theme.
+ */
+.dt-bootstrap :where(.table) {
+    --bs-table-color: var(--dt-ink);
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--dt-border);
+    --bs-table-hover-color: var(--dt-ink);
+    --bs-table-hover-bg: var(--dt-hover);
+    --bs-table-active-color: var(--dt-ink);
+    --bs-table-active-bg: var(--dt-selected);
+}
+
+.dt-bootstrap :where(.card) {
+    background: var(--dt-surface);
+    border-color: var(--dt-border);
+    color: var(--dt-ink);
+}
+
+.dt-bootstrap :where(.form-control, .form-select) {
+    background-color: var(--dt-surface);
+    border-color: var(--dt-border);
+    color: var(--dt-ink);
+}
+
+.dt *,
+.dt *::before,
+.dt *::after { box-sizing: inherit; }
+
+.dt-hidden { display: none !important; }
+
+.dt-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------------------------------------------------------------- */
+/* Toolbar                                                          */
+/* ---------------------------------------------------------------- */
+
+.dt-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.dt-toolbar-start,
+.dt-toolbar-end { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.dt-toolbar-end { margin-inline-start: auto; }
+
+.dt-selection-summary { display: inline-flex; align-items: center; gap: .5rem; font-size: .85em; }
+
+.dt-link-button {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--dt-accent);
+    cursor: pointer;
+    text-decoration: underline;
+    font: inherit;
+}
+
+/* ---------------------------------------------------------------- */
+/* Table                                                            */
+/* ---------------------------------------------------------------- */
+
+/*
+ * The scroller is the table's own scroll container.
+ *
+ * It has to be: `overflow-x: auto` alone makes an element a scroll container on
+ * *both* axes, so a header stuck to its top never moves — the page scrolls,
+ * the box does not. Giving it a height makes the box the thing that scrolls,
+ * which is what makes the sticky header actually stick.
+ *
+ * --dt-max-height is set per table (or globally in the config); `none` gives
+ * the old page-flow behaviour, at the cost of the sticky header.
+ */
+.dt-scroller {
+    position: relative;
+    overflow: auto;
+    max-block-size: var(--dt-max-height, none);
+    overscroll-behavior-y: contain;
+}
+
+.dt-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+
+/* separate borders, so the header keeps its rule while stuck */
+.dt-thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--dt-surface-2);
+    box-shadow: inset 0 -1px 0 var(--dt-border);
+}
+
+.dt-th { position: relative; user-select: none; }
+
+.dt-sort {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    background: none;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.dt-sort:focus-visible,
+.dt-cell:focus-visible,
+.dt-column-item:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
+
+.dt-sort-icon { font-size: .7em; opacity: .7; }
+
+.dt-resizer {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: -3px;
+    width: 7px;
+    cursor: col-resize;
+    touch-action: none;
+}
+
+.dt-resizer::after {
+    content: '';
+    position: absolute;
+    inset-block: 25%;
+    inset-inline-start: 3px;
+    width: 1px;
+    background: var(--dt-border);
+}
+
+.dt-resizing { user-select: none; cursor: col-resize; }
+
+.dt-align-start { text-align: start; }
+.dt-align-center { text-align: center; }
+.dt-align-end { text-align: end; }
+
+.dt-cell { vertical-align: middle; }
+.dt-select-cell { width: 2.5rem; text-align: center; }
+
+/* ---------------------------------------------------------------- */
+/* Row actions                                                      */
+/* ---------------------------------------------------------------- */
+
+.dt-row-actions-cell {
+    width: 1%;
+    white-space: nowrap;
+    text-align: end;
+}
+
+.dt-row-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 .35rem;
+    margin-inline-start: .15rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: .85rem;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.dt-row-action:hover { background: var(--dt-surface-2); border-color: var(--dt-border); }
+.dt-row-action:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
+.dt-row-action:disabled { opacity: .45; cursor: default; }
+.dt-row-action-danger:hover { color: var(--dt-danger); border-color: var(--dt-danger); }
+
+/* Cells may contain small pieces of markup — a badge, a thumbnail, a link. */
+.dt-cell img { max-height: 2rem; vertical-align: middle; }
+.dt-cell .dt-cell-actions { display: inline-flex; gap: .25rem; align-items: center; }
+
+.dt-null { opacity: .4; }
+.dt-link { color: var(--dt-accent); text-decoration: none; }
+.dt-link:hover { text-decoration: underline; }
+.dt-thumb { max-height: 2rem; max-width: 4rem; border-radius: 4px; object-fit: cover; }
+.dt-bool-true { color: var(--dt-success); }
+.dt-bool-false { color: var(--dt-muted); }
+
+.dt-row[data-trashed] { opacity: .6; text-decoration: line-through; }
+
+/* ---------------------------------------------------------------- */
+/* States                                                           */
+/* ---------------------------------------------------------------- */
+
+.dt-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    background: color-mix(in srgb, var(--dt-surface) 70%, transparent);
+    backdrop-filter: blur(1px);
+    z-index: 3;
+}
+
+.dt-spinner {
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--dt-border);
+    border-top-color: var(--dt-accent);
+    border-radius: 50%;
+    animation: dt-spin .7s linear infinite;
+}
+
+@keyframes dt-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .dt-spinner { animation-duration: 3s; }
+    .dt-cell-saved { transition: none; }
+}
+
+.dt-empty { text-align: center; }
+
+.dt-alerts { display: grid; gap: .25rem; }
+.dt-alerts:empty { display: none; }
+
+.dt-alert {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    border-inline-start: 3px solid var(--dt-accent);
+    background: color-mix(in srgb, var(--dt-accent) 8%, transparent);
+    font-size: .9em;
+}
+
+.dt-alert-error { border-color: var(--dt-danger); background: color-mix(in srgb, var(--dt-danger) 8%, transparent); }
+.dt-alert-success { border-color: var(--dt-success); background: color-mix(in srgb, var(--dt-success) 8%, transparent); }
+.dt-alert-warning { border-color: var(--dt-warning); background: color-mix(in srgb, var(--dt-warning) 10%, transparent); }
+.dt-alert-close { margin-inline-start: auto; background: none; border: 0; cursor: pointer; font-size: 1.1em; line-height: 1; }
+
+.dt-panel {
+    padding: .35rem .75rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .75rem;
+    color: var(--dt-muted);
+    border-top: 1px dashed var(--dt-border);
+}
+
+/* ---------------------------------------------------------------- */
+/* Pagination                                                       */
+/* ---------------------------------------------------------------- */
+
+.dt-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.dt-pagination-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.dt-pagination { display: flex; align-items: center; gap: .2rem; }
+
+/*
+ * Narrow screens: the chrome wraps rather than overflowing.
+ *
+ * The page list is the one part that cannot wrap sensibly — a hundred pages is
+ * a hundred buttons — so it scrolls on its own line instead of pushing the
+ * layout wider than the phone.
+ */
+@media (max-width: 640px) {
+    .dt-footer { flex-direction: column; align-items: stretch; }
+    .dt-summary { text-align: center; }
+    .dt-pagination-controls { justify-content: space-between; }
+    .dt-pagination {
+        max-width: 100%;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        padding-bottom: .15rem;
+    }
+    .dt-toolbar-start,
+    .dt-toolbar-end { width: 100%; }
+    .dt-toolbar-end { margin-inline-start: 0; }
+    .dt-toolbar :where(input[type='search'], .dt-search) { flex: 1 1 100%; min-width: 0; }
+}
+.dt-page { min-width: 2rem; }
+.dt-page-current { font-weight: 700; }
+.dt-page-gap { padding: 0 .25rem; opacity: .6; }
+
+/* ---------------------------------------------------------------- */
+/* Dialogs and menus                                                */
+/* ---------------------------------------------------------------- */
+
+.dt-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 0, 0, .45);
+}
+
+.dt-modal-box {
+    background: var(--dt-surface);
+    border-radius: var(--dt-radius);
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------------------------------------------------------------- */
+/* Offcanvas panels                                                 */
+/* ---------------------------------------------------------------- */
+
+/*
+ * The same dialog, docked to an edge instead of centred. Only the layout
+ * changes — the focus trap, Escape handling and markup are shared, so a panel
+ * never knows which presentation it is in.
+ */
+.dt-offcanvas { padding: 0; align-items: stretch; }
+.dt-offcanvas.dt-offcanvas-right { justify-content: flex-end; }
+.dt-offcanvas.dt-offcanvas-left { justify-content: flex-start; }
+
+.dt-offcanvas .dt-offcanvas-box {
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    animation: dt-slide-from-right .18s ease-out;
+}
+
+.dt-offcanvas-left .dt-offcanvas-box { animation-name: dt-slide-from-left; }
+
+@keyframes dt-slide-from-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes dt-slide-from-left {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dt-offcanvas .dt-offcanvas-box { animation: none; }
+}
+
+/* On a phone a side drawer is just a full-height sheet. */
+@media (max-width: 640px) {
+    .dt-offcanvas .dt-offcanvas-box { width: 100% !important; }
+}
+
+.dt-modal-head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .75rem 1rem;
+    border-bottom: 1px solid var(--dt-border);
+}
+
+.dt-modal-title { margin: 0; font-size: 1rem; font-weight: 600; }
+.dt-modal-close { margin-inline-start: auto; background: none; border: 0; font-size: 1.25rem; line-height: 1; cursor: pointer; }
+.dt-modal-body { padding: 1rem; overflow: auto; }
+.dt-modal-foot { padding: .75rem 1rem; border-top: 1px solid var(--dt-border); }
+.dt-modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+
+.dt-menu { z-index: 900; max-height: 26rem; display: flex; flex-direction: column; min-width: 15rem; }
+.dt-menu-list { overflow: auto; }
+.dt-menu-search { padding: .35rem; border-bottom: 1px solid var(--dt-border); }
+.dt-menu-heading { padding: .35rem .5rem; font-size: .75rem; text-transform: uppercase; opacity: .6; }
+.dt-menu-separator { height: 1px; margin: .25rem 0; background: var(--dt-border); }
+
+/* A separator with nothing after it is a rule under empty space. The menu
+   builder already prunes these; this covers anything built by hand. */
+.dt-menu-separator:last-child,
+.dt-menu-separator:first-child,
+.dt-menu-separator + .dt-menu-separator { display: none; }
+.dt-menu-item { cursor: pointer; }
+.dt-menu-item-active { font-weight: 600; }
+.dt-menu-item-danger { color: var(--dt-danger); }
+.dt-menu-item:disabled { opacity: .4; cursor: default; }
+
+.dt-menu-row { display: flex; align-items: center; gap: .5rem; width: 100%; }
+.dt-menu-check { flex: none; width: .9rem; color: var(--dt-accent); font-size: .8rem; }
+.dt-menu-icon { flex: none; width: 1.1rem; text-align: center; opacity: .8; }
+.dt-menu-label { flex: 1; text-align: start; }
+
+.dt-menu-badge {
+    flex: none;
+    font-size: .7rem;
+    padding: .05rem .4rem;
+    border-radius: 999px;
+    background: var(--dt-surface-2);
+    color: var(--dt-muted);
+}
+
+/* ---------------------------------------------------------------- */
+/* Column header menu                                               */
+/* ---------------------------------------------------------------- */
+
+.dt-header-menu {
+    margin-inline-start: .2rem;
+    padding: 0 .2rem;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity .12s ease;
+}
+
+.dt-th:hover .dt-header-menu,
+.dt-header-menu:focus-visible,
+.dt-header-menu[aria-expanded='true'] { opacity: .85; }
+
+/* Touch devices have no hover, so the affordance must always be visible. */
+@media (hover: none) {
+    .dt-header-menu { opacity: .7; }
+}
+
+/* ---------------------------------------------------------------- */
+/* View picker                                                      */
+/* ---------------------------------------------------------------- */
+
+.dt-view-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    max-width: 22rem;
+    padding: .15rem .35rem;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dt-view-picker > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dt-view-picker:hover { background: var(--dt-hover); }
+.dt-caret { font-size: .85em; opacity: .7; }
+
+/* ---------------------------------------------------------------- */
+/* Grouping                                                         */
+/* ---------------------------------------------------------------- */
+
+.dt-group-row > td {
+    background: var(--dt-surface-2);
+    font-size: .85rem;
+    padding: .35rem .8rem;
+    position: sticky;
+    inset-inline-start: 0;
+}
+
+.dt-group-label { color: var(--dt-muted); }
+
+.dt-form { display: grid; gap: .75rem; }
+.dt-field { display: grid; gap: .25rem; }
+.dt-field-inline { display: flex; align-items: center; gap: .5rem; }
+.dt-field-label { font-size: .8rem; opacity: .8; }
+.dt-subtitle { margin: .75rem 0 .25rem; font-size: .85rem; font-weight: 600; }
+.dt-hint { font-size: .8rem; opacity: .7; margin: 0 0 .5rem; }
+.dt-error { color: var(--dt-danger); }
+
+/* ---------------------------------------------------------------- */
+/* Filter builder                                                   */
+/* ---------------------------------------------------------------- */
+
+.dt-filter-group {
+    border: 1px solid var(--dt-border);
+    border-radius: var(--dt-radius);
+    padding: .6rem;
+    display: grid;
+    gap: .5rem;
+}
+
+.dt-filter-depth-1 { background: color-mix(in srgb, var(--dt-accent) 4%, transparent); }
+.dt-filter-depth-2 { background: color-mix(in srgb, var(--dt-accent) 7%, transparent); }
+
+.dt-condition {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1.4fr) minmax(7rem, 1fr) minmax(8rem, 1.4fr) auto;
+    gap: .4rem;
+    align-items: center;
+}
+
+@media (max-width: 640px) {
+    .dt-condition { grid-template-columns: 1fr auto; }
+}
+
+.dt-condition-remove {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--dt-danger);
+}
+
+.dt-filter-range { display: flex; align-items: center; gap: .3rem; }
+.dt-filter-group-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+.dt-filter-novalue { opacity: .5; }
+
+/* ---------------------------------------------------------------- */
+/* Column picker                                                    */
+/* ---------------------------------------------------------------- */
+
+.dt-column-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; max-height: 22rem; overflow: auto; }
+
+.dt-column-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .3rem .4rem;
+    border-radius: 4px;
+}
+
+.dt-column-item:hover { background: color-mix(in srgb, var(--dt-accent) 6%, transparent); }
+.dt-column-label { display: flex; align-items: center; gap: .5rem; flex: 1; cursor: pointer; }
+.dt-column-hint { font-size: .7rem; opacity: .6; }
+.dt-drag-handle { cursor: grab; opacity: .5; }
+.dt-dragging { opacity: .4; }
+.dt-drop-target { box-shadow: inset 0 2px 0 var(--dt-accent); }
+
+/* ---------------------------------------------------------------- */
+/* Inline editing                                                   */
+/* ---------------------------------------------------------------- */
+
+.dt-cell-editing { padding: .15rem !important; }
+.dt-cell-editing input,
+.dt-cell-editing select { width: 100%; }
+.dt-cell-saving { opacity: .6; }
+.dt-cell-saved { transition: background-color .4s ease; background: color-mix(in srgb, var(--dt-success) 18%, transparent); }
+.dt-cell-invalid { outline: 2px solid var(--dt-danger); outline-offset: -2px; }
+.dt-cell-error { display: block; font-size: .7rem; color: var(--dt-danger); }
+
+/* ---------------------------------------------------------------- */
+/* Spreadsheet mode                                                 */
+/* ---------------------------------------------------------------- */
+
+.dt-sheet { outline: none; }
+.dt-sheet-selected { background: color-mix(in srgb, var(--dt-accent) 12%, transparent); }
+.dt-sheet-cursor { outline: 2px solid var(--dt-accent); outline-offset: -2px; }
+.dt-sheet-dirty { background: color-mix(in srgb, var(--dt-warning) 16%, transparent); }
+
+.dt-sheet-bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    border-top: 1px solid var(--dt-border);
+    background: var(--dt-surface);
+}
+
+/* ---------------------------------------------------------------- */
+/* Transfer                                                         */
+/* ---------------------------------------------------------------- */
+
+.dt-mapping { display: grid; gap: .35rem; max-height: 18rem; overflow: auto; }
+.dt-mapping-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: .5rem; align-items: center; }
+.dt-mapping-source { font-weight: 600; font-size: .85rem; }
+.dt-preview { overflow: auto; max-height: 14rem; font-size: .8rem; }
+.dt-preview td, .dt-preview th { padding: .2rem .4rem; border: 1px solid var(--dt-border); white-space: nowrap; }
+
+.dt-progress { display: grid; gap: .25rem; }
+.dt-progress-track { height: .5rem; border-radius: 999px; background: var(--dt-border); overflow: hidden; }
+.dt-progress-bar { height: 100%; width: 0; background: var(--dt-accent); transition: width .3s ease; }
+.dt-progress-label { font-size: .75rem; opacity: .75; }
+
+/* ---------------------------------------------------------------- */
+/* Saved views manager                                              */
+/* ---------------------------------------------------------------- */
+
+.dt-views { display: grid; gap: .15rem; }
+
+.dt-view-row {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .35rem .4rem;
+    border-radius: 7px;
+}
+
+.dt-view-row:hover { background: var(--dt-hover); }
+.dt-view-row.is-active { background: var(--dt-selected); }
+
+.dt-view-star {
+    flex: none;
+    width: 1.75rem; height: 1.75rem;
+    display: grid; place-items: center;
+    border: 0; border-radius: 6px;
+    background: none; cursor: pointer;
+    font-size: 1rem; line-height: 1;
+    color: var(--dt-muted);
+}
+
+.dt-view-star.is-default { color: var(--dt-warning); }
+.dt-view-star:disabled { opacity: .35; cursor: default; }
+.dt-view-star:hover:not(:disabled) { background: var(--dt-surface-2); }
+
+.dt-view-icon { flex: none; width: 1.35rem; text-align: center; font-size: .9rem; }
+
+.dt-view-name {
+    flex: 1;
+    display: grid;
+    text-align: start;
+    border: 0; background: none; cursor: pointer;
+    font: inherit; color: inherit;
+    padding: .1rem 0;
+}
+
+.dt-view-owner { color: var(--dt-muted); font-size: .72rem; }
+
+/* ---------------------------------------------------------------- */
+/* Sharing a view                                                   */
+/* ---------------------------------------------------------------- */
+
+.dt-share-list { display: flex; flex-wrap: wrap; gap: .3rem; }
+
+.dt-share-pill {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .15rem .3rem .15rem .6rem;
+    border-radius: 999px;
+    background: var(--dt-selected);
+    font-size: .8rem;
+}
+
+.dt-share-pill button {
+    border: 0; background: none; cursor: pointer;
+    font: inherit; line-height: 1; color: inherit;
+    padding: 0 .2rem; opacity: .7;
+}
+
+.dt-share-pill button:hover { opacity: 1; color: var(--dt-danger); }
+
+.dt-share-results { display: grid; gap: 1px; max-height: 12rem; overflow: auto; }
+
+.dt-share-candidate {
+    border: 0; background: none; cursor: pointer;
+    font: inherit; text-align: start;
+    padding: .35rem .5rem; border-radius: 6px; color: inherit;
+}
+
+.dt-share-candidate:hover { background: var(--dt-hover); }
+
+.dt-view-action {
+    border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: .78rem;
+    color: var(--dt-muted);
+    padding: .15rem .35rem; border-radius: 5px;
+}
+
+.dt-view-action:hover { background: var(--dt-surface-2); color: var(--dt-ink); }
+.dt-view-action-danger:hover { color: var(--dt-danger); }
+
+/* ---------------------------------------------------------------- */
+/* Responsive: collapsing columns into a child row                  */
+/* ---------------------------------------------------------------- */
+
+/* Hidden by the responsive module, never by a media query: which columns fit
+   depends on how many there are and how wide they are, not on device width. */
+.dt-col-hidden { display: none !important; }
+
+.dt-control-cell { width: 2.5rem; text-align: center; padding-inline: .35rem; }
+
+.dt-control {
+    width: 1.35rem; height: 1.35rem;
+    display: inline-grid; place-items: center;
+    border: 1px solid var(--dt-accent);
+    border-radius: 999px;
+    background: var(--dt-accent);
+    color: var(--dt-accent-ink);
+    font: inherit; font-size: .85rem; line-height: 1;
+    cursor: pointer;
+}
+
+.dt-control:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 2px; }
+
+.dt-child > td { padding: .5rem .9rem .8rem; background: var(--dt-surface-2); }
+
+.dt-child-list {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(6rem, auto) 1fr;
+    gap: .3rem .9rem;
+    font-size: .85rem;
+}
+
+.dt-child-list dt { color: var(--dt-muted); font-weight: 500; }
+.dt-child-list dd { margin: 0; }
+
+@media (max-width: 480px) {
+    .dt-child-list { grid-template-columns: 1fr; gap: .1rem; }
+    .dt-child-list dd { margin-bottom: .4rem; }
+}
+
+/* ---------------------------------------------------------------- */
+/* Responsive: cards                                                */
+/* ---------------------------------------------------------------- */
+
+.dt-responsive-cards .dt-thead { display: none; }
+.dt-responsive-cards .dt-table,
+.dt-responsive-cards .dt-tbody,
+.dt-responsive-cards .dt-row { display: block; width: 100%; }
+
+.dt-responsive-cards .dt-row {
+    padding: .6rem .2rem;
+    border-top: 1px solid var(--dt-border);
+}
+
+.dt-responsive-cards .dt-cell {
+    display: grid;
+    grid-template-columns: 40% 60%;
+    gap: .5rem;
+    border: 0;
+    padding: .15rem .4rem;
+}
+
+.dt-responsive-cards .dt-cell::before {
+    content: attr(data-label);
+    font-size: .75rem;
+    color: var(--dt-muted);
+}
+
+.dt-responsive-cards .dt-select-cell { grid-template-columns: 1fr; }
+.dt-responsive-cards .dt-select-cell::before { content: none; }
+
+/* RTL is handled by logical properties throughout; this only mirrors icons. */
+.dt[dir='rtl'] .dt-sort-icon { transform: scaleX(-1); }
+
+/* ---------------------------------------------------------------- */
+/* Row detail expander                                              */
+/* ---------------------------------------------------------------- */
+
+.dt .dt-expand-cell {
+    width: 2.25rem;
+    padding-inline: 0.25rem;
+    text-align: center;
+}
+
+.dt .dt-expand {
+    border: 0;
+    background: none;
+    color: var(--dt-muted);
+    cursor: pointer;
+    font-size: 1.1em;
+    line-height: 1;
+    padding: 0.25rem;
+    border-radius: var(--dt-radius);
+    transition: transform 120ms ease;
+}
+
+.dt .dt-expand:hover {
+    color: var(--dt-ink);
+    background: var(--dt-hover);
+}
+
+/* Points along the reading direction when closed, down when open. */
+.dt .dt-expand-open {
+    transform: rotate(90deg);
+    color: var(--dt-ink);
+}
+
+.dt[dir='rtl'] .dt-expand {
+    transform: rotate(180deg);
+}
+
+.dt[dir='rtl'] .dt-expand-open {
+    transform: rotate(90deg);
+}
+
+.dt .dt-detail-row > td {
+    background: var(--dt-surface-2);
+    border-bottom: 1px solid var(--dt-border);
+    padding: 0.85rem 1rem;
+}
+
+.dt .dt-detail-loading,
+.dt .dt-detail-error {
+    color: var(--dt-muted);
+    font-size: 0.9em;
+}
+
+.dt .dt-detail-error {
+    color: var(--dt-danger);
+}
+
+/* ---------------------------------------------------------------- */
+/* Sticky (frozen) columns                                          */
+/* ---------------------------------------------------------------- */
+
+/* Offsets are measured by the sticky module and written as logical insets, so
+   the same rules freeze the correct edge in RTL. */
+.dt .dt-sticky-cell {
+    position: sticky;
+    z-index: 2;
+    background: var(--dt-surface);
+}
+
+.dt .dt-thead .dt-sticky-cell {
+    z-index: 4;
+    background: var(--dt-surface-2);
+}
+
+.dt .dt-row:hover .dt-sticky-cell {
+    background: var(--dt-hover);
+}
+
+.dt .dt-row-selected .dt-sticky-cell {
+    background: var(--dt-selected);
+}
+
+/* One divider at the boundary, not between every frozen column. */
+.dt [data-dt-sticky-last] {
+    box-shadow: 1px 0 0 var(--dt-border), 4px 0 6px -4px rgb(15 23 42 / 0.18);
+}
+
+.dt[dir='rtl'] [data-dt-sticky-last] {
+    box-shadow: -1px 0 0 var(--dt-border), -4px 0 6px -4px rgb(15 23 42 / 0.18);
+}
+
+.dt .dt-sticky-end {
+    box-shadow: -1px 0 0 var(--dt-border), -4px 0 6px -4px rgb(15 23 42 / 0.18);
+}
+
+/* ---------------------------------------------------------------- */
+/* Infinite scrolling                                               */
+/* ---------------------------------------------------------------- */
+
+.dt .dt-sentinel {
+    height: 1px;
+}
+
+/* Page numbers mean nothing when the pages are stitched together. */
+.dt [data-dt-infinite] .dt-pagination {
+    display: none;
+}
+
+/* ---------------------------------------------------------------- */
+/* Inline create and bulk edit                                      */
+/* ---------------------------------------------------------------- */
+
+.dt .dt-new-row > td {
+    background: var(--dt-selected);
+    vertical-align: middle;
+}
+
+.dt .dt-new-row .dt-row-actions-cell {
+    white-space: nowrap;
+    display: flex;
+    gap: 0.35rem;
+}
+
+.dt .dt-bulk-field .dt-field-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.dt .dt-hint {
+    color: var(--dt-muted);
+    font-size: 0.9em;
+    margin: 0 0 0.5rem;
+}
+
+.dt .dt-form-errors:not(:empty) {
+    color: var(--dt-danger);
+    font-size: 0.9em;
+    margin-top: 0.5rem;
+}
+
+/* A count beside a filter option: how many rows that choice would keep. */
+.dt .dt-facet-count {
+    color: var(--dt-muted);
+    font-variant-numeric: tabular-nums;
+    margin-inline-start: auto;
+    font-size: 0.85em;
+}
+
+/* ---------------------------------------------------------------- */
+/* Framework-free themes: minimal and bordered                      */
+/* ---------------------------------------------------------------- */
+
+/* These two need no Bootstrap and no Tailwind: every class they name is
+   defined here, on the same tokens as everything else, so they are readable in
+   light and dark and follow data-dt-scheme like the rest. */
+
+.dt-minimal {
+    background: var(--dt-surface);
+    border-radius: var(--dt-radius);
+}
+
+.dt-minimal .dt-toolbar {
+    padding: 0.65rem 0.75rem;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--dt-border);
+}
+
+.dt-minimal .dt-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.7rem;
+    font: inherit;
+    font-size: 0.9em;
+    color: var(--dt-ink);
+    background: var(--dt-surface);
+    border: 1px solid var(--dt-border);
+    border-radius: var(--dt-radius);
+    cursor: pointer;
+}
+
+.dt-minimal .dt-button:hover:not(:disabled) {
+    background: var(--dt-hover);
+}
+
+.dt-minimal .dt-button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.dt-minimal .dt-button-primary {
+    background: var(--dt-accent);
+    border-color: var(--dt-accent);
+    color: var(--dt-accent-ink);
+}
+
+.dt-minimal .dt-button-danger {
+    background: var(--dt-danger);
+    border-color: var(--dt-danger);
+    color: var(--dt-accent-ink);
+}
+
+.dt-minimal .dt-input,
+.dt-minimal .dt-select {
+    font: inherit;
+    font-size: 0.9em;
+    color: var(--dt-ink);
+    background: var(--dt-surface);
+    border: 1px solid var(--dt-border);
+    border-radius: var(--dt-radius);
+    padding: 0.35rem 0.5rem;
+}
+
+.dt-minimal .dt-search {
+    min-width: 14rem;
+}
+
+.dt-minimal .dt-input:focus,
+.dt-minimal .dt-select:focus {
+    outline: 2px solid color-mix(in srgb, var(--dt-accent) 45%, transparent);
+    outline-offset: 1px;
+}
+
+.dt-minimal .dt-th {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.78em;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--dt-muted);
+    white-space: nowrap;
+}
+
+.dt-minimal .dt-cell {
+    padding: 0.65rem 0.75rem;
+}
+
+.dt-minimal .dt-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid var(--dt-border);
+    font-size: 0.9em;
+}
+
+.dt-minimal .dt-empty {
+    padding: 3rem 0.75rem;
+    text-align: center;
+    color: var(--dt-muted);
+}
+
+/* Bordered: the same theme ruled like a spreadsheet, for wide numeric grids. */
+.dt-bordered .dt-table {
+    border: 1px solid var(--dt-border);
+    border-inline-end: 0;
+    border-block-end: 0;
+}
+
+/* Borders on two edges only: with separate borders, four would draw every
+   internal line twice. */
+.dt-bordered .dt-th,
+.dt-bordered .dt-cell {
+    border-inline-end: 1px solid var(--dt-border);
+    border-block-end: 1px solid var(--dt-border);
+    padding: 0.4rem 0.55rem;
+}
+
+.dt-bordered .dt-th {
+    text-transform: none;
+    font-size: 0.85em;
+    letter-spacing: 0;
+    color: var(--dt-ink);
+    background: var(--dt-surface-2);
+}

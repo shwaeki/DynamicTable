@@ -1,0 +1,196 @@
+# Configuration
+
+Every value has a working default, so you only need to publish the file if you
+want to change something.
+
+```bash
+php artisan dynamic-table:install --config
+```
+
+```php
+return [
+    // 'tailwind' | 'bootstrap' | your own registered theme | 'custom'
+    'theme' => 'tailwind',
+
+    // null = detect from the application locale (ar/he/fa/ur => rtl)
+    'direction' => null,
+
+    // null = follow the viewer's OS; 'light' or 'dark' forces one
+    'scheme' => null,
+
+    'panels' => [
+        'mode' => 'modal',      // or 'offcanvas'
+        'side' => 'end',        // 'end' | 'start' | 'left' | 'right'
+        'width' => '30rem',
+    ],
+
+    'tables' => [
+        'paths' => [app_path('DynamicTables')],
+        'register' => [],
+    ],
+
+    'pagination' => [
+        'default' => 25,
+        'options' => [10, 25, 50, 100],
+        'max' => 500,
+
+        // past this many rows, 'auto' pagination stops counting; 0 always counts
+        'count_threshold' => 250000,
+
+        // scroll the table back into view when the page changes
+        'scroll_on_page' => true,
+    ],
+
+    'responsive' => [
+        'enabled' => true,
+        'mode' => 'collapse',   // 'collapse' | 'scroll' | 'cards' | 'none'
+        'breakpoint' => 640,
+    ],
+
+    'search' => [
+        'debounce' => 350,          // ms
+        'min_length' => 1,
+        'max_auto_columns' => 6,    // ceiling for automatic searchable columns
+    ],
+
+    'route' => [
+        'prefix' => '_dynamic-table',
+        'middleware' => ['web'],
+    ],
+
+    'cache' => [
+        'metadata' => env('DYNAMIC_TABLE_CACHE', true),
+        'store' => null,
+        'ttl' => 86400,
+        'prefix' => 'dynamic-table',
+    ],
+
+    'views' => [
+        'enabled' => true,
+        'table' => 'dynamic_table_views',
+        'system_ability' => 'manage-dynamic-table-system-views',
+        'max_per_user' => 100,
+    ],
+
+    'excel' => [
+        'adapter' => 'auto',
+        'queue_threshold' => 5000,  // 0 disables queueing
+        'chunk' => 1000,
+        'disk' => null,
+        'directory' => 'dynamic-table',
+        'queue' => null,
+    ],
+
+    'spreadsheet' => [
+        'engine' => 'tabulator',
+        'cdn' => null,
+    ],
+
+    'security' => [
+        'blocked_columns' => [
+            'password', 'remember_token', 'secret', 'token',
+            'api_key', 'private_key', 'two_factor', 'otp',
+        ],
+        'max_filters' => 40,
+        'max_filter_depth' => 4,
+        'max_relation_depth' => 3,
+    ],
+
+    'performance' => [
+        'panel' => env('DYNAMIC_TABLE_PANEL', false),
+    ],
+
+    'assets' => [
+        'inject' => true,
+        'version' => null,
+    ],
+
+    'source_url' => null,
+];
+```
+
+## Notes on the ones that matter
+
+**`route.middleware`** — the endpoints run in the `web` group so CSRF and
+session auth apply. Add `'auth'` if every table in your app is behind login.
+
+**`cache.metadata`** — schema introspection is cached for `ttl` seconds. Only
+schema *shape* is cached; nothing user-specific ever is. Clear after migrating:
+
+```bash
+php artisan dynamic-table:clear
+```
+
+**`security.blocked_columns`** — substring matches, case-insensitive. This is a
+floor, not a fence: use `$hiddenColumns` or `$allowedColumns` for
+application-specific rules.
+
+**`excel.queue_threshold`** — exports and imports larger than this move to a
+queue automatically, with poll-based progress. Set to `0` to always run inline.
+
+**`pagination.count_threshold`** — past this size the table stops running
+`COUNT(*)` on every request and shows previous/next instead. See
+[Performance](performance.md#counting-is-the-thing-that-stops-scaling).
+
+**`responsive`** — see [Responsive](responsive.md) for the three modes and how
+columns are chosen for collapsing.
+
+**`performance.panel`** — the developer panel is suppressed in production
+regardless of this value.
+
+**`assets.inject`** — set to `false` and place `@dynamicTableStyles` /
+`@dynamicTableScripts` yourself when you have a strict CSP or your own bundler.
+
+**`themes`** — not present by default, but recognised. Add a class map here and
+reference it by name from `theme`:
+
+```php
+'themes' => [
+    'brand' => ['table' => 'dt-table my-table', /* … */],
+],
+```
+
+## Panels: modal or offcanvas
+
+The filter builder, column picker, import and action panels can be shown as a
+centred dialog or as a drawer that slides in from the side.
+
+```php
+'panels' => [
+    'mode' => 'modal',      // or 'offcanvas'
+    'side' => 'end',        // 'end' / 'start' follow the reading direction;
+                            // 'left' / 'right' are explicit
+    'width' => '30rem',     // drawer width; ignored by modals
+],
+```
+
+Per table:
+
+```php
+protected ?string $panels = 'offcanvas';
+```
+
+`end` and `start` are resolved against the table's direction, so an offcanvas
+opens from the right in English and from the left in Arabic without any extra
+configuration. Below 640px a drawer becomes a full-width sheet.
+
+Both presentations share the same markup, focus trap and Escape handling — a
+panel never knows which one it is being shown in, so this is safe to change at
+any time.
+
+## Environment variables
+
+Only two settings read the environment, because only two are genuinely
+per-environment rather than per-project:
+
+```
+DYNAMIC_TABLE_CACHE=false     # turn metadata caching off while editing models
+DYNAMIC_TABLE_PANEL=true      # show the developer performance panel
+```
+
+Everything else lives in the config file, where it can be reviewed in a diff and
+published with:
+
+```bash
+php artisan dynamic-table:install --config
+```

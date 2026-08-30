@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'equals' => 'يساوي',
+    'not_equals' => 'لا يساوي',
+    'contains' => 'يحتوي على',
+    'not_contains' => 'لا يحتوي على',
+    'starts_with' => 'يبدأ بـ',
+    'ends_with' => 'ينتهي بـ',
+    'greater_than' => 'أكبر من',
+    'greater_or_equal' => 'أكبر من أو يساوي',
+    'less_than' => 'أصغر من',
+    'less_or_equal' => 'أصغر من أو يساوي',
+    'between' => 'بين',
+    'not_between' => 'ليس بين',
+    'in' => 'أحد القيم',
+    'not_in' => 'ليس أياً من',
+    'is_empty' => 'فارغ',
+    'is_not_empty' => 'غير فارغ',
+    'before' => 'قبل',
+    'after' => 'بعد',
+    'today' => 'اليوم',
+    'yesterday' => 'أمس',
+    'tomorrow' => 'غداً',
+    'this_week' => 'هذا الأسبوع',
+    'last_week' => 'الأسبوع الماضي',
+    'next_week' => 'الأسبوع القادم',
+    'this_month' => 'هذا الشهر',
+    'last_month' => 'الشهر الماضي',
+    'next_month' => 'الشهر القادم',
+    'this_year' => 'هذه السنة',
+    'last_year' => 'السنة الماضية',
+    'last_n_days' => 'خلال آخر N يوم',
+    'next_n_days' => 'خلال N يوم القادمة',
+];

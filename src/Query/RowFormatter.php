@@ -1,0 +1,301 @@
+<?php
+
+namespace Shwaeki\DynamicTable\Query;
+
+use BackedEnum;
+use DateTimeInterface;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Shwaeki\DynamicTable\Columns\ColumnDefinition;
+use Shwaeki\DynamicTable\DynamicTable;
+use Shwaeki\DynamicTable\Metadata\FieldType;
+use UnitEnum;
+
+/**
+ * Converts hydrated models into the compact row payload sent to the browser.
+ *
+ * Display strings are produced here rather than in JavaScript so that dates,
+ * numbers and currency follow the application locale, and so that a custom
+ * render closure runs on the server where it has the full model.
+ */
+class RowFormatter
+{
+    /**
+     * @param  iterable<Model>  $records
+     * @param  list<ColumnDefinition>  $columns
+     * @return list<array<string, mixed>>
+     */
+    public function rows(iterable $records, array $columns, DynamicTable $table): array
+    {
+        $rows = [];
+
+        foreach ($records as $record) {
+            $rows[] = $this->row($record, $columns, $table);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  list<ColumnDefinition>  $columns
+     * @return array<string, mixed>
+     */
+    public function row(Model $record, array $columns, DynamicTable $table): array
+    {
+        $cells = [];
+        $raw = [];
+
+        foreach ($columns as $column) {
+            $value = $this->extract($record, $column);
+
+            if ($column->render !== null) {
+                $rendered = ($column->render)($value, $record, $column);
+
+                // Returning an Htmlable (e.g. a Blade view, or new HtmlString)
+                // is an explicit statement that the value is already safe HTML,
+                // so it does not also need the raw flag.
+                $cells[$column->key] = $rendered instanceof Htmlable
+                    ? $rendered->toHtml()
+                    : (string) $rendered;
+            } else {
+                $cells[$column->key] = $this->display($value, $column);
+            }
+
+            if ($column->editable) {
+                $raw[$column->key] = $this->rawValue($value);
+            }
+        }
+
+        $row = [
+            'id' => $record->getKey(),
+            'c' => $cells,
+        ];
+
+        if ($raw !== []) {
+            $row['r'] = $raw;
+        }
+
+        if ($table->usesSoftDeletes() && method_exists($record, 'trashed') && $record->trashed()) {
+            $row['trashed'] = true;
+        }
+
+        // Row actions are decided per record: visibility and authorisation can
+        // both depend on the row, so the browser is told exactly which buttons
+        // this row gets — and the server checks again before running one.
+        $actions = [];
+
+        foreach ($table->availableRowActions() as $action) {
+            if (! $action->appliesTo($table, $record)) {
+                continue;
+            }
+
+            $actions[$action->name] = $action->isLink() ? $action->forRecord($record) : true;
+        }
+
+        if ($actions !== []) {
+            $row['a'] = $actions;
+        }
+
+        return $row;
+    }
+
+    protected function extract(Model $record, ColumnDefinition $column): mixed
+    {
+        $path = $column->field->path;
+
+        if (! str_contains($path, '.')) {
+            return $record->getAttribute($path);
+        }
+
+        $segments = explode('.', $path);
+        $attribute = array_pop($segments);
+        $current = $record;
+
+        foreach ($segments as $segment) {
+            if (! $current instanceof Model) {
+                return null;
+            }
+
+            // Only read relations that were eager loaded: touching an unloaded
+            // relation here is exactly the N+1 this package exists to avoid.
+            if (! $current->relationLoaded($segment)) {
+                return null;
+            }
+
+            $current = $current->getRelation($segment);
+
+            if ($current instanceof Collection) {
+                $current = $current->first();
+            }
+
+            if ($current === null) {
+                return null;
+            }
+        }
+
+        return $current instanceof Model ? $current->getAttribute($attribute) : null;
+    }
+
+    protected function display(mixed $value, ColumnDefinition $column): string|bool|null
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof UnitEnum) {
+            $raw = $value instanceof BackedEnum ? $value->value : $value->name;
+
+            foreach ($column->field->options as $option) {
+                if ((string) $option['value'] === (string) $raw) {
+                    return $option['label'];
+                }
+            }
+
+            return Str::headline((string) $raw);
+        }
+
+        if ($column->format !== null) {
+            $formatted = $this->applyFormat($value, $column->format, $column);
+
+            if ($formatted !== null) {
+                return $formatted;
+            }
+        }
+
+        return match ($column->type) {
+            FieldType::Boolean => (bool) $value,
+            FieldType::Date => $this->date($value, 'date'),
+            FieldType::DateTime => $this->date($value, 'datetime'),
+            FieldType::Time => $this->date($value, 'time'),
+            FieldType::Json => $this->json($value),
+            FieldType::Decimal => $this->number((float) $value),
+            FieldType::Integer => (string) $value,
+            default => $this->stringify($value),
+        };
+    }
+
+    protected function applyFormat(mixed $value, string $format, ColumnDefinition $column): ?string
+    {
+        [$name, $argument] = array_pad(explode(':', $format, 2), 2, null);
+
+        return match ($name) {
+            'currency' => $this->currency((float) $value, $argument),
+            'number' => $this->number((float) $value, $argument !== null ? (int) $argument : null),
+            'percent' => $this->number((float) $value, $argument !== null ? (int) $argument : 1).'%',
+            'bytes' => $this->bytes((int) $value),
+            'date' => $this->date($value, 'date', $argument),
+            'datetime' => $this->date($value, 'datetime', $argument),
+            'time' => $this->date($value, 'time', $argument),
+            'since' => $value instanceof DateTimeInterface ? Carbon::instance($value)->diffForHumans() : null,
+            'upper' => Str::upper((string) $value),
+            'lower' => Str::lower((string) $value),
+            'headline' => Str::headline((string) $value),
+            'truncate' => Str::limit((string) $value, $argument !== null ? (int) $argument : 60),
+            default => null,
+        };
+    }
+
+    protected function date(mixed $value, string $kind, ?string $pattern = null): ?string
+    {
+        if (! $value instanceof DateTimeInterface) {
+            try {
+                $value = Carbon::parse((string) $value);
+            } catch (\Throwable) {
+                return (string) $value;
+            }
+        }
+
+        $carbon = Carbon::instance($value);
+
+        if ($pattern !== null) {
+            return $carbon->translatedFormat($pattern);
+        }
+
+        return match ($kind) {
+            'date' => $carbon->translatedFormat((string) __('dynamic-table::table.formats.date')),
+            'time' => $carbon->translatedFormat((string) __('dynamic-table::table.formats.time')),
+            default => $carbon->translatedFormat((string) __('dynamic-table::table.formats.datetime')),
+        };
+    }
+
+    protected function number(float $value, ?int $decimals = null): string
+    {
+        $decimals ??= floor($value) === $value ? 0 : 2;
+
+        return number_format($value, $decimals, '.', ',');
+    }
+
+    protected function currency(float $value, ?string $currency): string
+    {
+        $currency = strtoupper($currency ?? 'USD');
+
+        $symbols = ['USD' => '$', 'EUR' => '€', 'GBP' => '£', 'ILS' => '₪', 'JOD' => 'JD', 'AED' => 'AED', 'SAR' => 'SAR'];
+        $symbol = $symbols[$currency] ?? $currency.' ';
+
+        return $symbol.$this->number($value, 2);
+    }
+
+    protected function bytes(int $value): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $power = $value > 0 ? (int) floor(log($value, 1024)) : 0;
+        $power = min($power, count($units) - 1);
+
+        return $this->number($value / (1024 ** $power), $power === 0 ? 0 : 1).' '.$units[$power];
+    }
+
+    protected function json(mixed $value): string
+    {
+        if ($value instanceof Arrayable) {
+            $value = $value->toArray();
+        }
+
+        if (is_string($value)) {
+            return Str::limit($value, 200);
+        }
+
+        return Str::limit((string) json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 200);
+    }
+
+    protected function stringify(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_array($value) || $value instanceof Arrayable) {
+            return $this->json($value);
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::instance($value)->toDateTimeString();
+        }
+
+        return (string) $value;
+    }
+
+    protected function rawValue(mixed $value): mixed
+    {
+        if ($value instanceof BackedEnum) {
+            return $value->value;
+        }
+
+        if ($value instanceof UnitEnum) {
+            return $value->name;
+        }
+
+        if ($value instanceof DateTimeInterface) {
+            return Carbon::instance($value)->toIso8601String();
+        }
+
+        if ($value instanceof Arrayable) {
+            return $value->toArray();
+        }
+
+        return $value;
+    }
+}

@@ -1,0 +1,78 @@
+{
+    "name": "shwaeki/laravel-dynamictable",
+    "description": "Laravel DynamicTable — a fast, zero-configuration data grid for Laravel. Maximum functionality with minimum configuration.",
+    "keywords": [
+        "laravel",
+        "datatable",
+        "datagrid",
+        "table",
+        "grid",
+        "filters",
+        "views",
+        "excel",
+        "spreadsheet"
+    ],
+    "homepage": "https://github.com/shwaeki/DynamicTable",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Mohamad Shwaeki",
+            "email": "shwaeki@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/shwaeki/DynamicTable/issues",
+        "source": "https://github.com/shwaeki/DynamicTable"
+    },
+    "require": {
+        "illuminate/contracts": "^11.0|^12.0|^13.0",
+        "illuminate/database": "^11.0|^12.0|^13.0",
+        "illuminate/http": "^11.0|^12.0|^13.0",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/view": "^11.0|^12.0|^13.0",
+        "php": "^8.2",
+        "symfony/finder": "^7.0|^8.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0|^11.0",
+        "pestphp/pest": "^3.0|^4.0",
+        "larastan/larastan": "^2.9|^3.0",
+        "laravel/pint": "^1.18"
+    },
+    "suggest": {
+        "maatwebsite/excel": "Required for the xlsx Excel export/import adapter (^3.1|^4.0).",
+        "openspout/openspout": "Lightweight streaming alternative for very large exports (^4.0).",
+        "livewire/livewire": "Optional adapter to embed DynamicTable inside a Livewire component (^3.0|^4.0)."
+    },
+    "autoload": {
+        "psr-4": {
+            "Shwaeki\\DynamicTable\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Shwaeki\\DynamicTable\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "lint": "vendor/bin/pint",
+        "analyse": "vendor/bin/phpstan analyse"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Shwaeki\\DynamicTable\\DynamicTableServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

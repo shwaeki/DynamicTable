@@ -1,0 +1,11 @@
+<?php
+
+namespace {{ namespace }};
+
+use {{ modelClass }};
+use Shwaeki\DynamicTable\DynamicTable;
+
+class {{ class }} extends DynamicTable
+{
+    protected string $model = {{ model }}::class;
+{{ features }}}

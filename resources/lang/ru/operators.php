@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'equals' => 'равно',
+    'not_equals' => 'не равно',
+    'contains' => 'содержит',
+    'not_contains' => 'не содержит',
+    'starts_with' => 'начинается с',
+    'ends_with' => 'заканчивается на',
+    'greater_than' => 'больше',
+    'greater_or_equal' => 'больше или равно',
+    'less_than' => 'меньше',
+    'less_or_equal' => 'меньше или равно',
+    'between' => 'между',
+    'not_between' => 'не между',
+    'in' => 'одно из',
+    'not_in' => 'ни одно из',
+    'is_empty' => 'пусто',
+    'is_not_empty' => 'не пусто',
+    'before' => 'до',
+    'after' => 'после',
+    'today' => 'сегодня',
+    'yesterday' => 'вчера',
+    'tomorrow' => 'завтра',
+    'this_week' => 'на этой неделе',
+    'last_week' => 'на прошлой неделе',
+    'next_week' => 'на следующей неделе',
+    'this_month' => 'в этом месяце',
+    'last_month' => 'в прошлом месяце',
+    'next_month' => 'в следующем месяце',
+    'this_year' => 'в этом году',
+    'last_year' => 'в прошлом году',
+    'last_n_days' => 'за последние N дней',
+    'next_n_days' => 'в ближайшие N дней',
+];

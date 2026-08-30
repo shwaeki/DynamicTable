@@ -1,0 +1,37 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    'equals' => 'שווה ל',
+    'not_equals' => 'לא שווה ל',
+    'contains' => 'מכיל',
+    'not_contains' => 'אינו מכיל',
+    'starts_with' => 'מתחיל ב',
+    'ends_with' => 'מסתיים ב',
+    'greater_than' => 'גדול מ',
+    'greater_or_equal' => 'גדול או שווה ל',
+    'less_than' => 'קטן מ',
+    'less_or_equal' => 'קטן או שווה ל',
+    'between' => 'בין',
+    'not_between' => 'לא בין',
+    'in' => 'אחד מתוך',
+    'not_in' => 'אף אחד מתוך',
+    'is_empty' => 'ריק',
+    'is_not_empty' => 'אינו ריק',
+    'before' => 'לפני',
+    'after' => 'אחרי',
+    'today' => 'היום',
+    'yesterday' => 'אתמול',
+    'tomorrow' => 'מחר',
+    'this_week' => 'השבוע',
+    'last_week' => 'השבוע שעבר',
+    'next_week' => 'השבוע הבא',
+    'this_month' => 'החודש',
+    'last_month' => 'החודש שעבר',
+    'next_month' => 'החודש הבא',
+    'this_year' => 'השנה',
+    'last_year' => 'השנה שעברה',
+    'last_n_days' => 'ב־N הימים האחרונים',
+    'next_n_days' => 'ב־N הימים הבאים',
+];
