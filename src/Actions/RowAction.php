@@ -42,6 +42,10 @@ final class RowAction
 
     private ?string $target = null;
 
+    private ?string $class = null;
+
+    private bool $showLabel = false;
+
     private bool $destructive = false;
 
     private bool $refresh = true;
@@ -95,6 +99,36 @@ final class RowAction
     {
         $this->url = $url;
         $this->target = $target;
+
+        return $this;
+    }
+
+    /**
+     * Extra CSS classes on the button or link.
+     *
+     * A row action is a quiet icon by default, because a column of loud
+     * buttons is a wall. When you want the loud version, this is where your
+     * framework's classes go — they sit alongside the structural
+     * `dt-row-action`, which carries the layout and the click handling:
+     *
+     *     ->class('btn btn-sm btn-light')->withLabel()
+     */
+    public function class(string $class): self
+    {
+        $this->class = trim($class);
+
+        return $this;
+    }
+
+    /**
+     * Draw the label beside the icon, rather than only in the tooltip.
+     *
+     * Without an icon the label is drawn anyway — an action always says
+     * something. This is for the case where you want both.
+     */
+    public function withLabel(bool $show = true): self
+    {
+        $this->showLabel = $show;
 
         return $this;
     }
@@ -224,6 +258,8 @@ final class RowAction
             'name' => $this->name,
             'label' => $this->label ?? Str::headline($this->name),
             'icon' => $this->icon,
+            'class' => $this->class,
+            'showLabel' => $this->showLabel,
             'confirm' => $this->confirm,
             'destructive' => $this->destructive,
             'link' => $this->isLink(),

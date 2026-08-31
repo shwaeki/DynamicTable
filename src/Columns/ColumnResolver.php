@@ -199,7 +199,7 @@ class ColumnResolver
      * Does this column produce markup rather than text?
      *
      * Three ways it can: a render closure typed to return an Htmlable, one of
-     * the built-in cell renderers, or badges â all markup by definition. Either
+     * the built-in cell renderers, or badges — all markup by definition. Either
      * way the cell is written out as HTML rather than escaped.
      *
      * @param  array<string, mixed>  $options

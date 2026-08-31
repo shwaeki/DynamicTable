@@ -414,6 +414,7 @@ class ExampleRegistry
                     'Visibility is per record — "Publish" only appears on drafts, and "Discontinue" disappears once a product already is.',
                     'The server re-checks the action against the record before running it. A button having been rendered is never treated as permission.',
                     'After a handler runs, the row is repainted from the saved record; a delete reloads the page instead, because the row is gone.',
+                    '"Publish" carries its own classes and draws its label: an action that names classes is not painted by the package, so it matches the buttons around it.',
                     'The thumbnail and the stock badge are render closures returning an HtmlString — which says "already safe HTML", so no raw flag is needed. Note the e() calls: escaping what you interpolate is still your job.',
                 ],
                 keywords: ['row actions', 'buttons', 'html', 'image', 'badge', 'link', 'delete', 'render'],

@@ -383,18 +383,27 @@ export class DynamicTable {
                 if (applies === undefined) continue;
 
                 const shared = {
-                    class: ['dt-row-action', action.destructive ? 'dt-row-action-danger' : null],
+                    class: [
+                        'dt-row-action',
+                        action.destructive ? 'dt-row-action-danger' : null,
+                        // Its own classes mean the package stops painting it.
+                        action.class ? `dt-row-action-custom ${action.class}` : null,
+                    ],
                     title: action.label,
-                    // The server normalised the icon to safe HTML — an icon
-                    // font element stays markup, a glyph is already escaped —
-                    // so it is inserted rather than printed. A button with no
-                    // icon falls back to its label, which is plain text.
-                    ...(action.icon ? { html: action.icon } : { text: action.label }),
                 };
 
+                // Mirrors partials/row-action.blade.php. The server normalised
+                // the icon to safe HTML — an icon font element stays markup, a
+                // glyph is already escaped — so it is inserted rather than
+                // printed; the label is always plain text.
+                const content = [
+                    action.icon ? el('span', { class: 'dt-row-action-icon', 'aria-hidden': 'true', html: action.icon }) : null,
+                    ! action.icon || action.showLabel ? el('span', { class: 'dt-row-action-label', text: action.label }) : null,
+                ];
+
                 cell.append(action.link
-                    ? el('a', { ...shared, href: applies, target: action.target || null, rel: action.target ? 'noopener' : null })
-                    : el('button', { ...shared, type: 'button', 'data-dt-row-action': action.name }));
+                    ? el('a', { ...shared, href: applies, target: action.target || null, rel: action.target ? 'noopener' : null }, content)
+                    : el('button', { ...shared, type: 'button', 'data-dt-row-action': action.name }, content));
             }
 
             tr.append(cell);
@@ -404,7 +413,7 @@ export class DynamicTable {
     }
 
     /**
-     * The classes of one badge â mirrors Columns\Badge::classes().
+     * The classes of one badge — mirrors Columns\Badge::classes().
      *
      * A theme that writes {tone} in its badge slot says where the tone goes;
      * every other theme gets the package modifier appended.

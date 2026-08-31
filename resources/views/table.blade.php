@@ -338,20 +338,27 @@
                                         @continue
                                     @endif
 
+                                    @php
+                                        /* Mirrors the browser's renderRow(): icon, label, or both. */
+                                        $actionClass = trim('dt-row-action '
+                                            .(! empty($action['destructive']) ? 'dt-row-action-danger ' : '')
+                                            .(! empty($action['class']) ? 'dt-row-action-custom '.$action['class'] : ''));
+                                    @endphp
+
                                     @if (! empty($action['link']))
                                         <a
                                             href="{{ $applies }}"
-                                            class="dt-row-action {{ !empty($action['destructive']) ? 'dt-row-action-danger' : '' }}"
+                                            class="{{ $actionClass }}"
                                             @if (!empty($action['target'])) target="{{ $action['target'] }}" rel="noopener" @endif
                                             title="{{ $action['label'] }}"
-                                        >{!! $action['icon'] ?? e($action['label']) !!}</a>
+                                        >@include('dynamic-table::partials.row-action', ['action' => $action])</a>
                                     @else
                                         <button
                                             type="button"
-                                            class="dt-row-action {{ !empty($action['destructive']) ? 'dt-row-action-danger' : '' }}"
+                                            class="{{ $actionClass }}"
                                             data-dt-row-action="{{ $action['name'] }}"
                                             title="{{ $action['label'] }}"
-                                        >{!! $action['icon'] ?? e($action['label']) !!}</button>
+                                        >@include('dynamic-table::partials.row-action', ['action' => $action])</button>
                                     @endif
                                 @endforeach
                             </td>

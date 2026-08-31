@@ -36,6 +36,8 @@ final class ToolbarAction
 
     private ?string $target = null;
 
+    private ?string $class = null;
+
     private string $align = 'end';
 
     private string $style = 'default';
@@ -88,8 +90,16 @@ final class ToolbarAction
         return $this;
     }
 
+    /** Extra CSS classes on the button, alongside the theme's own. */
+    public function class(string $class): self
+    {
+        $this->class = trim($class);
+
+        return $this;
+    }
+
     /**
-     * A link to a named route â the short form of ->url(fn () => route(...)).
+     * A link to a named route — the short form of ->url(fn () => route(...)).
      *
      * @param  array<int|string, mixed>  $parameters
      */
@@ -227,6 +237,7 @@ final class ToolbarAction
             'name' => $this->name,
             'label' => $this->label ?? Str::headline($this->name),
             'icon' => $this->icon,
+            'class' => $this->class,
             'confirm' => $this->confirm,
             'link' => $this->isLink(),
             'href' => $this->url === null ? null : (string) ($this->url)(),

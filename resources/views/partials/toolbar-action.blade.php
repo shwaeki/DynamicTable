@@ -3,6 +3,9 @@
     $class = ($action['style'] ?? 'default') === 'primary'
         ? ($classes['buttonPrimary'] ?? '')
         : (($action['style'] ?? 'default') === 'danger' ? ($classes['buttonDanger'] ?? '') : ($classes['button'] ?? ''));
+
+    /* The action's own classes come last, so they win where they overlap. */
+    $class = trim($class.' '.($action['class'] ?? ''));
 @endphp
 
 @if (! empty($action['link']))

@@ -68,9 +68,15 @@ class RowActionsTable extends DynamicTable
                 ->icon('★')
                 ->handle(fn (Product $product) => $product->update(['is_featured' => ! $product->is_featured])),
 
+            // The loud version: its own classes, and the label drawn beside the
+            // icon rather than left in the tooltip. An action that names classes
+            // is not painted by the package at all, so it looks like the rest of
+            // the application's buttons.
             RowAction::make('publish')
                 ->label('Publish')
                 ->icon('✔')
+                ->class('demo-btn demo-btn-primary')
+                ->withLabel()
                 ->visible(fn (Product $product): bool => $product->status === ProductStatus::Draft)
                 ->handle(fn (Product $product) => $product->update(['status' => ProductStatus::Active])),
 

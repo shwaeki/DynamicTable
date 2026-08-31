@@ -249,10 +249,23 @@ class TablePayload
         ];
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * The strings the browser draws.
+     *
+     * The operator names live in a language file of their own — they belong to
+     * a closed enum rather than to the table chrome — but the filter builder
+     * and the column header menu are the things that draw them, and both run in
+     * the browser. Shipping them under one key is what keeps "does not contain"
+     * from arriving as "not contains" in every language.
+     *
+     * @return array<string, mixed>
+     */
     public function labels(): array
     {
-        return (array) trans('dynamic-table::table');
+        return array_replace(
+            ['operators' => (array) trans('dynamic-table::operators')],
+            (array) trans('dynamic-table::table'),
+        );
     }
 
     protected function panelEnabled(): bool

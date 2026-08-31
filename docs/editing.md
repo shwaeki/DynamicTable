@@ -147,6 +147,14 @@ public function rowActions(): array
             ->ability('update')
             ->handle(fn (Product $product) => $product->update(['status' => Status::Active])),
 
+        // A real button, in your own framework's clothes.
+        RowAction::make('invoice')
+            ->label('Invoice')
+            ->icon('<i class="far fa-file-lines"></i>')
+            ->class('btn btn-sm btn-light')
+            ->withLabel()
+            ->route('products.invoice'),
+
         RowAction::delete(),
     ];
 }
@@ -155,7 +163,10 @@ public function rowActions(): array
 | Method | |
 |---|---|
 | `label`, `icon` | The icon is shown when present, with the label as its tooltip. Icon-font markup works too — `->icon('<i class="far fa-edit"></i>')` is rendered as markup, anything else as text. `->icon(new HtmlString(...))` says it is markup outright |
+| `withLabel()` | Draw the label beside the icon, instead of only in the tooltip. An action with no icon shows its label either way |
+| `class('btn btn-sm')` | Your own classes on the element — the package then stops painting it, see below |
 | `url(fn, $target)` | Makes it a link; the closure receives the record |
+| `route('products.edit')` | The same for a named route, with the record as its parameter |
 | `handle(fn)` | Makes it a server action; receives the record and any input |
 | `visible(fn)` | Per record — hide an action that makes no sense for that row |
 | `ability('update')` | Runs through the table's `can()`, so policies apply |
@@ -163,6 +174,29 @@ public function rowActions(): array
 | `confirm('…')` | Browser confirmation before running |
 | `destructive()` | Styles it as dangerous |
 | `withoutRefresh()` | Skip the reload when the action changes nothing visible |
+
+### Link, button, icon or text
+
+The element follows the method rather than a setting: `url()` and `route()`
+render an `<a href>`, `handle()` renders a `<button>`. Both carry
+`dt-row-action` and, by default, look the same — a quiet icon, because a column
+of loud buttons is a wall.
+
+`->class()` is the way out of that default. An action that brings its own
+classes also gets `dt-row-action-custom`, and the package's button styling steps
+aside for it: only the layout stays (inline-flex, the gap between icon and
+label, the spacing between buttons), so your framework's `.btn` is never fought
+over. `->withLabel()` decides whether the label is drawn beside the icon or left
+as the tooltip.
+
+```php
+RowAction::make('edit')->label('Edit')->icon('✏')->route('products.edit')                // icon only
+RowAction::make('edit')->label('Edit')->route('products.edit')                            // text only
+RowAction::make('edit')->label('Edit')->icon('✏')->withLabel()->route('products.edit')   // both
+RowAction::make('edit')->label('Edit')->class('btn btn-sm btn-primary')->withLabel()->route('products.edit')
+```
+
+Toolbar actions take `->class()` too, appended after the theme's button class.
 
 ### What the server does
 

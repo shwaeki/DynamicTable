@@ -4,6 +4,26 @@ All notable changes to Laravel DynamicTable are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`RowAction::class()` and `->withLabel()`** (and `ToolbarAction::class()`):
+  a row action can wear the application's own button classes and show its label
+  beside the icon. An action that names classes also gets
+  `dt-row-action-custom`, and the package's own button styling steps aside for
+  it — only the layout is kept, so a framework `.btn` is never fought over.
+
+### Fixed
+
+- Operator names in the filter builder and the column header menu were drawn
+  from the raw enum value — "not contains" — in every language: the boot payload
+  carried `dynamic-table::table` but not `dynamic-table::operators`, so the
+  browser never had the translations that were sitting in the language files.
+- Badge tones no longer draw a border.
+- Three em dashes in source comments were double-encoded by a bad patch in
+  1.3.0.
+
 ## [1.3.0] — 2026-08-31
 
 ### Added

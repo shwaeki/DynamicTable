@@ -135,13 +135,16 @@
  * Badge tones, for the `badges` column option.
  *
  * Tinted rather than filled: a column of solid pills fights the row it sits
- * in, and these have to stay legible next to plain text in both schemes.
+ * in, and these have to stay legible next to plain text in both schemes. The
+ * border is transparent rather than absent, so a toned badge is exactly the
+ * size of an untoned one and a column of them lines up.
  */
-.dt :where(.dt-badge-success) { background: color-mix(in srgb, var(--dt-success) 12%, transparent); border-color: color-mix(in srgb, var(--dt-success) 35%, transparent); color: var(--dt-success); }
-.dt :where(.dt-badge-danger) { background: color-mix(in srgb, var(--dt-danger) 12%, transparent); border-color: color-mix(in srgb, var(--dt-danger) 35%, transparent); color: var(--dt-danger); }
-.dt :where(.dt-badge-warning) { background: color-mix(in srgb, var(--dt-warning) 14%, transparent); border-color: color-mix(in srgb, var(--dt-warning) 35%, transparent); color: var(--dt-warning); }
-.dt :where(.dt-badge-info) { background: color-mix(in srgb, var(--dt-info) 12%, transparent); border-color: color-mix(in srgb, var(--dt-info) 35%, transparent); color: var(--dt-info); }
-.dt :where(.dt-badge-primary) { background: color-mix(in srgb, var(--dt-accent) 12%, transparent); border-color: color-mix(in srgb, var(--dt-accent) 35%, transparent); color: var(--dt-accent); }
+.dt :where([class*='dt-badge-']) { border-color: transparent; }
+.dt :where(.dt-badge-success) { background: color-mix(in srgb, var(--dt-success) 12%, transparent); color: var(--dt-success); }
+.dt :where(.dt-badge-danger) { background: color-mix(in srgb, var(--dt-danger) 12%, transparent); color: var(--dt-danger); }
+.dt :where(.dt-badge-warning) { background: color-mix(in srgb, var(--dt-warning) 14%, transparent); color: var(--dt-warning); }
+.dt :where(.dt-badge-info) { background: color-mix(in srgb, var(--dt-info) 12%, transparent); color: var(--dt-info); }
+.dt :where(.dt-badge-primary) { background: color-mix(in srgb, var(--dt-accent) 12%, transparent); color: var(--dt-accent); }
 .dt :where(.dt-badge-neutral) { color: var(--dt-muted); }
 
 .dt :where(.dt-btn-primary) { background: var(--dt-accent); color: var(--dt-accent-ink); border: 1px solid var(--dt-accent); }
@@ -431,10 +434,23 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: .35rem;
+    margin-inline-start: .15rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/*
+ * The quiet icon button, which is what a row action looks like by default.
+ *
+ * An action that brings its own classes — ->class('btn btn-sm btn-light') —
+ * keeps the layout above and nothing else, so the package and the framework
+ * are never painting the same button against each other.
+ */
+.dt-row-action:not(.dt-row-action-custom) {
     min-width: 1.75rem;
     height: 1.75rem;
     padding: 0 .35rem;
-    margin-inline-start: .15rem;
     border: 1px solid transparent;
     border-radius: 6px;
     background: none;
@@ -442,14 +458,13 @@
     font: inherit;
     font-size: .85rem;
     line-height: 1;
-    text-decoration: none;
-    cursor: pointer;
 }
 
-.dt-row-action:hover { background: var(--dt-surface-2); border-color: var(--dt-border); }
+.dt-row-action:not(.dt-row-action-custom):hover { background: var(--dt-surface-2); border-color: var(--dt-border); }
+.dt-row-action-danger:not(.dt-row-action-custom):hover { color: var(--dt-danger); border-color: var(--dt-danger); }
 .dt-row-action:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
 .dt-row-action:disabled { opacity: .45; cursor: default; }
-.dt-row-action-danger:hover { color: var(--dt-danger); border-color: var(--dt-danger); }
+.dt-row-action-label { white-space: nowrap; }
 
 /* Cells may contain small pieces of markup — a badge, a thumbnail, a link. */
 .dt-cell img { max-height: 2rem; vertical-align: middle; }
