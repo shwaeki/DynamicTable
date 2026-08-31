@@ -100,6 +100,23 @@ final class RowAction
     }
 
     /**
+     * A link to a named route, with the record as its parameter.
+     *
+     * The short way to write what a show or edit button always is:
+     *
+     *     RowAction::make('edit')->route('admin.companies.edit')
+     *
+     * @param  array<int|string, mixed>  $parameters  anything else the route needs
+     */
+    public function route(string $name, array $parameters = [], ?string $target = null): self
+    {
+        return $this->url(
+            static fn (Model $record): string => route($name, array_merge([$record], $parameters)),
+            $target,
+        );
+    }
+
+    /**
      * Run something on the server for this record.
      *
      * @param  Closure(Model, array<string, mixed>): mixed  $handler

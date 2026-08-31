@@ -4,6 +4,59 @@ All notable changes to Laravel DynamicTable are documented here. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Badges as a column option.** `'status' => ['badges' => ['paid' => 'success',
+  'overdue' => 'danger']]` draws the value as a coloured pill, replacing the
+  render closure every project writes for a status column. Booleans take
+  `[1 => ['success', 'Active'], 0 => ['danger', 'Inactive']]`, `'badges' => true`
+  colours a value from the word itself, and a closure —
+  `fn ($value, $record) => [$record->status_color, $record->status_name]` —
+  covers the model-accessor pair. The label sits inside the markup, so exports
+  still read as the word on screen. A theme that writes `{tone}` in its badge
+  slot (`'badge' => 'badge badge-light-{tone}'`) decides where the tone goes.
+- **`empty` column option**: what a null or blank cell reads as, e.g.
+  `['empty' => 'Unassigned']`, instead of a closure that only supplies a
+  fallback.
+- **`$paramFilters`**: parameters bound straight to the query, so the usual
+  `when($this->param('x'), fn ($q, $v) => $q->where(...))` chain in `query()`
+  becomes one line each. Operators cover equality, comparisons, `contains`,
+  `in`, `between` and `date`; a dotted column filters through a relation; and
+  `'operator' => 'period'` reads a whole date picker from one parameter —
+  `week`, `this_month`, `last_n_days:30`, or `custom` with its two companion
+  parameters. Every name declared this way is a declared parameter.
+- **Date patterns in either vocabulary.** `['format' => 'dd/mm/yyyy']`,
+  `'dd/mm/yyyy hh:ii a'`, `'yyyy-mm-dd HH:mm'` — the way a spreadsheet writes a
+  pattern — alongside PHP's own `d/m/Y`. `mm` between an hour and a second is
+  minutes, words inside a pattern survive, and month and day names still follow
+  the locale. On a column the package already knows is a date, the `date:`
+  prefix is optional, so a bare `['format' => 'dd/mm/yyyy']` — which used to be
+  ignored in silence — now does what it says.
+- **`config('dynamic-table.formats')`**: application-wide default patterns for
+  date, time and datetime columns, overriding the per-locale defaults from the
+  language files.
+- **`RowAction::route()` and `ToolbarAction::route()`**: the short form of
+  `->url(fn ($record) => route('admin.companies.edit', $record))`.
+
+### Changed
+
+- **One config file.** Themes moved from `config/dynamic-table-themes.php` into
+  the `themes` key of `config/dynamic-table.php`, next to the `theme` that
+  selects one, and the second file is gone — along with its
+  `dynamic-table-themes` publish tag and `dynamic-table:install --themes`. A
+  themes file published by an earlier version is still read, so an upgrade
+  drops no theme; move its contents under `themes` and delete it when
+  convenient.
+
+### Fixed
+
+- The `badges` column option was accepted and carried through the resolver but
+  never drawn. It now is.
+- An enum cell drawn in the browser missed the `dt-badge-<value>` class the
+  server-rendered one has; both now agree, and both honour a theme's `{tone}`.
+
 ## [1.2.1] — 2026-08-30
 
 ### Fixed

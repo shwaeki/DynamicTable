@@ -116,6 +116,19 @@ protected array $scopes = ['active'];
 no filter, sort, selection or inline edit can escape it. See
 [Security](security.md).
 
+When the value comes from a control of your own rather than from the filter
+builder, bind it instead of writing the `where` by hand:
+
+```php
+protected array $paramFilters = [
+    'status',
+    'category' => 'company_category_id',
+    'created_period' => ['column' => 'created_at', 'operator' => 'period'],
+];
+```
+
+See [Filters from parameters](tables.md#filters-from-parameters).
+
 ## Presets
 
 Developer-defined views appear alongside saved ones:

@@ -103,12 +103,33 @@ protected function columns(): array
     return [
         'name',
         'email',
-        'department.name' => 'Department',
+        'department.name' => ['label' => 'Department', 'empty' => 'Unassigned'],
+        'status' => ['badges' => ['paid' => 'success', 'overdue' => 'danger']],
         'salary' => ['format' => 'currency:USD', 'align' => 'end'],
         'created_at',
     ];
 }
 ```
+
+The presentations everyone writes the same closure for are options, not code:
+badges, placeholders, progress bars, ratings, avatars, chips.
+
+## Your own controls, without the query() boilerplate
+
+Filters above the table are usually one `where` each. Say so:
+
+```php
+protected array $paramFilters = [
+    'status',
+    'category' => 'company_category_id',
+    'q' => ['column' => 'name', 'operator' => 'contains'],
+    'created_period' => ['column' => 'created_at', 'operator' => 'period'],
+];
+```
+
+Those names are declared parameters, the period picker understands
+`week`, `this_month`, `last_year` and `custom` with its own two date inputs, and
+`query()` stays for the things that are actually yours.
 
 ---
 
@@ -116,8 +137,8 @@ protected function columns(): array
 
 | | |
 |---|---|
-| **Columns** | Automatic discovery · type detection · relationship columns · computed attributes · formatting · built-in renderers (progress, rating, sparkline, chips, avatar) · picker that can add any column, including through relations · drag reordering · resizing |
-| **Querying** | Global search · per-column search · Dynamics-style filter builder with nested AND/OR groups · multi-column sorting · server-side pagination · soft deletes |
+| **Columns** | Automatic discovery · type detection · relationship columns · computed attributes · formatting · declarative badges and empty-cell placeholders · built-in renderers (progress, rating, sparkline, chips, avatar) · picker that can add any column, including through relations · drag reordering · resizing |
+| **Querying** | Global search · per-column search · Dynamics-style filter builder with nested AND/OR groups · parameters bound straight to the query, date periods included · multi-column sorting · server-side pagination · soft deletes |
 | **Views** | User views · system views · developer presets · default-view precedence · versioned JSON state · optional URL sync |
 | **Editing** | Inline editing with validation · inline create · bulk edit over a selection · bulk actions · row actions · toolbar actions |
 | **Output** | Print view from an editable Blade template · summary row (sum, avg, min, max, count) over the filtered set |

@@ -30,6 +30,7 @@
     --dt-danger: #dc2626;
     --dt-success: #16a34a;
     --dt-warning: #d97706;
+    --dt-info: #0284c7;
     --dt-radius: 6px;
 
     position: relative;
@@ -57,6 +58,7 @@
         --dt-danger: #f87171;
         --dt-success: #4ade80;
         --dt-warning: #fbbf24;
+        --dt-info: #38bdf8;
 
         color-scheme: dark;
     }
@@ -76,6 +78,7 @@
     --dt-danger: #f87171;
     --dt-success: #4ade80;
     --dt-warning: #fbbf24;
+    --dt-info: #38bdf8;
 
     color-scheme: dark;
 }
@@ -127,6 +130,19 @@
     background: var(--dt-selected);
     color: var(--dt-accent);
 }
+
+/*
+ * Badge tones, for the `badges` column option.
+ *
+ * Tinted rather than filled: a column of solid pills fights the row it sits
+ * in, and these have to stay legible next to plain text in both schemes.
+ */
+.dt :where(.dt-badge-success) { background: color-mix(in srgb, var(--dt-success) 12%, transparent); border-color: color-mix(in srgb, var(--dt-success) 35%, transparent); color: var(--dt-success); }
+.dt :where(.dt-badge-danger) { background: color-mix(in srgb, var(--dt-danger) 12%, transparent); border-color: color-mix(in srgb, var(--dt-danger) 35%, transparent); color: var(--dt-danger); }
+.dt :where(.dt-badge-warning) { background: color-mix(in srgb, var(--dt-warning) 14%, transparent); border-color: color-mix(in srgb, var(--dt-warning) 35%, transparent); color: var(--dt-warning); }
+.dt :where(.dt-badge-info) { background: color-mix(in srgb, var(--dt-info) 12%, transparent); border-color: color-mix(in srgb, var(--dt-info) 35%, transparent); color: var(--dt-info); }
+.dt :where(.dt-badge-primary) { background: color-mix(in srgb, var(--dt-accent) 12%, transparent); border-color: color-mix(in srgb, var(--dt-accent) 35%, transparent); color: var(--dt-accent); }
+.dt :where(.dt-badge-neutral) { color: var(--dt-muted); }
 
 .dt :where(.dt-btn-primary) { background: var(--dt-accent); color: var(--dt-accent-ink); border: 1px solid var(--dt-accent); }
 .dt :where(.dt-btn-danger) { background: var(--dt-danger); color: #fff; border: 1px solid var(--dt-danger); }

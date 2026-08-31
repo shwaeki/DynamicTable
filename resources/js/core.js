@@ -403,6 +403,21 @@ export class DynamicTable {
         return tr;
     }
 
+    /**
+     * The classes of one badge â mirrors Columns\Badge::classes().
+     *
+     * A theme that writes {tone} in its badge slot says where the tone goes;
+     * every other theme gets the package modifier appended.
+     */
+    badgeClass(tone) {
+        const base = this.classes.badge || 'dt-badge';
+        const slug = String(tone || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+
+        if (base.includes('{tone}')) return base.replace('{tone}', slug || 'neutral').trim();
+
+        return slug ? `${base} dt-badge-${slug}` : base;
+    }
+
     /** Mirrors resources/views/partials/cell.blade.php. */
     paintCell(td, column, value, row) {
         td.replaceChildren();
@@ -429,7 +444,7 @@ export class DynamicTable {
                 }));
                 break;
             case 'enum':
-                td.append(el('span', { class: `${this.classes.badge || 'dt-badge'}`, text: String(value) }));
+                td.append(el('span', { class: this.badgeClass(String(value)), text: String(value) }));
                 break;
             case 'image':
                 td.append(el('img', { src: value, alt: '', class: 'dt-thumb', loading: 'lazy' }));

@@ -88,6 +88,16 @@ final class ToolbarAction
         return $this;
     }
 
+    /**
+     * A link to a named route â the short form of ->url(fn () => route(...)).
+     *
+     * @param  array<int|string, mixed>  $parameters
+     */
+    public function route(string $name, array $parameters = [], ?string $target = null): self
+    {
+        return $this->url(static fn (): string => route($name, $parameters), $target);
+    }
+
     /** @param Closure(DynamicTable, array<string, mixed>): mixed $handler */
     public function handle(Closure $handler): self
     {

@@ -175,17 +175,32 @@ class ColumnResolver
             // column identifies the row, so it collapses last.
             priority: isset($options['priority']) ? (int) $options['priority'] : ($position === 0 ? 1 : 10 + $position),
             render: $render instanceof Closure ? $render : null,
-            badges: (array) ($options['badges'] ?? []),
+            badges: $this->badgesFor($options['badges'] ?? []),
+            placeholder: isset($options['empty']) ? (string) $options['empty'] : null,
             meta: (array) ($options['meta'] ?? []),
         );
     }
 
     /**
+     * The badges option, kept in whichever shape it was written.
+     *
+     * @return array<array-key, mixed>|Closure|bool
+     */
+    protected function badgesFor(mixed $badges): array|Closure|bool
+    {
+        if ($badges instanceof Closure || is_bool($badges)) {
+            return $badges;
+        }
+
+        return is_array($badges) ? $badges : [];
+    }
+
+    /**
      * Does this column produce markup rather than text?
      *
-     * Two ways it can: a render closure typed to return an Htmlable, or one of
-     * the built-in cell renderers, which are markup by definition. Either way
-     * the cell is written out as HTML rather than escaped.
+     * Three ways it can: a render closure typed to return an Htmlable, one of
+     * the built-in cell renderers, or badges â all markup by definition. Either
+     * way the cell is written out as HTML rather than escaped.
      *
      * @param  array<string, mixed>  $options
      */
@@ -194,6 +209,12 @@ class ColumnResolver
         $format = isset($options['format']) ? explode(':', (string) $options['format'], 2)[0] : null;
 
         if ($format !== null && in_array($format, CellRenderers::FORMATS, true)) {
+            return true;
+        }
+
+        $badges = $options['badges'] ?? [];
+
+        if ($badges !== [] && $badges !== false) {
             return true;
         }
 

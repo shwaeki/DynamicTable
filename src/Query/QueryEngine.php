@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Shwaeki\DynamicTable\Columns\ColumnDefinition;
 use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Filters\FilterEngine;
+use Shwaeki\DynamicTable\Filters\ParamFilters;
 use Shwaeki\DynamicTable\Metadata\FieldType;
 use Shwaeki\DynamicTable\Metadata\MetadataEngine;
 use Shwaeki\DynamicTable\Support\Feature;
@@ -157,7 +158,7 @@ class QueryEngine
             }
         }
 
-        $query = $table->query($query);
+        $query = ParamFilters::apply($table, $table->query($query));
 
         if ($table->usesSoftDeletes() && $state->trashed !== 'without') {
             // Expressed through the global scope rather than the SoftDeletes

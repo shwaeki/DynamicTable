@@ -42,8 +42,7 @@ un-published files keep receiving upstream fixes. Publish only what you intend
 to change.
 
 ```bash
-php artisan dynamic-table:install --config      # config/dynamic-table.php
-php artisan dynamic-table:install --themes      # config/dynamic-table-themes.php
+php artisan dynamic-table:install --config      # config/dynamic-table.php, themes included
 php artisan dynamic-table:install --lang        # lang/vendor/dynamic-table
 php artisan dynamic-table:install --views       # the Blade template
 php artisan dynamic-table:install --migrations  # the saved-views tables
@@ -55,7 +54,6 @@ command or need it in a deploy script:
 
 ```bash
 php artisan vendor:publish --tag=dynamic-table-config
-php artisan vendor:publish --tag=dynamic-table-themes
 php artisan vendor:publish --tag=dynamic-table-lang
 php artisan vendor:publish --tag=dynamic-table-views
 php artisan vendor:publish --tag=dynamic-table-migrations
@@ -69,8 +67,7 @@ discard your edits to them, so keep it out of habit and out of deploys.
 
 | Tag | Publishes | Publish it when |
 |---|---|---|
-| `dynamic-table-config` | `config/dynamic-table.php` | Changing defaults: theme, page size, table height, panel mode, responsive strategy, caching. |
-| `dynamic-table-themes` | `config/dynamic-table-themes.php` | Defining your own themes. This is the file to edit — no service provider needed. |
+| `dynamic-table-config` | `config/dynamic-table.php` | Changing defaults: theme, page size, table height, panel mode, responsive strategy, caching — and defining your own themes under `themes`. |
 | `dynamic-table-lang` | `lang/vendor/dynamic-table/{locale}` | Rewording the UI, or adding a language the package does not ship. |
 | `dynamic-table-views` | `resources/views/vendor/dynamic-table` | Changing the markup itself. Rarely needed — a theme is a class map, so looks do not require this. |
 | `dynamic-table-migrations` | The saved-views tables | You want to own them, e.g. to change the table names or add columns. |

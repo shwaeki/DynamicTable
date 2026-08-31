@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Shwaeki\DynamicTable\Columns\Badge;
 use Shwaeki\DynamicTable\Columns\CellRenderers;
 use Shwaeki\DynamicTable\Columns\ColumnDefinition;
 use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Metadata\FieldType;
+use Shwaeki\DynamicTable\Support\DateFormat;
+use Shwaeki\DynamicTable\Support\Theme;
 use UnitEnum;
 
 /**
@@ -25,6 +28,9 @@ use UnitEnum;
  */
 class RowFormatter
 {
+    /** @var array<string, string> The badge classes of each theme met so far. */
+    private array $badgeClasses = [];
+
     /**
      * @param  iterable<Model>  $records
      * @param  list<ColumnDefinition>  $columns
@@ -69,8 +75,10 @@ class RowFormatter
                     $cells[$column->key] = (string) $rendered;
                 }
             } else {
-                $cells[$column->key] = $this->display($value, $column);
+                $cells[$column->key] = $this->badge($this->display($value, $column), $value, $column, $record, $table);
             }
+
+            $cells[$column->key] = $this->placeholder($cells[$column->key], $column);
 
             if ($column->editable) {
                 $raw[$column->key] = $this->rawValue($value);
@@ -112,6 +120,42 @@ class RowFormatter
         }
 
         return $row;
+    }
+
+    /**
+     * A cell drawn as a badge, when the column asked for that.
+     *
+     * The label goes inside the markup rather than beside it, so the exporter
+     * strips the tags and still writes the word the reader saw.
+     */
+    protected function badge(string|bool|null $display, mixed $value, ColumnDefinition $column, Model $record, DynamicTable $table): string|bool|null
+    {
+        if ($column->badges === [] || $column->badges === false || $display === null || $display === '') {
+            return $display;
+        }
+
+        $label = is_bool($display)
+            ? (string) __('dynamic-table::table.'.($display ? 'yes' : 'no'))
+            : $display;
+
+        $badge = Badge::resolve($column->badges, $value, $label, $record);
+
+        return $badge === null ? $display : Badge::html($badge[0], $badge[1], $this->badgeClass($table));
+    }
+
+    /** What a column says instead of nothing, when it was given the words. */
+    protected function placeholder(string|bool|null $cell, ColumnDefinition $column): string|bool|null
+    {
+        return ($cell === null || $cell === '') && $column->placeholder !== null
+            ? $column->placeholder
+            : $cell;
+    }
+
+    protected function badgeClass(DynamicTable $table): string
+    {
+        $theme = $table->theme();
+
+        return $this->badgeClasses[$theme] ??= (string) (Theme::classes($theme)['badge'] ?? 'dt-badge');
     }
 
     protected function extract(Model $record, ColumnDefinition $column): mixed
@@ -252,8 +296,32 @@ class RowFormatter
             'avatar' => CellRenderers::avatar($value, $argument),
             'duration' => CellRenderers::duration($value, $argument),
 
+            // A date column may name its pattern on its own — 'dd/mm/yyyy' —
+            // without the date: prefix, because that is what everyone writes.
+            default => $this->pattern($value, $format, $column),
+        };
+    }
+
+    /**
+     * A format that is not a name but a date pattern, on a column that can use
+     * one. Anything else is left alone, so a typo stays visible as a typo.
+     */
+    protected function pattern(mixed $value, string $format, ColumnDefinition $column): ?string
+    {
+        $kind = match ($column->type) {
+            FieldType::Date => 'date',
+            FieldType::Time => 'time',
+            FieldType::DateTime => 'datetime',
             default => null,
         };
+
+        if ($kind === null && ! $value instanceof DateTimeInterface) {
+            return null;
+        }
+
+        return DateFormat::looksLikePattern($format)
+            ? $this->date($value, $kind ?? 'datetime', $format)
+            : null;
     }
 
     protected function date(mixed $value, string $kind, ?string $pattern = null): ?string
@@ -266,17 +334,26 @@ class RowFormatter
             }
         }
 
-        $carbon = Carbon::instance($value);
+        return Carbon::instance($value)->translatedFormat(
+            DateFormat::toPhp($pattern ?? $this->defaultPattern($kind)),
+        );
+    }
 
-        if ($pattern !== null) {
-            return $carbon->translatedFormat($pattern);
-        }
+    /**
+     * The pattern a table uses when a column names none.
+     *
+     * config('dynamic-table.formats.date') sets it for the whole application;
+     * left null, each locale keeps the pattern in its own language file, which
+     * is why a date reads as 9 مارس 2026 in Arabic and 9 Mar 2026 in English.
+     */
+    protected function defaultPattern(string $kind): string
+    {
+        $kind = in_array($kind, ['date', 'time'], true) ? $kind : 'datetime';
+        $configured = config('dynamic-table.formats.'.$kind);
 
-        return match ($kind) {
-            'date' => $carbon->translatedFormat((string) __('dynamic-table::table.formats.date')),
-            'time' => $carbon->translatedFormat((string) __('dynamic-table::table.formats.time')),
-            default => $carbon->translatedFormat((string) __('dynamic-table::table.formats.datetime')),
-        };
+        return is_string($configured) && $configured !== ''
+            ? $configured
+            : (string) __('dynamic-table::table.formats.'.$kind);
     }
 
     protected function number(float $value, ?int $decimals = null): string

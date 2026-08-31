@@ -42,15 +42,16 @@ theme is at all.
 
 ## Writing a theme
 
-Publish the theme file once, and every theme you write lives in it:
+Publish the config once, and every theme you write lives under its `themes`
+key:
 
 ```bash
-php artisan vendor:publish --tag=dynamic-table-themes
+php artisan vendor:publish --tag=dynamic-table-config
 ```
 
 ```php
-// config/dynamic-table-themes.php
-return [
+// config/dynamic-table.php
+'themes' => [
     'brand' => [
         'wrapper' => 'rounded-2xl border shadow',
         'toolbar' => 'dt-toolbar flex items-center gap-2 p-4 border-b',
@@ -59,15 +60,17 @@ return [
         'cell' => 'dt-cell px-3 py-2',
         // …anything you leave out keeps the structural default
     ],
-];
+],
 ```
 
 ```php
 protected ?string $theme = 'brand';
 ```
 
-That is the whole workflow: one file, no service provider, no Blade files, no
-build step. Every slot is optional, so a theme can be three lines.
+That is the whole workflow: one file — the same one that holds `'theme'`, so
+the name you select and the theme you wrote sit a few lines apart — no service
+provider, no Blade files, no build step. Every slot is optional, so a theme can
+be three lines.
 
 Two rules, and only two:
 
@@ -80,6 +83,30 @@ Two rules, and only two:
    ```css
    .dt-brand { --dt-accent: #7c3aed; --dt-radius: 14px; }
    ```
+
+### Building on a theme that already works
+
+An admin template usually needs one or two slots changed, not thirty. Name the
+theme you are starting from:
+
+```php
+// config/dynamic-table.php
+'themes' => [
+    'metronic' => [
+        'extends' => 'bootstrap',
+        'badge' => 'badge badge-light-{tone}',
+        'button' => 'btn btn-sm btn-light',
+    ],
+],
+```
+
+Everything else stays Bootstrap's, including whatever the package changes about
+it later.
+
+`{tone}` is the one placeholder a slot understands, and only `badge` uses it: it
+is where the package writes the tone of a [badge](columns.md#badges) — the
+`success` of `badge badge-light-success`. Leave it out and the tone arrives as
+`dt-badge-success` alongside your class, which the package stylesheet paints.
 
 ### Registering one from code
 
@@ -123,8 +150,15 @@ Note the colours in that older example: `bg-white`, `text-slate-500`. They work,
 but they are the reason a theme can look wrong in dark mode — prefer the tokens.
 
 Resolution order, if a name is defined in more than one place: a theme
-registered in code wins, then `config/dynamic-table-themes.php`, then the
-legacy `dynamic-table.themes` key, then the built-ins.
+registered in code wins, then `config('dynamic-table.themes')`, then a
+`config/dynamic-table-themes.php` left over from an older version, then the
+built-ins.
+
+> **Upgrading?** Themes used to live in a second file,
+> `config/dynamic-table-themes.php`. They are part of `config/dynamic-table.php`
+> now, under `themes`. A file you published earlier is still read, so nothing
+> breaks — move its contents under the `themes` key when convenient and delete
+> it.
 
 ## Keep the `dt-*` classes
 

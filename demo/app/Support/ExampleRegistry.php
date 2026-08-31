@@ -388,6 +388,22 @@ class ExampleRegistry
                 keywords: ['bulk', 'actions', 'selection', 'select all', 'delete'],
             ),
             new Example(
+                id: 'badges',
+                category: 'Columns',
+                title: 'Badges & empty cells',
+                description: 'Coloured pills and placeholder text as column options, with no render closure anywhere.',
+                table: DynamicTables\BadgesTable::class,
+                notes: [
+                    'The map is keyed by the stored value — the enum backing value, 1/0 for a boolean — and an entry is a tone, [tone, label], or [\'tone\' => …, \'label\' => …].',
+                    'A tone on its own keeps the label the column already had, which is how the price column stays formatted as currency while the expensive rows are coloured.',
+                    'A closure gets ($value, $record) and may return null, so only some rows are badged; that is the shape to use when the colour comes from a model accessor.',
+                    'The label sits inside the markup rather than beside it, so an export of a badge column reads as the word on screen, not as HTML.',
+                    'Tones are the theme\'s badge class plus dt-badge-<tone>. A template with its own badge CSS writes {tone} into the theme once: \'badge\' => \'badge badge-light-{tone}\'.',
+                    '"empty" is the other half: what a null cell should say when a dash is not the right word.',
+                ],
+                keywords: ['badge', 'pill', 'status', 'tone', 'colour', 'color', 'empty', 'placeholder', 'null'],
+            ),
+            new Example(
                 id: 'row-actions',
                 category: 'Actions',
                 title: 'Row actions & HTML cells',
@@ -551,11 +567,11 @@ class ExampleRegistry
                 description: 'A complete theme in one array — no Blade files, no build step.',
                 table: DynamicTables\CustomThemeTable::class,
                 notes: [
-                    'The whole theme is config/dynamic-table-themes.php — publish it with `php artisan vendor:publish --tag=dynamic-table-themes` and edit it there. Nothing is registered in a service provider.',
+                    'The whole theme is the "themes" key of config/dynamic-table.php — publish it with `php artisan vendor:publish --tag=dynamic-table-config` and edit it there. Nothing is registered in a service provider.',
                     'Keep the structural dt-* classes: they carry behaviour (sticky header, resize handles, dialog layout, RTL mirroring), not looks.',
                     'No colour in the map. The demo theme sets the CSS tokens (--dt-accent, --dt-radius …) under .dt-demo instead, which is what keeps it readable in light and dark.',
                 ],
-                extraFiles: ['config/dynamic-table-themes.php'],
+                extraFiles: ['config/dynamic-table.php'],
                 keywords: ['theme', 'custom', 'css', 'brand'],
             ),
             new Example(

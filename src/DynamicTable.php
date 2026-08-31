@@ -12,6 +12,7 @@ use Shwaeki\DynamicTable\Actions\ToolbarAction;
 use Shwaeki\DynamicTable\Columns\ColumnDefinition;
 use Shwaeki\DynamicTable\Columns\ColumnResolver;
 use Shwaeki\DynamicTable\Exceptions\DynamicTableException;
+use Shwaeki\DynamicTable\Filters\ParamFilters;
 use Shwaeki\DynamicTable\Metadata\MetadataEngine;
 use Shwaeki\DynamicTable\Metadata\ModelMetadata;
 use Shwaeki\DynamicTable\Support\Feature;
@@ -82,6 +83,37 @@ abstract class DynamicTable
      * @var array<int|string, mixed>
      */
     protected array $params = [];
+
+    /**
+     * Parameters bound straight to the query, instead of by hand in query().
+     *
+     *     protected array $paramFilters = [
+     *         'status',                                                 // where('status', $value)
+     *         'category' => 'company_category_id',                      // parameter name is not the column
+     *         'q' => ['column' => 'name', 'operator' => 'contains'],
+     *         'area' => ['column' => 'companyArea.slug'],               // through a relation
+     *         'created_period' => ['column' => 'created_at', 'operator' => 'period'],
+     *     ];
+     *
+     * A filter is applied only when its parameter arrived with a value, and
+     * every name here is a declared parameter, so $params need not repeat them.
+     * See Filters\ParamFilters for the operators and the period vocabulary.
+     *
+     * PHP does not allow a closure in a property default, so a filter that
+     * needs one — anything the operators cannot say — comes from the method
+     * instead:
+     *
+     *     public function paramFilters(): array
+     *     {
+     *         return [
+     *             ...parent::paramFilters(),
+     *             'agent' => fn (Builder $q, $value) => $q->whereHas('agent', ...),
+     *         ];
+     *     }
+     *
+     * @var array<int|string, mixed>
+     */
+    protected array $paramFilters = [];
 
     /** @var array<string, mixed> The validated values for this request. */
     private array $resolvedParams = [];
@@ -730,13 +762,30 @@ abstract class DynamicTable
     }
 
     /**
+     * Filters declared as parameter bindings.
+     *
+     * @return array<int|string, mixed>
+     */
+    public function paramFilters(): array
+    {
+        return $this->paramFilters;
+    }
+
+    /**
      * The parameters this table declares, as name => default.
+     *
+     * Anything a declared filter reads is a parameter too, so binding one does
+     * not also have to be written down in $params.
      *
      * @return array<string, mixed>
      */
     public function declaredParams(): array
     {
         $declared = [];
+
+        foreach (ParamFilters::parameters($this->paramFilters()) as $name) {
+            $declared[$name] = null;
+        }
 
         foreach ($this->params as $name => $default) {
             if (is_int($name)) {

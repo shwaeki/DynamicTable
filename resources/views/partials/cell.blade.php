@@ -15,7 +15,7 @@
         {{ $value ? '✓' : '✕' }}
     </span>
 @elseif ($type === 'enum')
-    <span class="{{ $classes['badge'] ?? 'dt-badge' }} dt-badge-{{ \Illuminate\Support\Str::slug((string) $value) }}">{{ $value }}</span>
+    <span class="{{ \Shwaeki\DynamicTable\Columns\Badge::classes($classes['badge'] ?? 'dt-badge', (string) $value) }}">{{ $value }}</span>
 @elseif ($type === 'image')
     <img src="{{ $value }}" alt="" class="dt-thumb" loading="lazy">
 @elseif ($type === 'url')

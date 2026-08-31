@@ -22,7 +22,7 @@ class Theme
 
     /**
      * Every theme name that resolves to something: the built-ins, whatever the
-     * theme file defines, and anything registered in code.
+     * config defines, and anything registered in code.
      *
      * @return list<string>
      */
@@ -33,29 +33,35 @@ class Theme
             'bootstrap',
             'minimal',
             'bordered',
-            ...array_keys((array) config('dynamic-table-themes', [])),
             ...array_keys((array) config('dynamic-table.themes', [])),
+            // A themes file published by an older version, still honoured.
+            ...array_keys((array) config('dynamic-table-themes', [])),
             ...array_keys(static::$registered),
         ]));
     }
 
-    /** @return array<string, string> */
-    public static function classes(string $name): array
+    /**
+     * @param  list<string>  $seen  themes already being resolved, so an
+     *                              "extends" cycle cannot recurse forever
+     * @return array<string, string>
+     */
+    public static function classes(string $name, array $seen = []): array
     {
         $base = static::base();
 
         if (isset(static::$registered[$name])) {
-            return array_merge($base, static::$registered[$name]);
+            return static::inherit(array_merge($base, static::$registered[$name]), $name, $seen);
         }
 
-        // config/dynamic-table-themes.php is the intended home for a project's
-        // own themes: publish it and edit it there, rather than registering a
-        // map from a service provider. The legacy 'dynamic-table.themes' key
-        // still works for anyone already using it.
-        $fromConfig = config('dynamic-table-themes.'.$name) ?? config('dynamic-table.themes.'.$name);
+        // config/dynamic-table.php is the home for a project's own themes:
+        // publish it and edit the "themes" key there, rather than registering
+        // a map from a service provider. A config/dynamic-table-themes.php
+        // published by an older version still works, so an upgrade does not
+        // silently drop a theme, but the one config file wins.
+        $fromConfig = config('dynamic-table.themes.'.$name) ?? config('dynamic-table-themes.'.$name);
 
         if (is_array($fromConfig)) {
-            return array_merge($base, $fromConfig);
+            return static::inherit(array_merge($base, $fromConfig), $name, $seen);
         }
 
         return match ($name) {
@@ -65,6 +71,31 @@ class Theme
             'none', 'custom' => $base,
             default => array_merge($base, static::tailwind()),
         };
+    }
+
+    /**
+     * A theme built on another one.
+     *
+     *     'metronic' => ['extends' => 'bootstrap', 'badge' => 'badge badge-light-{tone}'],
+     *
+     * Without this, changing one slot means copying every slot of the theme you
+     * were otherwise happy with — and re-copying it whenever the package
+     * changes one.
+     *
+     * @param  array<string, string>  $classes
+     * @param  list<string>  $seen
+     * @return array<string, string>
+     */
+    protected static function inherit(array $classes, string $name, array $seen): array
+    {
+        $parent = $classes['extends'] ?? null;
+        unset($classes['extends']);
+
+        if (! is_string($parent) || $parent === '' || in_array($name, $seen, true)) {
+            return $classes;
+        }
+
+        return array_merge(static::classes($parent, [...$seen, $name]), $classes);
     }
 
     /**

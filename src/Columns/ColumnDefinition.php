@@ -38,7 +38,10 @@ final class ColumnDefinition
         /** Lower survives longer when columns are collapsed on a narrow screen. */
         public readonly int $priority = 100,
         public readonly ?Closure $render = null,
-        public readonly array $badges = [],
+        /** How this column's values are drawn as badges. See Columns\Badge. */
+        public readonly array|Closure|bool $badges = [],
+        /** What a null or blank cell reads as, when the default dash is not the right word. */
+        public readonly ?string $placeholder = null,
         public readonly array $meta = [],
     ) {}
 
@@ -132,6 +135,7 @@ final class ColumnDefinition
             priority: $overrides['priority'] ?? $this->priority,
             render: $overrides['render'] ?? $this->render,
             badges: $overrides['badges'] ?? $this->badges,
+            placeholder: $overrides['placeholder'] ?? $this->placeholder,
             meta: $overrides['meta'] ?? $this->meta,
         );
     }

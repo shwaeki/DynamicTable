@@ -19,7 +19,6 @@ class DynamicTableServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/dynamic-table.php', 'dynamic-table');
-        $this->mergeConfigFrom(__DIR__.'/../config/dynamic-table-themes.php', 'dynamic-table-themes');
 
         $this->app->singleton(TableRegistry::class);
         $this->app->singleton(MetadataEngine::class);
@@ -91,10 +90,6 @@ class DynamicTableServiceProvider extends ServiceProvider
         $this->publishes([
             __DIR__.'/../config/dynamic-table.php' => config_path('dynamic-table.php'),
         ], 'dynamic-table-config');
-
-        $this->publishes([
-            __DIR__.'/../config/dynamic-table-themes.php' => config_path('dynamic-table-themes.php'),
-        ], 'dynamic-table-themes');
 
         $this->publishes([
             __DIR__.'/../resources/lang' => lang_path('vendor/dynamic-table'),

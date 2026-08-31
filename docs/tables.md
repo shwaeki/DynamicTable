@@ -47,6 +47,7 @@ class UsersTable extends DynamicTable
 | `$facets` | `[]` | Columns whose filter values carry counts. Needs `facets`. |
 | `$relationDepth` | 1 | How deep the filter builder and column picker walk relations. |
 | `$params` | `[]` | External parameters `query()` may read. See [Parameters](#parameters). |
+| `$paramFilters` | `[]` | Parameters bound straight to the query. See [Filters from parameters](#filters-from-parameters). |
 | `$policy` | null | Ability prefix when you use gates rather than a policy class. |
 
 ## Methods
@@ -54,6 +55,7 @@ class UsersTable extends DynamicTable
 ```php
 protected function columns(): array;                    // see docs/columns.md
 public function query(Builder $query): Builder;         // the base query
+public function paramFilters(): array;                  // parameters bound to the query
 public function actions(): array;                       // bulk actions
 public function rowActions(): array;                    // per-row buttons
 public function toolbar(): array;                       // your own toolbar buttons
@@ -122,6 +124,70 @@ public function query(Builder $query): Builder
 `param($name, $default = null)` returns the declared default when nothing was
 sent, and your `$default` when the value is empty. `params()` returns them all,
 and `hasParam()` answers whether one arrived.
+
+### Filters from parameters
+
+Most of that `query()` body is one line repeated: take a parameter, put it in a
+`where`. `$paramFilters` says the same thing declaratively, and the whole block
+above collapses to:
+
+```php
+protected array $paramFilters = [
+    'status',                                                 // where('status', $value)
+    'category' => 'company_category_id',                      // the parameter is not the column
+    'q' => ['column' => 'name', 'operator' => 'contains'],
+    'area' => ['column' => 'companyArea.slug'],               // through a relation
+    'created_period' => ['column' => 'created_at', 'operator' => 'period'],
+];
+```
+
+Every name here is a declared parameter, so `$params` does not repeat them, and
+a filter whose parameter did not arrive is not applied. A value still only ever
+reaches SQL as a bound value — the column comes from your class.
+
+| `operator` | Does |
+|---|---|
+| `equals` (default) | `where($column, $value)`, or `whereIn` when the value is a list |
+| `not_equals`, `>`, `>=`, `<`, `<=` | The comparison, named or symbolic (`greater_or_equal` = `>=`) |
+| `contains`, `starts_with`, `ends_with` | `LIKE`, with the value's own wildcards escaped |
+| `in`, `not_in` | Against a list |
+| `between` | A two-value list |
+| `date` | `whereDate`, for a day rather than an instant |
+| `period` | A date window — see below |
+
+A dotted column is a relation path, and becomes a `whereHas`, exactly as it
+would in the filter builder.
+
+**Periods.** One parameter drives the whole date picker:
+
+```php
+'created_period' => ['column' => 'created_at', 'operator' => 'period'],
+```
+
+Its value is either a window reaching back from now — `day`, `week`, `month`,
+`quarter`, `year` — or any relative operator the filter builder knows (`today`,
+`yesterday`, `this_week`, `last_month`, `this_year`, `last_year`,
+`last_n_days:30`), or `custom`, which reads the two companion parameters. Those
+are `created_from` and `created_to` here, because a picker named
+`<thing>_period` pairs with `<thing>_from` and `<thing>_to`; name them yourself
+with `'from' => …, 'to' => …` if they are called something else. They are
+declared for you either way, and they also work with no picker at all.
+
+**Anything else.** A filter can be a closure — but PHP does not allow one in a
+property default, so it comes from the method:
+
+```php
+public function paramFilters(): array
+{
+    return [
+        ...parent::paramFilters(),
+        'agent' => fn (Builder $query, $value) => $query->whereHas('agent', fn ($q) => $q->where('code', $value)),
+    ];
+}
+```
+
+`query()` still runs, before the declared filters, for everything that is not a
+parameter: the tenant scope, the eager loads, the business rules.
 
 ### Where the values come from
 

@@ -73,6 +73,11 @@ format itself is a translation key, so a language can change the pattern:
 ],
 ```
 
+Those patterns are also writable as `dd/mm/yyyy` and `HH:ii`; see
+[Dates in the format you want](columns.md#dates-in-the-format-you-want). To
+override every locale at once rather than per language, set
+`config('dynamic-table.formats')`.
+
 Numbers and currency are formatted server-side, which means exports carry the
 same values the screen shows.
 

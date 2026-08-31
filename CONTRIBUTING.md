@@ -21,8 +21,10 @@ composer analyse    # PHPStan / larastan level 5
 composer test       # Pest
 ```
 
-All three must pass. CI runs them against every supported PHP and Laravel
-combination.
+All three must pass. There is no CI to catch what they miss, so run them
+yourself — and say in the pull request which PHP and Laravel versions you ran
+them on, because the package supports Laravel 10 through 13 on PHP 8.2 through
+8.4 and your machine is only one of those combinations.
 
 ## What a good pull request looks like
 

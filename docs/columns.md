@@ -69,18 +69,65 @@ protected function columns(): array
 | `priority` | by position | Lower survives longer when columns collapse on a narrow screen. |
 | `class` | — | Extra CSS classes on the cell |
 | `render` | — | `fn ($value, $record, $column): string` |
+| `badges` | — | Draw the value as a coloured pill. See [Badges](#badges) |
+| `empty` | `—` | What a null or blank cell reads as, e.g. `'Unassigned'` |
 | `raw` | false | Opt in to unescaped HTML — see the warning below |
 
 ### Formats
 
 ```
 currency:USD    number:2      percent:1     bytes
-date:d/m/Y      datetime      time          since
+date:dd/mm/yyyy datetime      time          since
 upper           lower         headline      truncate:40
 ```
 
 Formatting happens on the server, so it follows the application locale and the
 same values appear in exports.
+
+### Dates in the format you want
+
+A date column takes a pattern, written either way — as a spreadsheet writes it,
+or as PHP does:
+
+```php
+'created_at' => ['format' => 'dd/mm/yyyy'],              // 09/03/2026
+'due_at'     => ['format' => 'dd/mm/yyyy hh:ii a'],      // 09/03/2026 02:05 pm
+'shipped_at' => ['format' => 'datetime:yyyy-mm-dd HH:mm'], // 2026-03-09 14:05
+'released_at' => ['format' => 'date:d M Y'],             // 09 Mar 2026, PHP's own codes
+```
+
+The `date:` / `datetime:` / `time:` prefix is optional on a column the package
+already knows is a date — `['format' => 'dd/mm/yyyy']` is enough. Use the prefix
+when the value is a date the schema does not know about, or to force a time-only
+reading.
+
+| | |
+|---|---|
+| `yyyy` `yy` | 2026 · 26 |
+| `mmmm` `mmm` `mm` `m` | March · Mar · 03 · 3 |
+| `dddd` `ddd` `dd` `d` | Monday · Mon · 09 · 9 |
+| `HH` `H` `hh` `h` | 14 · 14 · 02 · 2 (upper is the 24-hour clock) |
+| `ii` `ss` | 05 · 09 (minutes, seconds) |
+| `a` `A` | pm · PM |
+
+`mm` between an hour and a second is minutes, the way a spreadsheet reads it, so
+`HH:mm:ss` gives what you expect. Words inside a pattern survive — `dd mmm yyyy
+at HH:ii` — and quoting a word (`'at'`) is the way to be sure of one that is
+made of pattern letters. Month and day names are translated to the current
+locale, whichever vocabulary the pattern uses.
+
+For the whole application at once, set the default in `config/dynamic-table.php`:
+
+```php
+'formats' => [
+    'date' => 'dd/mm/yyyy',
+    'time' => 'HH:ii',
+    'datetime' => 'dd/mm/yyyy HH:ii',
+],
+```
+
+Left as `null`, each locale keeps its own pattern from its language file — see
+[Localization](localization.md).
 
 ### Custom rendering
 
@@ -108,6 +155,45 @@ thing without the flag, and only for the rows that actually returned one:
     'render' => fn ($value, Category $category) => new HtmlString(
         '<img src="'.e($category->image_path).'" alt="" height="56" width="56">'
     ),
+],
+```
+
+### Badges
+
+A status column is a pill on every project, and it is the same closure every
+time. Declare it instead:
+
+```php
+'status' => ['badges' => ['paid' => 'success', 'pending' => 'warning', 'overdue' => 'danger']],
+'active' => ['badges' => [1 => ['success', __('manager.active')], 0 => ['danger', __('manager.inactive')]]],
+'state'  => ['badges' => true],
+```
+
+The map is keyed by the stored value — the enum's backing value, `1`/`0` for a
+boolean — and each entry is a tone, `[tone, label]`, or
+`['tone' => …, 'label' => …]`. A value the map does not mention is still drawn
+as a badge, coloured from the word itself, which is all `'badges' => true` does:
+`active`, `paid`, `completed` are green, `failed`, `overdue`, `cancelled` red,
+`pending`, `draft` amber. The label is escaped for you, and it sits inside the
+markup, so an export of the column still reads `Paid`.
+
+When the colour and the text come off the model — the usual `status_color` and
+`status_name` accessor pair — pass a closure. Returning `null` leaves that row
+as plain text:
+
+```php
+'status' => ['badges' => fn ($value, Company $company) => [$company->status_color, $company->status_name]],
+```
+
+The tones the stylesheet paints are `success`, `danger`, `warning`, `info`,
+`primary` and `neutral`, written as `dt-badge-<tone>` next to the theme's own
+badge class. An admin template with its own badge CSS says where the tone goes,
+once, in the theme:
+
+```php
+// config/dynamic-table.php
+'themes' => [
+    'metronic' => ['extends' => 'bootstrap', 'badge' => 'badge badge-light-{tone}'],
 ],
 ```
 
