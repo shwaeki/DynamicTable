@@ -46,11 +46,11 @@
             print-color-adjust: exact;
         }
 
-        .dt-print { padding: 0; }
+        .dynamic-table-print { padding: 0; }
 
         /* -------------------------------------------------- masthead */
 
-        .dt-print-head {
+        .dynamic-table-print-head {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
@@ -60,29 +60,29 @@
             border-bottom: 1.5pt solid #111;
         }
 
-        .dt-print-title { margin: 0; font-size: 15pt; font-weight: 700; letter-spacing: -0.01em; }
-        .dt-print-meta { margin: 1.5mm 0 0; padding: 0; list-style: none; color: #444; font-size: 8pt; }
-        .dt-print-meta li { margin-top: 0.6mm; }
-        .dt-print-stamp { text-align: end; color: #444; font-size: 8pt; white-space: nowrap; }
-        .dt-print-stamp strong { display: block; color: #111; font-size: 9pt; }
+        .dynamic-table-print-title { margin: 0; font-size: 15pt; font-weight: 700; letter-spacing: -0.01em; }
+        .dynamic-table-print-meta { margin: 1.5mm 0 0; padding: 0; list-style: none; color: #444; font-size: 8pt; }
+        .dynamic-table-print-meta li { margin-top: 0.6mm; }
+        .dynamic-table-print-stamp { text-align: end; color: #444; font-size: 8pt; white-space: nowrap; }
+        .dynamic-table-print-stamp strong { display: block; color: #111; font-size: 9pt; }
 
         /* -------------------------------------------------- the table */
 
-        table.dt-print-table {
+        table.dynamic-table-print-table {
             width: 100%;
             border-collapse: collapse;
             table-layout: auto;
         }
 
-        .dt-print-table th,
-        .dt-print-table td {
+        .dynamic-table-print-table th,
+        .dynamic-table-print-table td {
             padding: 1.6mm 2mm;
             border-bottom: 0.5pt solid #ccc;
             vertical-align: top;
             text-align: start;
         }
 
-        .dt-print-table thead th {
+        .dynamic-table-print-table thead th {
             border-bottom: 1pt solid #111;
             font-size: 7.5pt;
             font-weight: 700;
@@ -96,22 +96,22 @@
          * two — the two things that separate a printed table from a screenshot
          * of one.
          */
-        .dt-print-table thead { display: table-header-group; }
-        .dt-print-table tfoot { display: table-footer-group; }
-        .dt-print-table tr { page-break-inside: avoid; break-inside: avoid; }
+        .dynamic-table-print-table thead { display: table-header-group; }
+        .dynamic-table-print-table tfoot { display: table-footer-group; }
+        .dynamic-table-print-table tr { page-break-inside: avoid; break-inside: avoid; }
 
-        .dt-print-table tbody tr:nth-child(even) { background: #f6f7f9; }
+        .dynamic-table-print-table tbody tr:nth-child(even) { background: #f6f7f9; }
 
-        .dt-align-end { text-align: end; }
-        .dt-align-center { text-align: center; }
+        .dynamic-table-align-end { text-align: end; }
+        .dynamic-table-align-center { text-align: center; }
 
-        .dt-print-table tfoot td {
+        .dynamic-table-print-table tfoot td {
             border-top: 1pt solid #111;
             border-bottom: 0;
             font-weight: 700;
         }
 
-        .dt-print-summary-label {
+        .dynamic-table-print-summary-label {
             display: block;
             font-size: 7pt;
             font-weight: 500;
@@ -122,22 +122,22 @@
 
         /* -------------------------------------------------- cells */
 
-        .dt-null { color: #999; }
-        .dt-badge { border: 0.5pt solid #999; border-radius: 2mm; padding: 0.2mm 1.4mm; font-size: 8pt; }
-        .dt-chips { display: inline; }
-        .dt-chip { border: 0.5pt solid #999; border-radius: 2mm; padding: 0.2mm 1.2mm; margin-inline-end: 1mm; font-size: 8pt; }
-        .dt-avatar, .dt-thumb { width: 8mm; height: 8mm; object-fit: cover; border-radius: 50%; }
-        .dt-progress { display: flex; align-items: center; gap: 2mm; }
-        .dt-progress-track { flex: 1; height: 1.2mm; background: #ddd; border-radius: 1mm; overflow: hidden; }
-        .dt-progress-bar { display: block; height: 100%; background: #555; }
-        .dt-sparkline svg { width: 18mm; height: 5mm; }
-        .dt-sparkline polyline { fill: none; stroke: #555; stroke-width: 1.2; }
-        .dt-rating-stars { letter-spacing: 0.05em; }
-        .dt-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+        .dynamic-table-null { color: #999; }
+        .dynamic-table-badge { border: 0.5pt solid #999; border-radius: 2mm; padding: 0.2mm 1.4mm; font-size: 8pt; }
+        .dynamic-table-chips { display: inline; }
+        .dynamic-table-chip { border: 0.5pt solid #999; border-radius: 2mm; padding: 0.2mm 1.2mm; margin-inline-end: 1mm; font-size: 8pt; }
+        .dynamic-table-avatar, .dynamic-table-thumb { width: 8mm; height: 8mm; object-fit: cover; border-radius: 50%; }
+        .dynamic-table-progress { display: flex; align-items: center; gap: 2mm; }
+        .dynamic-table-progress-track { flex: 1; height: 1.2mm; background: #ddd; border-radius: 1mm; overflow: hidden; }
+        .dynamic-table-progress-bar { display: block; height: 100%; background: #555; }
+        .dynamic-table-sparkline svg { width: 18mm; height: 5mm; }
+        .dynamic-table-sparkline polyline { fill: none; stroke: #555; stroke-width: 1.2; }
+        .dynamic-table-rating-stars { letter-spacing: 0.05em; }
+        .dynamic-table-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
         /* -------------------------------------------------- notices */
 
-        .dt-print-note {
+        .dynamic-table-print-note {
             margin-top: 4mm;
             padding: 2mm 3mm;
             border: 0.5pt solid #999;
@@ -146,7 +146,7 @@
             color: #444;
         }
 
-        .dt-print-footer {
+        .dynamic-table-print-footer {
             margin-top: 5mm;
             padding-top: 2mm;
             border-top: 0.5pt solid #ccc;
@@ -164,7 +164,7 @@
         @media screen {
             body { background: #eef0f3; padding: 8mm; }
 
-            .dt-print {
+            .dynamic-table-print {
                 max-width: 297mm;
                 margin: 0 auto;
                 padding: 14mm 12mm;
@@ -172,7 +172,7 @@
                 box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
             }
 
-            .dt-print-toolbar {
+            .dynamic-table-print-toolbar {
                 max-width: 297mm;
                 margin: 0 auto 6mm;
                 display: flex;
@@ -180,7 +180,7 @@
                 justify-content: flex-end;
             }
 
-            .dt-print-button {
+            .dynamic-table-print-button {
                 font: inherit;
                 font-size: 10pt;
                 padding: 6px 14px;
@@ -190,11 +190,11 @@
                 cursor: pointer;
             }
 
-            .dt-print-button-primary { background: #111; border-color: #111; color: #fff; }
+            .dynamic-table-print-button-primary { background: #111; border-color: #111; color: #fff; }
         }
 
         @media print {
-            .dt-print-toolbar { display: none !important; }
+            .dynamic-table-print-toolbar { display: none !important; }
         }
     </style>
 </head>
@@ -211,13 +211,13 @@
             })();
         </script>
     @endif
-    <main class="dt-print">
-        <header class="dt-print-head">
+    <main class="dynamic-table-print">
+        <header class="dynamic-table-print-head">
             <div>
-                <h1 class="dt-print-title">{{ $title }}</h1>
+                <h1 class="dynamic-table-print-title">{{ $title }}</h1>
 
                 @if ($meta !== [])
-                    <ul class="dt-print-meta">
+                    <ul class="dynamic-table-print-meta">
                         @foreach ($meta as $line)
                             <li>{{ $line }}</li>
                         @endforeach
@@ -225,18 +225,18 @@
                 @endif
             </div>
 
-            <div class="dt-print-stamp">
+            <div class="dynamic-table-print-stamp">
                 <strong>{{ __('dynamic-table::table.print.scopes.'.$scope) }}</strong>
                 {{ $printedAt->isoFormat('LLL') }}<br>
                 {{ trans_choice('dynamic-table::table.print.rows', count($rows), ['count' => number_format(count($rows))]) }}
             </div>
         </header>
 
-        <table class="dt-print-table">
+        <table class="dynamic-table-print-table">
             <thead>
                 <tr>
                     @foreach ($columns as $column)
-                        <th class="dt-align-{{ $column['align'] ?? 'start' }}">{{ $column['label'] }}</th>
+                        <th class="dynamic-table-align-{{ $column['align'] ?? 'start' }}">{{ $column['label'] }}</th>
                     @endforeach
                 </tr>
             </thead>
@@ -245,7 +245,7 @@
                 @forelse ($rows as $row)
                     <tr>
                         @foreach ($columns as $column)
-                            <td class="dt-align-{{ $column['align'] ?? 'start' }}">
+                            <td class="dynamic-table-align-{{ $column['align'] ?? 'start' }}">
                                 @include('dynamic-table::partials.cell', [
                                     'column' => $column,
                                     'value' => $row['c'][$column['key']] ?? null,
@@ -266,9 +266,9 @@
                 <tfoot>
                     <tr>
                         @foreach ($columns as $column)
-                            <td class="dt-align-{{ $column['align'] ?? 'start' }}">
+                            <td class="dynamic-table-align-{{ $column['align'] ?? 'start' }}">
                                 @if (isset($summaries[$column['key']]))
-                                    <span class="dt-print-summary-label">{{ __('dynamic-table::table.summary.'.$column['summary']) }}</span>
+                                    <span class="dynamic-table-print-summary-label">{{ __('dynamic-table::table.summary.'.$column['summary']) }}</span>
                                     {{ $summaries[$column['key']] }}
                                 @endif
                             </td>
@@ -279,12 +279,12 @@
         </table>
 
         @if ($truncated)
-            <p class="dt-print-note">
+            <p class="dynamic-table-print-note">
                 {{ __('dynamic-table::table.print.truncated', ['limit' => number_format($limit)]) }}
             </p>
         @endif
 
-        <footer class="dt-print-footer">
+        <footer class="dynamic-table-print-footer">
             <span>{{ $title }}</span>
             <span>{{ $printedAt->isoFormat('LL') }}</span>
         </footer>

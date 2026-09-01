@@ -37,7 +37,7 @@ class RowActionsTable extends DynamicTable
                 'width' => 56,
                 'render' => fn (?string $url, Product $product): HtmlString => new HtmlString(
                     $url === null
-                        ? '<span class="dt-null">—</span>'
+                        ? '<span class="dynamic-table-null">—</span>'
                         : '<img src="'.e($url).'" alt="'.e($product->name).'" class="demo-thumb">'
                 ),
             ],

@@ -18,7 +18,7 @@
         {{ $action['label'] }}
     </a>
 @else
-    <button type="button" class="{{ $class }}" data-dt-toolbar-action="{{ $action['name'] }}">
+    <button type="button" class="{{ $class }}" data-dynamic-table-toolbar-action="{{ $action['name'] }}">
         @if (! empty($action['icon']))<span aria-hidden="true">{!! $action['icon'] !!}</span>@endif
         {{ $action['label'] }}
     </button>

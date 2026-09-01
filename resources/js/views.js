@@ -29,7 +29,7 @@ export default function install(table) {
     }
 
     function label(text) {
-        const node = table.root.querySelector('[data-dt-view-label]');
+        const node = table.root.querySelector('[data-dynamic-table-view-label]');
 
         if (node) node.textContent = text;
     }
@@ -80,25 +80,25 @@ export default function install(table) {
         const name = el('input', { type: 'text', class: table.classes.input, maxlength: 150, placeholder: table.t('views.name') });
         const shared = el('input', { type: 'checkbox' });
         const makeDefault = el('input', { type: 'checkbox' });
-        const status = el('p', { class: 'dt-error' });
+        const status = el('p', { class: 'dynamic-table-error' });
 
         const instance = dialog(table, {
             title: table.t('views.save_as'),
             width: '26rem',
-            body: el('div', { class: 'dt-form' }, [
-                el('label', { class: 'dt-field' }, [
-                    el('span', { class: 'dt-field-label', text: table.t('views.name') }),
+            body: el('div', { class: 'dynamic-table-form' }, [
+                el('label', { class: 'dynamic-table-field' }, [
+                    el('span', { class: 'dynamic-table-field-label', text: table.t('views.name') }),
                     name,
                 ]),
-                el('label', { class: 'dt-field dt-field-inline' }, [
+                el('label', { class: 'dynamic-table-field dynamic-table-field-inline' }, [
                     makeDefault, el('span', { text: table.t('views.make_default') }),
                 ]),
                 canManageSystem
-                    ? el('label', { class: 'dt-field dt-field-inline' }, [shared, el('span', { text: table.t('views.share') })])
+                    ? el('label', { class: 'dynamic-table-field dynamic-table-field-inline' }, [shared, el('span', { text: table.t('views.share') })])
                     : null,
                 status,
             ]),
-            footer: el('div', { class: 'dt-modal-actions' }, [
+            footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                 el('button', { type: 'button', class: table.classes.button, text: table.t('cancel'), onclick: () => instance.close() }),
                 el('button', {
                     type: 'button',
@@ -143,13 +143,13 @@ export default function install(table) {
         const instance = dialog(table, {
             title: table.t('views.rename'),
             width: '24rem',
-            body: el('div', { class: 'dt-form' }, [
-                el('label', { class: 'dt-field' }, [
-                    el('span', { class: 'dt-field-label', text: table.t('views.name') }),
+            body: el('div', { class: 'dynamic-table-form' }, [
+                el('label', { class: 'dynamic-table-field' }, [
+                    el('span', { class: 'dynamic-table-field-label', text: table.t('views.name') }),
                     name,
                 ]),
             ]),
-            footer: el('div', { class: 'dt-modal-actions' }, [
+            footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                 el('button', { type: 'button', class: table.classes.button, text: table.t('cancel'), onclick: () => instance.close() }),
                 el('button', {
                     type: 'button',
@@ -177,15 +177,15 @@ export default function install(table) {
         const url = `${base}/${encodeURIComponent(view.id)}`;
 
         let selected = [];
-        const chosen = el('div', { class: 'dt-share-chosen' });
-        const results = el('div', { class: 'dt-share-results' });
-        const status = el('p', { class: 'dt-hint' });
+        const chosen = el('div', { class: 'dynamic-table-share-chosen' });
+        const results = el('div', { class: 'dynamic-table-share-results' });
+        const status = el('p', { class: 'dynamic-table-hint' });
 
         const paintChosen = () => {
             chosen.replaceChildren(
-                el('p', { class: 'dt-field-label', text: table.t('views.shared_with') }),
+                el('p', { class: 'dynamic-table-field-label', text: table.t('views.shared_with') }),
                 selected.length
-                    ? el('div', { class: 'dt-share-list' }, selected.map((person) => el('span', { class: 'dt-share-pill' }, [
+                    ? el('div', { class: 'dynamic-table-share-list' }, selected.map((person) => el('span', { class: 'dynamic-table-share-pill' }, [
                         el('span', { text: person.name }),
                         el('button', {
                             type: 'button',
@@ -197,7 +197,7 @@ export default function install(table) {
                             },
                         }),
                     ])))
-                    : el('p', { class: 'dt-hint', text: table.t('views.not_shared') }),
+                    : el('p', { class: 'dynamic-table-hint', text: table.t('views.not_shared') }),
             );
         };
 
@@ -212,20 +212,20 @@ export default function install(table) {
                 .filter((person) => ! ids.has(person.id))
                 .map((person) => el('button', {
                     type: 'button',
-                    class: 'dt-share-candidate',
+                    class: 'dynamic-table-share-candidate',
                     text: person.name,
                     onclick: () => {
                         selected = [...selected, person];
                         paintChosen();
                         person.hidden = true;
-                        results.querySelectorAll('.dt-share-candidate').forEach((node) => {
+                        results.querySelectorAll('.dynamic-table-share-candidate').forEach((node) => {
                             if (node.textContent === person.name) node.remove();
                         });
                     },
                 })));
 
             if (! results.childElementCount) {
-                results.append(el('p', { class: 'dt-hint', text: table.t('views.no_people') }));
+                results.append(el('p', { class: 'dynamic-table-hint', text: table.t('views.no_people') }));
             }
 
             paintChosen();
@@ -244,17 +244,17 @@ export default function install(table) {
         const instance = dialog(table, {
             title: table.t('views.share_title', { name: view.name }),
             width: '30rem',
-            body: el('div', { class: 'dt-form' }, [
+            body: el('div', { class: 'dynamic-table-form' }, [
                 chosen,
-                el('label', { class: 'dt-field' }, [
-                    el('span', { class: 'dt-field-label', text: table.t('views.add_people') }),
+                el('label', { class: 'dynamic-table-field' }, [
+                    el('span', { class: 'dynamic-table-field-label', text: table.t('views.add_people') }),
                     search,
                 ]),
                 results,
-                el('p', { class: 'dt-hint', text: table.t('views.share_hint') }),
+                el('p', { class: 'dynamic-table-hint', text: table.t('views.share_hint') }),
                 status,
             ]),
-            footer: el('div', { class: 'dt-modal-actions' }, [
+            footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                 el('button', { type: 'button', class: table.classes.button, text: table.t('cancel'), onclick: () => instance.close() }),
                 el('button', {
                     type: 'button',
@@ -273,7 +273,7 @@ export default function install(table) {
                             manage();
                         } catch (error) {
                             status.textContent = error.message;
-                            status.className = 'dt-error';
+                            status.className = 'dynamic-table-error';
                         }
                     },
                 }),
@@ -287,7 +287,7 @@ export default function install(table) {
     async function manage() {
         await load(true);
 
-        const list = el('div', { class: 'dt-views' });
+        const list = el('div', { class: 'dynamic-table-views' });
 
         const repaint = () => {
             const sections = [
@@ -303,14 +303,14 @@ export default function install(table) {
 
                 if (! matching.length) continue;
 
-                nodes.push(el('h3', { class: 'dt-subtitle', text: table.t(labelKey) }));
+                nodes.push(el('h3', { class: 'dynamic-table-subtitle', text: table.t(labelKey) }));
 
                 for (const view of matching) {
                     nodes.push(renderRow(view));
                 }
             }
 
-            if (! nodes.length) nodes.push(el('p', { class: 'dt-hint', text: table.t('views.empty') }));
+            if (! nodes.length) nodes.push(el('p', { class: 'dynamic-table-hint', text: table.t('views.empty') }));
 
             list.replaceChildren(...nodes);
         };
@@ -321,7 +321,7 @@ export default function install(table) {
 
             const star = el('button', {
                 type: 'button',
-                class: ['dt-view-star', isDefault ? 'is-default' : null],
+                class: ['dynamic-table-view-star', isDefault ? 'is-default' : null],
                 text: isDefault ? '★' : '☆',
                 title: isDefault ? table.t('views.clear_default') : table.t('views.set_default'),
                 'aria-pressed': String(isDefault),
@@ -336,12 +336,12 @@ export default function install(table) {
 
             const badge = badgeFor(view);
 
-            return el('div', { class: ['dt-view-row', table.state.view === view.id ? 'is-active' : null] }, [
+            return el('div', { class: ['dynamic-table-view-row', table.state.view === view.id ? 'is-active' : null] }, [
                 star,
-                el('span', { class: 'dt-view-icon', title: badge.label, 'aria-label': badge.label, text: badge.icon }),
+                el('span', { class: 'dynamic-table-view-icon', title: badge.label, 'aria-label': badge.label, text: badge.icon }),
                 el('button', {
                     type: 'button',
-                    class: 'dt-view-name',
+                    class: 'dynamic-table-view-name',
                     onclick: () => {
                         apply(view);
                         instance.close();
@@ -350,7 +350,7 @@ export default function install(table) {
                     el('span', { text: view.name }),
                     // Whose view this is, when it is not mine.
                     view.owner && ! view.mine
-                        ? el('small', { class: 'dt-view-owner', text: table.t('views.owned_by', { name: view.owner }) })
+                        ? el('small', { class: 'dynamic-table-view-owner', text: table.t('views.owned_by', { name: view.owner }) })
                         : null,
                 ]),
                 view.shareCount > 0
@@ -361,20 +361,20 @@ export default function install(table) {
                 view.mine && ! view.system && sharingEnabled
                     ? el('button', {
                         type: 'button',
-                        class: 'dt-view-action',
+                        class: 'dynamic-table-view-action',
                         text: table.t('views.share_action'),
                         onclick: () => share(view),
                     })
                     : null,
                 canEdit ? el('button', {
                     type: 'button',
-                    class: 'dt-view-action',
+                    class: 'dynamic-table-view-action',
                     text: table.t('edit'),
                     onclick: () => rename(view),
                 }) : null,
                 canEdit ? el('button', {
                     type: 'button',
-                    class: 'dt-view-action dt-view-action-danger',
+                    class: 'dynamic-table-view-action dynamic-table-view-action-danger',
                     text: table.t('delete'),
                     onclick: async () => {
                         if (! window.confirm(table.t('views.delete_confirm'))) return;
@@ -396,7 +396,7 @@ export default function install(table) {
             title: table.t('views.manage'),
             width: '34rem',
             body: list,
-            footer: el('div', { class: 'dt-modal-actions' }, [
+            footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                 el('button', { type: 'button', class: table.classes.button, text: table.t('close'), onclick: () => instance.close() }),
                 el('button', {
                     type: 'button',

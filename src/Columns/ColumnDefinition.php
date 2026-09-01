@@ -75,7 +75,7 @@ final class ColumnDefinition
     /** @return array<string, mixed> The client-side description of this column. */
     public function toArray(): array
     {
-        return array_filter([
+        $data = array_filter([
             'key' => $this->key,
             'path' => $this->field->path,
             'label' => $this->label,
@@ -98,6 +98,19 @@ final class ColumnDefinition
             'options' => $this->field->options ?: null,
             'relation' => $this->field->relationKey(),
         ], static fn (mixed $value): bool => $value !== null && $value !== false && $value !== []);
+
+        /*
+         * Sent only when it is false. The payload drops falsey values to stay
+         * small, which is right for every other flag here — but this is the one
+         * whose interesting state is the false one, and the export panel has to
+         * know which columns it will leave out before it can say what the file
+         * will contain.
+         */
+        if (! $this->exportable) {
+            $data['exportable'] = false;
+        }
+
+        return $data;
     }
 
     public function defaultAlign(): string

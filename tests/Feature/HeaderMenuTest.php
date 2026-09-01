@@ -14,7 +14,7 @@ beforeEach(fn () => seedUsers());
 it('renders a header menu trigger for every column', function (): void {
     $html = app(TableRenderer::class)->render(FullUsersTable::class)->toHtml();
 
-    expect(substr_count($html, 'data-dt-header-menu='))
+    expect(substr_count($html, 'data-dynamic-table-header-menu='))
         ->toBe(count(app(FullUsersTable::class)->resolvedColumns()) - 1); // display_name is hidden
 });
 
@@ -30,7 +30,7 @@ it('does not render a header menu when nothing in it would work', function (): v
     };
 
     expect(app(TableRenderer::class)->render($table)->toHtml())
-        ->not->toContain('data-dt-header-menu');
+        ->not->toContain('data-dynamic-table-header-menu');
 });
 
 it('can be switched off with the feature flag', function (): void {
@@ -46,9 +46,9 @@ it('can be switched off with the feature flag', function (): void {
 
     $html = app(TableRenderer::class)->render($table)->toHtml();
 
-    expect($html)->not->toContain('data-dt-header-menu')
+    expect($html)->not->toContain('data-dynamic-table-header-menu')
         // The rest of the table is untouched.
-        ->and($html)->toContain('data-dt-sort');
+        ->and($html)->toContain('data-dynamic-table-sort');
 });
 
 it('groups by ordering in the database rather than in PHP', function (): void {

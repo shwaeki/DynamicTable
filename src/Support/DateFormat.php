@@ -55,6 +55,28 @@ final class DateFormat
         return preg_match('/(yy|mm|dd|hh|ss|ii)/i', $pattern) === 1;
     }
 
+    /**
+     * The pattern a table uses for a kind of column when none names its own.
+     *
+     * config('dynamic-table.formats.date') sets it for the whole application;
+     * left null, each locale keeps the pattern in its own language file, which
+     * is why a date reads as 9 مارس 2026 in Arabic and 9 Mar 2026 in English.
+     *
+     * It lives here rather than in the formatter because the importer needs the
+     * very same answer: it parses a date back with the pattern the export was
+     * written in, and two copies of this rule would round-trip fine right up
+     * until one of them changed.
+     */
+    public static function defaultPattern(string $kind): string
+    {
+        $kind = in_array($kind, ['date', 'time'], true) ? $kind : 'datetime';
+        $configured = config('dynamic-table.formats.'.$kind);
+
+        return is_string($configured) && $configured !== ''
+            ? $configured
+            : (string) __('dynamic-table::table.formats.'.$kind);
+    }
+
     /** Does this look like a date pattern at all, rather than a format name? */
     public static function looksLikePattern(string $value): bool
     {

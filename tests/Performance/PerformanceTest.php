@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\DB;
+use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Support\TablePayload;
 use Shwaeki\DynamicTable\Support\TableRenderer;
 use Shwaeki\DynamicTable\Tests\Fixtures\Department;
@@ -151,4 +152,39 @@ it('boots a table without touching the views table when the feature is off', fun
     DB::disableQueryLog();
 
     expect($sql)->not->toContain('dynamic_table_views');
+});
+
+it('costs one query for a summary column, not one per eager-loaded relation', function (): void {
+    seedMany(50);
+
+    // The same shape as the budget above — two relation columns — plus a
+    // summary. The aggregate reads one row and never touches its relations, so
+    // repeating the page's eager loads for it would be pure waste.
+    $table = new class extends DynamicTable
+    {
+        protected string $model = User::class;
+
+        protected function columns(): array
+        {
+            return [
+                'name',
+                'department.name' => 'Department',
+                'role.name',
+                'salary' => ['summary' => 'sum'],
+            ];
+        }
+    };
+
+    $state = stateFor($table, ['perPage' => 100]);
+
+    DB::enableQueryLog();
+    DB::flushQueryLog();
+
+    app(TablePayload::class)->data($table, $state);
+
+    $queries = DB::getQueryLog();
+    DB::disableQueryLog();
+
+    // 1 estimate + 1 count + 1 page + 2 eager loads + 1 aggregate.
+    expect($queries)->toHaveCount(6);
 });

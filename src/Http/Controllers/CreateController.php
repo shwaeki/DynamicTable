@@ -32,7 +32,7 @@ class CreateController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::CREATE);
+        $table->requireFeature(Feature::INLINE_CREATE);
         abort_unless($table->can('create'), 403, __('dynamic-table::table.errors.forbidden'));
 
         $fields = (array) $request->input('fields', []);

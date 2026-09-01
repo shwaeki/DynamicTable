@@ -31,7 +31,7 @@ class AssetController extends Controller
 
         $path = $assets->pathFor($file);
 
-        abort_if($path === null, 404);
+        abort_if($path === null, 404, 'Unknown asset.');
 
         $response = new BinaryFileResponse($path, 200, [
             'Content-Type' => $assets->mimeFor($file),

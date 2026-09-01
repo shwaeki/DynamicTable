@@ -114,12 +114,12 @@
             // Force every table to the same scheme. Passing null (auto) lets
             // each table fall back to prefers-color-scheme on its own.
             for (const table of document.querySelectorAll('[data-dynamic-table]')) {
-                if (choice === 'auto') table.removeAttribute('data-dt-scheme');
-                else table.setAttribute('data-dt-scheme', choice);
+                if (choice === 'auto') table.removeAttribute('data-dynamic-table-scheme');
+                else table.setAttribute('data-dynamic-table-scheme', choice);
             }
 
             root.dataset.schemeChoice = choice;
-            localStorage.setItem('dt-demo-scheme', choice);
+            localStorage.setItem('dynamic-table-demo-scheme', choice);
 
             for (const button of buttons) {
                 const active = button.dataset.schemeChoice === choice;
@@ -137,19 +137,19 @@
         document.addEventListener('dynamic-table:ready', (event) => {
             const choice = root.dataset.schemeChoice || 'auto';
 
-            if (choice === 'auto') event.target.removeAttribute('data-dt-scheme');
-            else event.target.setAttribute('data-dt-scheme', choice);
+            if (choice === 'auto') event.target.removeAttribute('data-dynamic-table-scheme');
+            else event.target.setAttribute('data-dynamic-table-scheme', choice);
         });
 
         for (const button of buttons) {
             button.addEventListener('click', () => apply(button.dataset.schemeChoice));
         }
 
-        apply(localStorage.getItem('dt-demo-scheme') || 'auto');
+        apply(localStorage.getItem('dynamic-table-demo-scheme') || 'auto');
 
         // Keep "auto" honest when the OS setting changes while the page is open.
         matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-            if ((localStorage.getItem('dt-demo-scheme') || 'auto') === 'auto') apply('auto');
+            if ((localStorage.getItem('dynamic-table-demo-scheme') || 'auto') === 'auto') apply('auto');
         });
     })();
 

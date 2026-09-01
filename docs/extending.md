@@ -63,6 +63,24 @@ document.addEventListener('dynamic-table:updated', (event) => {
 `ready` · `updated` · `error` · `rows-rendered` · `header-rendered` ·
 `selection-changed` · `row-saved` · `escape`
 
+## State classes
+
+The table puts a handful of classes on its root element to say what it is
+currently doing. They carry no styling of their own — they exist so your
+stylesheet can react without polling the JavaScript handle:
+
+| Class | On the root element while |
+| --- | --- |
+| `dynamic-table-is-loading` | a fetch is in flight (`aria-busy="true"` is set too) |
+| `dynamic-table-has-sticky` | at least one column is pinned |
+| `dynamic-table-has-collapsed` | responsive collapsing is hiding columns |
+
+```css
+.dynamic-table-is-loading .dynamic-table-scroller { opacity: .6; }
+```
+
+These are part of the public DOM contract, alongside the `data-dynamic-table-*`
+hooks — see [UPGRADE.md](../UPGRADE.md#versioning-promise).
 ## The JavaScript handle
 
 ```js

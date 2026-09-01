@@ -31,18 +31,77 @@ class ExportManager
         protected RowFormatter $formatter,
     ) {}
 
-    public function writerFor(string $format): SpreadsheetWriter
+    public function writerFor(string $format, ?DynamicTable $table = null): SpreadsheetWriter
     {
-        if ($format === 'xlsx' && XlsxWriter::isAvailable()) {
-            return new XlsxWriter;
+        if ($format === 'xlsx' && $this->xlsxAvailable()) {
+            $writer = new XlsxWriter;
+
+            /*
+             * A sheet reads in the direction its table does. An Arabic or
+             * Hebrew table exported left-to-right puts the first column where
+             * the reader's eye ends up last, and Excel will not work it out
+             * from the content.
+             */
+            $writer->describe(
+                $table?->direction() ?? 'ltr',
+                config('dynamic-table.excel.style', true),
+                $table !== null ? $this->sheetName($table) : 'Table',
+            );
+
+            return $writer;
         }
 
         return new CsvWriter;
     }
 
+    /**
+     * What the sheet tab is called. "Sheet1" tells the reader nothing they did
+     * not already know about spreadsheets.
+     */
+    protected function sheetName(DynamicTable $table): string
+    {
+        return Str::headline($table->key());
+    }
+
+    /**
+     * The formats on offer, preferred one first — the dialogs open on it.
+     *
+     * XLSX by default: a spreadsheet is what people do with an export, and the
+     * file arrives filterable and readable instead of as raw commas. CSV stays
+     * first for anyone who sets dynamic-table.excel.default_format back, and is
+     * the only option when no spreadsheet library is installed.
+     *
+     * @return list<string>
+     */
     public function supportedFormats(): array
     {
-        return XlsxWriter::isAvailable() ? ['csv', 'xlsx'] : ['csv'];
+        if (! $this->xlsxAvailable()) {
+            return ['csv'];
+        }
+
+        return config('dynamic-table.excel.default_format', 'xlsx') === 'csv'
+            ? ['csv', 'xlsx']
+            : ['xlsx', 'csv'];
+    }
+
+    /** The format a dialog opens on. */
+    public function defaultFormat(): string
+    {
+        return $this->supportedFormats()[0];
+    }
+
+    /**
+     * Whether XLSX is on the table at all.
+     *
+     * "auto" is whichever spreadsheet library the application already has;
+     * "csv" is the deliberate refusal — a project that would rather not ship
+     * xlsx at all, even with PhpSpreadsheet installed as somebody else's
+     * dependency, says so here and the format stops being offered.
+     */
+    protected function xlsxAvailable(): bool
+    {
+        return config('dynamic-table.excel.adapter', 'auto') !== 'csv'
+            && XlsxWriter::isAvailable();
     }
 
     /**
@@ -82,7 +141,7 @@ class ExportManager
     public function stream(DynamicTable $table, TableState $state, string $scope, string $format): StreamedResponse
     {
         $columns = $this->columns($table, $state);
-        $writer = $this->writerFor($format);
+        $writer = $this->writerFor($format, $table);
         $filename = $this->filename($table, $writer->extension());
 
         if ($writer instanceof XlsxWriter) {
@@ -124,10 +183,10 @@ class ExportManager
     public function write(DynamicTable $table, TableState $state, string $scope, string $format, ?string $progressId = null): string
     {
         $columns = $this->columns($table, $state);
-        $writer = $this->writerFor($format);
+        $writer = $this->writerFor($format, $table);
         $path = $this->temporaryPath($writer->extension());
 
-        $writer->open($path);
+        $writer->open($path, $this->sheetName($table));
         $writer->writeHeadings(array_map(
             static fn (ColumnDefinition $column): string => $column->label,
             $columns,

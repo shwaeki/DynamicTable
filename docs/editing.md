@@ -65,7 +65,7 @@ browser sends.
 ## Inline create
 
 ```php
-protected array $features = [Feature::CREATE];   // implies inline_edit
+protected array $features = [Feature::INLINE_CREATE];   // implies inline_edit
 ```
 
 "New" in the toolbar opens a blank row at the top of the table. It uses the
@@ -179,11 +179,12 @@ public function rowActions(): array
 
 The element follows the method rather than a setting: `url()` and `route()`
 render an `<a href>`, `handle()` renders a `<button>`. Both carry
-`dt-row-action` and, by default, look the same — a quiet icon, because a column
+`dynamic-table-row-action` and, by default, look the same — a quiet icon, because a column
 of loud buttons is a wall.
 
 `->class()` is the way out of that default. An action that brings its own
-classes also gets `dt-row-action-custom`, and the package's button styling steps
+classes also gets `dynamic-table-row-action-custom`, and the package's button
+styling steps
 aside for it: only the layout stays (inline-flex, the gap between icon and
 label, the spacing between buttons), so your framework's `.btn` is never fought
 over. `->withLabel()` decides whether the label is drawn beside the icon or left

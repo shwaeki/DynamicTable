@@ -9,8 +9,8 @@ import { el } from './dom.js';
 import { dialog, menu, select } from './ui.js';
 
 export default function install(table) {
-    const summary = table.root.querySelector('[data-dt-selection-summary]');
-    const actionsHost = table.root.querySelector('[data-dt-actions]');
+    const summary = table.root.querySelector('[data-dynamic-table-selection-summary]');
+    const actionsHost = table.root.querySelector('[data-dynamic-table-actions]');
 
     function reset() {
         table.selection = { mode: 'include', ids: new Set() };
@@ -22,7 +22,7 @@ export default function install(table) {
 
         if (summary) {
             summary.replaceChildren();
-            summary.classList.toggle('dt-hidden', count === 0);
+            summary.classList.toggle('dynamic-table-hidden', count === 0);
 
             if (count) {
                 summary.append(el('span', { text: table.t('selected', { count }) }));
@@ -30,7 +30,7 @@ export default function install(table) {
                 if (table.selection.mode === 'include' && count === table.data.rows.length && table.data.total > count) {
                     summary.append(el('button', {
                         type: 'button',
-                        class: 'dt-link-button',
+                        class: 'dynamic-table-link-button',
                         text: table.t('select_all_matching', { total: table.data.total }),
                         onclick: () => {
                             table.selection = { mode: 'exclude', ids: new Set() };
@@ -42,7 +42,7 @@ export default function install(table) {
 
                 summary.append(el('button', {
                     type: 'button',
-                    class: 'dt-link-button',
+                    class: 'dynamic-table-link-button',
                     text: table.t('clear_selection'),
                     onclick: () => {
                         reset();
@@ -52,16 +52,16 @@ export default function install(table) {
             }
         }
 
-        actionsHost?.classList.toggle('dt-hidden', count === 0);
+        actionsHost?.classList.toggle('dynamic-table-hidden', count === 0);
         table.emit('selection-changed', count);
     }
 
     function syncCheckboxes() {
-        table.root.querySelectorAll('[data-dt-select]').forEach((box) => {
-            box.checked = table.isSelected(box.getAttribute('data-dt-select'));
+        table.root.querySelectorAll('[data-dynamic-table-select]').forEach((box) => {
+            box.checked = table.isSelected(box.getAttribute('data-dynamic-table-select'));
         });
 
-        const all = table.root.querySelector('[data-dt-select-all]');
+        const all = table.root.querySelector('[data-dynamic-table-select-all]');
 
         if (all) {
             const ids = table.data.rows.map((row) => String(row.id));
@@ -88,16 +88,16 @@ export default function install(table) {
     }
 
     table.root.addEventListener('change', (event) => {
-        const box = event.target.closest('[data-dt-select]');
+        const box = event.target.closest('[data-dynamic-table-select]');
 
         if (box) {
-            toggle(box.getAttribute('data-dt-select'), box.checked);
+            toggle(box.getAttribute('data-dynamic-table-select'), box.checked);
             syncCheckboxes();
 
             return;
         }
 
-        const all = event.target.closest('[data-dt-select-all]');
+        const all = event.target.closest('[data-dynamic-table-select-all]');
 
         if (all) {
             for (const row of table.data.rows) toggle(row.id, all.checked);
@@ -109,11 +109,11 @@ export default function install(table) {
     let lastIndex = null;
 
     table.root.addEventListener('click', (event) => {
-        const box = event.target.closest('[data-dt-select]');
+        const box = event.target.closest('[data-dynamic-table-select]');
         if (!box) return;
 
         const ids = table.data.rows.map((row) => String(row.id));
-        const index = ids.indexOf(box.getAttribute('data-dt-select'));
+        const index = ids.indexOf(box.getAttribute('data-dynamic-table-select'));
 
         if (event.shiftKey && lastIndex !== null && index > -1) {
             const [from, to] = [Math.min(lastIndex, index), Math.max(lastIndex, index)];
@@ -174,8 +174,8 @@ export default function install(table) {
         const controls = Object.entries(action.fields).map(([name, config]) => {
             values[name] = config.default ?? '';
 
-            return el('label', { class: 'dt-field' }, [
-                el('span', { class: 'dt-field-label', text: config.label || name }),
+            return el('label', { class: 'dynamic-table-field' }, [
+                el('span', { class: 'dynamic-table-field-label', text: config.label || name }),
                 control(config, values[name], (value) => { values[name] = value; }),
             ]);
         });
@@ -183,8 +183,8 @@ export default function install(table) {
         const instance = dialog(table, {
             title: action.label,
             width: '24rem',
-            body: el('div', { class: 'dt-form' }, controls),
-            footer: el('div', { class: 'dt-modal-actions' }, [
+            body: el('div', { class: 'dynamic-table-form' }, controls),
+            footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                 el('button', { type: 'button', class: table.classes.button, text: table.t('cancel'), onclick: () => instance.close() }),
                 el('button', {
                     type: 'button',
@@ -237,13 +237,13 @@ export default function install(table) {
                 toggle.checked = true;
             });
 
-            return el('label', { class: 'dt-field dt-bulk-field' }, [
-                el('span', { class: 'dt-field-label' }, [toggle, el('span', { text: column.label })]),
+            return el('label', { class: 'dynamic-table-field dynamic-table-bulk-field' }, [
+                el('span', { class: 'dynamic-table-field-label' }, [toggle, el('span', { text: column.label })]),
                 input,
             ]);
         });
 
-        const errors = el('div', { class: 'dt-form-errors' });
+        const errors = el('div', { class: 'dynamic-table-form-errors' });
 
         const submit = async () => {
             const fields = {};
@@ -274,12 +274,12 @@ export default function install(table) {
         const instance = dialog(table, {
             title: table.t('bulk_edit.title'),
             width: '28rem',
-            body: el('div', { class: 'dt-form' }, [
-                el('p', { class: 'dt-hint', text: table.t('bulk_edit.hint', { count: table.selectionCount() }) }),
+            body: el('div', { class: 'dynamic-table-form' }, [
+                el('p', { class: 'dynamic-table-hint', text: table.t('bulk_edit.hint', { count: table.selectionCount() }) }),
                 ...rows,
                 errors,
             ]),
-            footer: el('div', { class: 'dt-modal-actions' }, [
+            footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                 el('button', { type: 'button', class: table.classes.button, text: table.t('cancel'), onclick: () => instance.close() }),
                 el('button', { type: 'button', class: table.classes.buttonPrimary, text: table.t('apply'), onclick: submit }),
             ]),
@@ -329,16 +329,21 @@ export default function install(table) {
     }
 
     table.root.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-dt-toolbar-action]');
+        const button = event.target.closest('[data-dynamic-table-toolbar-action]');
 
         if (! button || ! table.root.contains(button)) return;
 
         event.preventDefault();
-        runToolbar(button.getAttribute('data-dt-toolbar-action'), button);
+        runToolbar(button.getAttribute('data-dynamic-table-toolbar-action'), button);
     });
 
     async function run(action) {
         const execute = async (input) => {
+            // A bulk action runs over the whole selection, which can be every
+            // row that matches the filters — long enough that a silent table
+            // reads as a table that ignored the click.
+            table.setLoading(true, table.t('actions.running'));
+
             try {
                 const response = await table.post(table.endpoints.action, {
                     action: action.name,
@@ -351,6 +356,8 @@ export default function install(table) {
                 await table.refresh();
             } catch (error) {
                 table.alert(error.message, 'error');
+            } finally {
+                table.setLoading(false);
             }
         };
 
@@ -414,15 +421,15 @@ export default function install(table) {
     }
 
     table.root.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-dt-row-action]');
+        const button = event.target.closest('[data-dynamic-table-row-action]');
 
         if (! button || ! table.root.contains(button)) return;
 
         event.preventDefault();
 
-        const rowId = button.closest('[data-dt-row]')?.getAttribute('data-dt-row');
+        const rowId = button.closest('[data-dynamic-table-row]')?.getAttribute('data-dynamic-table-row');
 
-        if (rowId) runRow(button.getAttribute('data-dt-row-action'), rowId, button);
+        if (rowId) runRow(button.getAttribute('data-dynamic-table-row-action'), rowId, button);
     });
 
     return {

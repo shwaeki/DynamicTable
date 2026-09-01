@@ -15,7 +15,7 @@
  * exactly what a saved view stores and what an export produces.
  */
 
-import { el } from './dom.js';
+import { el, mount } from './dom.js';
 import { dialog } from './ui.js';
 
 /** A glyph per field type, as Dynamics marks its column list. */
@@ -38,6 +38,21 @@ const ICONS = {
 export default function install(table) {
     const defaults = table.columns.filter((column) => column.visible).map((column) => column.key);
 
+    /**
+     * The chosen keys back in the order the table declares them.
+     *
+     * Only used when reordering is off. Adding a column appends it, which is
+     * the right answer when the reader owns the order — but when they do not,
+     * remove-then-re-add was a way to reorder a table that had reordering
+     * switched off. A column the table never declared has no declared place,
+     * so it stays at the end.
+     */
+    function inDeclaredOrder(keys) {
+        const rank = new Map(table.columns.map((column, index) => [column.key, index]));
+
+        return [...keys].sort((a, b) => (rank.get(a) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b) ?? Number.MAX_SAFE_INTEGER));
+    }
+
     let catalogue = null;
 
     /*
@@ -50,7 +65,7 @@ export default function install(table) {
      */
     const drafted = new Map();
 
-    if (table.features.column_resizing) installResizing(table);
+    if (table.features.column_resize) installResizing(table);
 
     /** Everything the table knows about a key, declared or added earlier. */
     function definitionFor(key) {
@@ -73,7 +88,7 @@ export default function install(table) {
     }
 
     function icon(type) {
-        return el('span', { class: 'dt-column-icon', 'aria-hidden': 'true', text: ICONS[type] || 'Abc' });
+        return el('span', { class: 'dynamic-table-column-icon', 'aria-hidden': 'true', text: ICONS[type] || 'Abc' });
     }
 
     /* ------------------------------------------------------------------ */
@@ -81,40 +96,44 @@ export default function install(table) {
     /* ------------------------------------------------------------------ */
 
     function renderList(working, repaint) {
-        const list = el('ul', { class: 'dt-column-list', role: 'list' });
+        const list = el('ul', { class: 'dynamic-table-column-list', role: 'list' });
 
         working.forEach((key, index) => {
             const column = definitionFor(key) || { key, label: key, type: 'string' };
 
             const item = el('li', {
-                class: 'dt-column-item',
-                draggable: table.features.column_reordering ? 'true' : null,
+                class: 'dynamic-table-column-item',
+                draggable: table.features.column_reorder ? 'true' : null,
                 'data-key': key,
                 'data-index': index,
             }, [
-                table.features.column_reordering
-                    ? el('span', { class: 'dt-drag-handle', 'aria-hidden': 'true', text: '⠿' })
+                table.features.column_reorder
+                    ? el('span', { class: 'dynamic-table-drag-handle', 'aria-hidden': 'true', text: '⠿' })
                     : null,
                 icon(column.type),
-                el('span', { class: 'dt-column-name', text: column.label }),
-                column.relation ? el('span', { class: 'dt-column-hint', text: column.relation }) : null,
-                el('button', {
-                    type: 'button',
-                    class: 'dt-column-remove',
-                    'aria-label': table.t('columns_panel.remove', { column: column.label }),
-                    text: '✕',
-                    onclick: () => {
-                        // A table with no columns at all is not a state worth
-                        // being able to reach.
-                        if (working.length <= 1) return;
+                el('span', { class: 'dynamic-table-column-name', text: column.label }),
+                column.relation ? el('span', { class: 'dynamic-table-column-hint', text: column.relation }) : null,
 
-                        working.splice(working.indexOf(key), 1);
-                        repaint();
-                    },
-                }),
+                // Removing a column is the picker's power, not reordering's.
+                table.features.column_picker
+                    ? el('button', {
+                        type: 'button',
+                        class: 'dynamic-table-column-remove',
+                        'aria-label': table.t('columns_panel.remove', { column: column.label }),
+                        text: '✕',
+                        onclick: () => {
+                            // A table with no columns at all is not a state
+                            // worth being able to reach.
+                            if (working.length <= 1) return;
+
+                            working.splice(working.indexOf(key), 1);
+                            repaint();
+                        },
+                    })
+                    : null,
             ]);
 
-            if (table.features.column_reordering) makeDraggable(item, key, working, repaint);
+            if (table.features.column_reorder) makeDraggable(item, key, working, repaint);
 
             list.append(item);
         });
@@ -125,21 +144,21 @@ export default function install(table) {
     function makeDraggable(item, key, working, repaint) {
         item.addEventListener('dragstart', (event) => {
             event.dataTransfer.setData('text/plain', key);
-            item.classList.add('dt-dragging');
+            item.classList.add('dynamic-table-dragging');
         });
 
-        item.addEventListener('dragend', () => item.classList.remove('dt-dragging'));
+        item.addEventListener('dragend', () => item.classList.remove('dynamic-table-dragging'));
 
         item.addEventListener('dragover', (event) => {
             event.preventDefault();
-            item.classList.add('dt-drop-target');
+            item.classList.add('dynamic-table-drop-target');
         });
 
-        item.addEventListener('dragleave', () => item.classList.remove('dt-drop-target'));
+        item.addEventListener('dragleave', () => item.classList.remove('dynamic-table-drop-target'));
 
         item.addEventListener('drop', (event) => {
             event.preventDefault();
-            item.classList.remove('dt-drop-target');
+            item.classList.remove('dynamic-table-drop-target');
 
             const dragged = event.dataTransfer.getData('text/plain');
             if (!dragged || dragged === key) return;
@@ -193,7 +212,7 @@ export default function install(table) {
      * different columns, and a flat list of both is a guessing game.
      */
     function renderCatalogue(working, back) {
-        const results = el('div', { class: 'dt-column-add-results' });
+        const results = el('div', { class: 'dynamic-table-column-add-results' });
 
         const search = el('input', {
             type: 'search',
@@ -223,14 +242,14 @@ export default function install(table) {
 
                 shown += matches.length;
 
-                fragment.append(el('p', { class: 'dt-column-group', text: group.label }));
+                fragment.append(el('p', { class: 'dynamic-table-column-group', text: group.label }));
 
                 for (const field of matches) {
                     const key = String(field.path).replace(/\./g, '__');
 
                     fragment.append(el('button', {
                         type: 'button',
-                        class: 'dt-column-add-item',
+                        class: 'dynamic-table-column-add-item',
                         onclick: () => {
                             /*
                              * The catalogue already describes the field, so the
@@ -254,25 +273,29 @@ export default function install(table) {
 
                             working.push(key);
 
+                            if (! table.features.column_reorder) {
+                                working.splice(0, working.length, ...inDeclaredOrder(working));
+                            }
+
                             // Straight back to the list, where the new column is
                             // now the last row — the answer to "did that work?"
                             back();
                         },
                     }, [
                         icon(field.type),
-                        el('span', { class: 'dt-column-name', text: field.label }),
+                        el('span', { class: 'dynamic-table-column-name', text: field.label }),
                     ]));
                 }
             }
 
             if (!shown) {
-                fragment.append(el('p', { class: 'dt-hint', text: table.t('columns_panel.none_left') }));
+                fragment.append(el('p', { class: 'dynamic-table-hint', text: table.t('columns_panel.none_left') }));
             }
 
             results.replaceChildren(fragment);
         };
 
-        results.append(el('p', { class: 'dt-hint', text: table.t('loading') }));
+        results.append(el('p', { class: 'dynamic-table-hint', text: table.t('loading') }));
 
         fields()
             .then((loaded) => {
@@ -281,17 +304,23 @@ export default function install(table) {
                 search.focus();
             })
             .catch((error) => {
-                results.replaceChildren(el('p', { class: 'dt-form-errors', text: error.message }));
+                results.replaceChildren(el('p', { class: 'dynamic-table-form-errors', text: error.message }));
             });
 
-        return el('div', { class: 'dt-column-add' }, [search, results]);
+        return el('div', { class: 'dynamic-table-column-add' }, [
+            el('p', { class: 'dynamic-table-panel-heading' }, [
+                el('span', { text: table.t('columns_panel.available') }),
+            ]),
+            search,
+            results,
+        ]);
     }
 
     return {
         open() {
             const working = [...table.state.columns];
-            const body = el('div', { class: 'dt-column-picker' });
-            const foot = el('div', { class: 'dt-modal-actions' });
+            const body = el('div', { class: 'dynamic-table-column-picker' });
+            const foot = el('div', { class: 'dynamic-table-modal-actions' });
 
             // Which of the panel's two panes is showing.
             let adding = false;
@@ -315,28 +344,44 @@ export default function install(table) {
                     return;
                 }
 
-                body.replaceChildren(
-                    el('div', { class: 'dt-column-actions' }, [
-                        el('button', { type: 'button', class: 'dt-link-button', onclick: () => show('add') }, [
-                            el('span', { 'aria-hidden': 'true', text: '＋' }),
-                            el('span', { text: table.t('columns_panel.add') }),
-                        ]),
+                mount(
+                    body,
+                    el('div', { class: 'dynamic-table-column-actions' }, [
+                        /*
+                         * Two actions of very different weight. Adding a column
+                         * is what people open this panel to do, so it is a
+                         * button in the theme's own style — the same object as
+                         * Apply in the footer. Resetting is a rare escape
+                         * hatch, so it is quiet, unglyphed and pushed to the
+                         * far end where it cannot be hit by accident.
+                         */
+                        table.features.column_picker
+                            ? el('button', { type: 'button', class: [table.classes.button, 'dynamic-table-column-add-button'], onclick: () => show('add') }, [
+                                el('span', { class: 'dynamic-table-column-add-glyph', 'aria-hidden': 'true', text: '+' }),
+                                el('span', { text: table.t('columns_panel.add') }),
+                            ])
+                            : null,
                         el('button', {
                             type: 'button',
-                            class: 'dt-link-button',
+                            class: 'dynamic-table-column-reset',
+                            text: table.t('columns_panel.reset'),
                             onclick: () => {
                                 working.length = 0;
                                 working.push(...defaults);
                                 repaint();
                             },
-                        }, [
-                            el('span', { 'aria-hidden': 'true', text: '↺' }),
-                            el('span', { text: table.t('columns_panel.reset') }),
-                        ]),
+                        }),
                     ]),
-                    table.features.column_reordering
-                        ? el('p', { class: 'dt-hint', text: table.t('columns_panel.reorder_hint') })
+                    table.features.column_reorder
+                        ? el('p', { class: 'dynamic-table-hint', text: table.t('columns_panel.reorder_hint') })
                         : null,
+                    // The panel has two panes and they hold different things;
+                    // each one says which. The count answers "how many am I
+                    // showing?" without making anyone count the rows.
+                    el('p', { class: 'dynamic-table-panel-heading' }, [
+                        el('span', { text: table.t('columns_panel.visible') }),
+                        el('span', { class: 'dynamic-table-panel-count', text: String(working.length) }),
+                    ]),
                     renderList(working, repaint),
                 );
 
@@ -369,7 +414,8 @@ export default function install(table) {
             repaint();
 
             const instance = dialog(table, {
-                title: table.t('columns_panel.title'),
+                // "Choose columns" would be a lie on a table that only reorders.
+                title: table.t(table.features.column_picker ? 'columns_panel.title' : 'columns_panel.arrange'),
                 width: '28rem',
                 body,
                 footer: foot,
@@ -400,7 +446,7 @@ function installResizing(table) {
      */
     const MIN_WIDTH = 24;
 
-    const element = () => table.root.querySelector('[data-dt-table]');
+    const element = () => table.root.querySelector('[data-dynamic-table-table]');
 
     /** Pin every column to what it measures now, once, before the first drag. */
     const freeze = () => {
@@ -410,7 +456,7 @@ function installResizing(table) {
         const widths = { ...table.state.widths };
 
         node.querySelectorAll('thead th').forEach((th) => {
-            const key = th.getAttribute('data-dt-column');
+            const key = th.getAttribute('data-dynamic-table-column');
             const width = Math.round(th.getBoundingClientRect().width);
 
             // Cells that are not columns of data are pinned too — otherwise a
@@ -426,7 +472,7 @@ function installResizing(table) {
             th.style.width = `${widths[key]}px`;
         });
 
-        node.classList.add('dt-sized');
+        node.classList.add('dynamic-table-sized');
 
         return widths;
     };
@@ -447,13 +493,13 @@ function installResizing(table) {
         table.state.widths = { ...active.widths, [active.key]: active.width };
         document.removeEventListener('pointermove', onMove);
         document.removeEventListener('pointerup', onUp);
-        table.root.classList.remove('dt-resizing');
+        table.root.classList.remove('dynamic-table-resizing');
         table.emit('resized', { key: active.key, width: active.width });
         active = null;
     };
 
     table.root.addEventListener('pointerdown', (event) => {
-        const handle = event.target.closest('[data-dt-resizer]');
+        const handle = event.target.closest('[data-dynamic-table-resizer]');
         if (!handle) return;
 
         const th = handle.closest('th');
@@ -465,7 +511,7 @@ function installResizing(table) {
         const measured = Math.round(th.getBoundingClientRect().width);
 
         active = {
-            key: handle.getAttribute('data-dt-resizer'),
+            key: handle.getAttribute('data-dynamic-table-resizer'),
             th,
             widths,
             startX: event.clientX,
@@ -473,7 +519,7 @@ function installResizing(table) {
             width: measured,
         };
 
-        table.root.classList.add('dt-resizing');
+        table.root.classList.add('dynamic-table-resizing');
         document.addEventListener('pointermove', onMove);
         document.addEventListener('pointerup', onUp);
     });

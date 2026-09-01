@@ -88,8 +88,19 @@ export class DynamicTable {
 
         if (typeof value !== 'string') return key;
 
+        /*
+         * ":to" must not match the front of ":total".
+         *
+         * It did, and because the replacements ran in the order they were
+         * given, "Showing :from–:to of :total" came out as "Showing 1–10 of
+         * 10tal". The lookahead makes the order irrelevant: a token only
+         * matches where the placeholder actually ends. Laravel's own
+         * make_replacements sorts by length for the same reason, which is why
+         * the server-rendered first page was always right and only the pages
+         * after it were wrong.
+         */
         for (const [token, replacement] of Object.entries(replace)) {
-            value = value.replace(new RegExp(`:${token}`, 'g'), String(replacement));
+            value = value.replace(new RegExp(`:${token}(?![A-Za-z0-9_])`, 'g'), String(replacement));
         }
 
         return value;
@@ -130,7 +141,9 @@ export class DynamicTable {
     }
 
     /** Reload the current page of rows. */
-    async refresh({ resetPage = false, silent = false } = {}) {
+    async refresh(options = {}) {
+        const { resetPage = false, silent = false } = options;
+
         if (resetPage) this.state.page = 1;
 
         this.pending?.abort();
@@ -173,7 +186,13 @@ export class DynamicTable {
             this.emit('updated', response);
         } catch (error) {
             if (error.name === 'AbortError') return;
-            this.alert(error.message || this.t('error'), 'error');
+
+            // A failed load is the one error the reader can do something about,
+            // and "try again" beats making them find the reload button.
+            this.alert(error.message || this.t('error'), 'error', {
+                action: { label: this.t('retry'), handler: () => this.refresh(options) },
+            });
+
             this.emit('error', error);
         } finally {
             if (id === this.requestId) {
@@ -194,7 +213,6 @@ export class DynamicTable {
             columns: this.state.columns,
             widths: Object.keys(this.state.widths || {}).length ? this.state.widths : undefined,
             group: this.state.group || undefined,
-            trashed: this.state.trashed && this.state.trashed !== 'without' ? this.state.trashed : undefined,
             view: this.state.view || undefined,
             params: Object.keys(this.state.params || {}).length ? this.state.params : undefined,
         };
@@ -219,7 +237,7 @@ export class DynamicTable {
     }
 
     renderRows() {
-        const body = this.root.querySelector('[data-dt-body]');
+        const body = this.root.querySelector('[data-dynamic-table-body]');
         if (!body) return;
 
         const columns = this.visibleColumns();
@@ -273,15 +291,15 @@ export class DynamicTable {
     renderEmpty() {
         const filtered = this.data.emptyReason === 'filtered';
 
-        return el('div', { class: 'dt-empty-state', 'data-dt-empty': '' }, [
-            el('p', { class: 'dt-empty-title', text: this.t(filtered ? 'empty_filtered' : 'empty') }),
-            filtered ? el('p', { class: 'dt-empty-hint', text: this.t('empty_filtered_hint') }) : null,
+        return el('div', { class: 'dynamic-table-empty-state', 'data-dynamic-table-empty': '' }, [
+            el('p', { class: 'dynamic-table-empty-title', text: this.t(filtered ? 'empty_filtered' : 'empty') }),
+            filtered ? el('p', { class: 'dynamic-table-empty-hint', text: this.t('empty_filtered_hint') }) : null,
             filtered
                 ? el('button', {
                     type: 'button',
                     class: this.classes.button,
                     text: this.t('clear_filters'),
-                    'data-dt-clear-filters': '',
+                    'data-dynamic-table-clear-filters': '',
                 })
                 : null,
         ]);
@@ -297,13 +315,12 @@ export class DynamicTable {
         this.state.search = '';
         this.state.columnSearch = {};
         this.state.filters = null;
-        this.state.trashed = 'without';
 
-        const search = this.root.querySelector('[data-dt-search]');
+        const search = this.root.querySelector('[data-dynamic-table-search]');
 
         if (search) search.value = '';
 
-        this.root.querySelectorAll('[data-dt-column-search]').forEach((input) => { input.value = ''; });
+        this.root.querySelectorAll('[data-dynamic-table-column-search]').forEach((input) => { input.value = ''; });
 
         this.refresh({ resetPage: true });
         this.emit('filters-cleared');
@@ -312,9 +329,9 @@ export class DynamicTable {
     renderGroupRow(key, value, span) {
         const column = this.columns.find((candidate) => candidate.key === key);
 
-        return el('tr', { class: `${this.classes.group} dt-group-row` }, [
+        return el('tr', { class: `${this.classes.group} dynamic-table-group-row` }, [
             el('td', { colspan: span }, [
-                el('span', { class: 'dt-group-label', text: `${column?.label ?? key}: ` }),
+                el('span', { class: 'dynamic-table-group-label', text: `${column?.label ?? key}: ` }),
                 el('strong', { text: value === null || value === '' ? '—' : String(value) }),
             ]),
         ]);
@@ -325,17 +342,17 @@ export class DynamicTable {
 
         const tr = el('tr', {
             class: [this.classes.row, selected ? this.classes.rowSelected : null],
-            'data-dt-row': row.id,
+            'data-dynamic-table-row': row.id,
             'data-trashed': row.trashed ? '' : null,
         });
 
         if (this.features.row_detail) {
             tr.append(
-                el('td', { class: `${this.classes.cell} dt-expand-cell` }, [
+                el('td', { class: `${this.classes.cell} dynamic-table-expand-cell` }, [
                     el('button', {
                         type: 'button',
-                        class: 'dt-expand',
-                        'data-dt-detail': row.id,
+                        class: 'dynamic-table-expand',
+                        'data-dynamic-table-detail': row.id,
                         'aria-expanded': 'false',
                         'aria-label': this.t('detail.toggle'),
                         text: '\u203a',
@@ -346,10 +363,10 @@ export class DynamicTable {
 
         if (selectable) {
             tr.append(
-                el('td', { class: `${this.classes.cell} dt-select-cell` }, [
+                el('td', { class: `${this.classes.cell} dynamic-table-select-cell` }, [
                     el('input', {
                         type: 'checkbox',
-                        'data-dt-select': row.id,
+                        'data-dynamic-table-select': row.id,
                         'aria-label': this.t('select_row'),
                         checked: selected,
                     }),
@@ -359,11 +376,11 @@ export class DynamicTable {
 
         for (const column of columns) {
             const td = el('td', {
-                class: [this.classes.cell, `dt-align-${column.align || 'start'}`, column.class],
-                'data-dt-cell': column.key,
+                class: [this.classes.cell, `dynamic-table-align-${column.align || 'start'}`, column.class],
+                'data-dynamic-table-cell': column.key,
                 'data-label': column.label,
-                'data-dt-editable': column.editable && this.features.inline_edit ? '' : null,
-                'data-dt-sticky': (this.boot.sticky || []).includes(column.key) ? '' : null,
+                'data-dynamic-table-editable': column.editable && this.features.inline_edit ? '' : null,
+                'data-dynamic-table-sticky': (this.boot.sticky || []).includes(column.key) ? '' : null,
             });
 
             this.paintCell(td, column, row.c?.[column.key], row);
@@ -373,7 +390,7 @@ export class DynamicTable {
         const rowActions = this.boot.rowActions || [];
 
         if (rowActions.length) {
-            const cell = el('td', { class: `${this.classes.cell} dt-row-actions-cell` });
+            const cell = el('td', { class: `${this.classes.cell} dynamic-table-row-actions-cell` });
 
             for (const action of rowActions) {
                 // The server decided per record which actions apply; absent
@@ -384,10 +401,10 @@ export class DynamicTable {
 
                 const shared = {
                     class: [
-                        'dt-row-action',
-                        action.destructive ? 'dt-row-action-danger' : null,
+                        'dynamic-table-row-action',
+                        action.destructive ? 'dynamic-table-row-action-danger' : null,
                         // Its own classes mean the package stops painting it.
-                        action.class ? `dt-row-action-custom ${action.class}` : null,
+                        action.class ? `dynamic-table-row-action-custom ${action.class}` : null,
                     ],
                     title: action.label,
                 };
@@ -397,13 +414,13 @@ export class DynamicTable {
                 // glyph is already escaped — so it is inserted rather than
                 // printed; the label is always plain text.
                 const content = [
-                    action.icon ? el('span', { class: 'dt-row-action-icon', 'aria-hidden': 'true', html: action.icon }) : null,
-                    ! action.icon || action.showLabel ? el('span', { class: 'dt-row-action-label', text: action.label }) : null,
+                    action.icon ? el('span', { class: 'dynamic-table-row-action-icon', 'aria-hidden': 'true', html: action.icon }) : null,
+                    ! action.icon || action.showLabel ? el('span', { class: 'dynamic-table-row-action-label', text: action.label }) : null,
                 ];
 
                 cell.append(action.link
                     ? el('a', { ...shared, href: applies, target: action.target || null, rel: action.target ? 'noopener' : null }, content)
-                    : el('button', { ...shared, type: 'button', 'data-dt-row-action': action.name }, content));
+                    : el('button', { ...shared, type: 'button', 'data-dynamic-table-row-action': action.name }, content));
             }
 
             tr.append(cell);
@@ -419,12 +436,12 @@ export class DynamicTable {
      * every other theme gets the package modifier appended.
      */
     badgeClass(tone) {
-        const base = this.classes.badge || 'dt-badge';
+        const base = this.classes.badge || 'dynamic-table-badge';
         const slug = String(tone || '').toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
 
         if (base.includes('{tone}')) return base.replace('{tone}', slug || 'neutral').trim();
 
-        return slug ? `${base} dt-badge-${slug}` : base;
+        return slug ? `${base} dynamic-table-badge-${slug}` : base;
     }
 
     /** Mirrors resources/views/partials/cell.blade.php. */
@@ -432,7 +449,7 @@ export class DynamicTable {
         td.replaceChildren();
 
         if (value === null || value === undefined || value === '') {
-            td.append(el('span', { class: 'dt-null', text: '—', 'aria-hidden': 'true' }));
+            td.append(el('span', { class: 'dynamic-table-null', text: '—', 'aria-hidden': 'true' }));
 
             return;
         }
@@ -447,7 +464,7 @@ export class DynamicTable {
         switch (column.type) {
             case 'boolean':
                 td.append(el('span', {
-                    class: `dt-bool ${value ? 'dt-bool-true' : 'dt-bool-false'}`,
+                    class: `dynamic-table-bool ${value ? 'dynamic-table-bool-true' : 'dynamic-table-bool-false'}`,
                     title: value ? this.t('yes') : this.t('no'),
                     text: value ? '✓' : '✕',
                 }));
@@ -456,19 +473,19 @@ export class DynamicTable {
                 td.append(el('span', { class: this.badgeClass(String(value)), text: String(value) }));
                 break;
             case 'image':
-                td.append(el('img', { src: value, alt: '', class: 'dt-thumb', loading: 'lazy' }));
+                td.append(el('img', { src: value, alt: '', class: 'dynamic-table-thumb', loading: 'lazy' }));
                 break;
             case 'url':
                 td.append(el('a', {
                     href: value,
-                    class: 'dt-link',
+                    class: 'dynamic-table-link',
                     rel: 'noopener noreferrer',
                     target: '_blank',
                     text: String(value).length > 40 ? `${String(value).slice(0, 40)}…` : value,
                 }));
                 break;
             case 'email':
-                td.append(el('a', { href: `mailto:${value}`, class: 'dt-link', text: value }));
+                td.append(el('a', { href: `mailto:${value}`, class: 'dynamic-table-link', text: value }));
                 break;
             default:
                 td.textContent = String(value);
@@ -476,22 +493,27 @@ export class DynamicTable {
     }
 
     renderPagination() {
-        const nav = this.root.querySelector('[data-dt-pagination]');
+        const nav = this.root.querySelector('[data-dynamic-table-pagination]');
         if (!nav) return;
 
         const { page, lastPage, counted, hasMore } = this.data;
         nav.replaceChildren();
 
-        const button = (label, target, { disabled = false, current = false } = {}) =>
+        // The arrows are glyphs, so their accessible name has to be a word:
+        // "‹" announced literally tells a screen-reader user nothing.
+        const button = (label, target, { disabled = false, current = false, name = null } = {}) =>
             el('button', {
                 type: 'button',
-                class: [this.classes.button, 'dt-page', current ? 'dt-page-current' : null],
+                class: [this.classes.button, 'dynamic-table-page', current ? 'dynamic-table-page-current' : null],
                 disabled,
                 'aria-current': current ? 'page' : null,
-                'aria-label': typeof label === 'number' ? `${this.t('page')} ${label}` : label,
+                'aria-label': name ?? (typeof label === 'number' ? `${this.t('page')} ${label}` : label),
                 text: String(label),
                 onclick: () => this.goToPage(target),
             });
+
+        const previous = (target, disabled) => button('‹', target, { disabled, name: this.t('previous') });
+        const next = (target, disabled) => button('›', target, { disabled, name: this.t('next') });
 
         // Without a count there is no last page and no page list — only
         // whether another page exists. Showing invented numbers would be worse
@@ -500,9 +522,9 @@ export class DynamicTable {
             if (page <= 1 && !hasMore) return;
 
             nav.append(
-                button('‹', page - 1, { disabled: page <= 1 }),
-                el('span', { class: 'dt-page-current-only', text: String(page) }),
-                button('›', page + 1, { disabled: !hasMore }),
+                previous(page - 1, page <= 1),
+                el('span', { class: 'dynamic-table-page-current-only', text: String(page) }),
+                next(page + 1, !hasMore),
             );
 
             return;
@@ -510,17 +532,17 @@ export class DynamicTable {
 
         if (!lastPage || lastPage <= 1) return;
 
-        nav.append(button('‹', page - 1, { disabled: page <= 1 }));
+        nav.append(previous(page - 1, page <= 1));
 
         for (const target of pageWindow(page, lastPage)) {
             if (target === '…') {
-                nav.append(el('span', { class: 'dt-page-gap', text: '…' }));
+                nav.append(el('span', { class: 'dynamic-table-page-gap', text: '…' }));
             } else {
                 nav.append(button(target, target, { current: target === page }));
             }
         }
 
-        nav.append(button('›', page + 1, { disabled: page >= lastPage }));
+        nav.append(next(page + 1, page >= lastPage));
     }
 
     /**
@@ -538,7 +560,7 @@ export class DynamicTable {
      * the current state has to travel in the href rather than in a fetch body.
      */
     syncPrintLink() {
-        const link = this.root.querySelector('[data-dt-print]');
+        const link = this.root.querySelector('[data-dynamic-table-print]');
 
         if (! link) return;
 
@@ -551,7 +573,7 @@ export class DynamicTable {
     }
 
     renderSummaryRow() {
-        const foot = this.root.querySelector('[data-dt-summary-row]');
+        const foot = this.root.querySelector('[data-dynamic-table-summary-row]');
 
         if (! foot) return;
 
@@ -559,8 +581,8 @@ export class DynamicTable {
 
         foot.hidden = Object.keys(summaries).length === 0;
 
-        for (const cell of foot.querySelectorAll('[data-dt-summary]')) {
-            const key = cell.getAttribute('data-dt-summary');
+        for (const cell of foot.querySelectorAll('[data-dynamic-table-summary]')) {
+            const key = cell.getAttribute('data-dynamic-table-summary');
             const column = this.columns.find((candidate) => candidate.key === key);
             const value = summaries[key];
 
@@ -569,14 +591,15 @@ export class DynamicTable {
             if (value === undefined) continue;
 
             cell.append(
-                el('span', { class: 'dt-summary-label', text: this.t(`summary.${column?.summary || 'sum'}`) }),
-                el('span', { class: 'dt-summary-value', text: String(value) }),
+                el('span', { class: 'dynamic-table-summary-label', text: this.t(`summary.${column?.summary || 'sum'}`) }),
+                el('span', { class: 'dynamic-table-summary-value', text: String(value) }),
             );
         }
     }
 
+    /** The "Showing 11–20 of 100" line in the footer. */
     renderSummary() {
-        const summary = this.root.querySelector('[data-dt-summary]');
+        const summary = this.root.querySelector('[data-dynamic-table-range]');
 
         if (! summary) return;
 
@@ -621,16 +644,16 @@ export class DynamicTable {
     renderFilterIndicators() {
         const filtered = new Set(this.filteredColumns());
 
-        this.root.querySelectorAll('[data-dt-column]').forEach((th) => {
-            const on = filtered.has(th.getAttribute('data-dt-column'));
+        this.root.querySelectorAll('[data-dynamic-table-column]').forEach((th) => {
+            const on = filtered.has(th.getAttribute('data-dynamic-table-column'));
 
-            th.toggleAttribute('data-dt-filtered', on);
+            th.toggleAttribute('data-dynamic-table-filtered', on);
 
-            let marker = th.querySelector('.dt-filtered-icon');
+            let marker = th.querySelector('.dynamic-table-filtered-icon');
 
             if (on && ! marker) {
-                marker = el('span', { class: 'dt-filtered-icon', 'aria-hidden': 'true', text: '▼' });
-                (th.querySelector('.dt-header-trigger') || th).append(marker);
+                marker = el('span', { class: 'dynamic-table-filtered-icon', 'aria-hidden': 'true', text: '▼' });
+                (th.querySelector('.dynamic-table-header-trigger') || th).append(marker);
             } else if (! on && marker) {
                 marker.remove();
             }
@@ -640,10 +663,10 @@ export class DynamicTable {
     renderSortIndicators() {
         const sort = new Map((this.state.sort || []).map((entry) => [entry.field, entry.direction]));
 
-        this.root.querySelectorAll('[data-dt-column]').forEach((th) => {
-            const key = th.getAttribute('data-dt-column');
+        this.root.querySelectorAll('[data-dynamic-table-column]').forEach((th) => {
+            const key = th.getAttribute('data-dynamic-table-column');
             const direction = sort.get(key);
-            const icon = th.querySelector('.dt-sort-icon');
+            const icon = th.querySelector('.dynamic-table-sort-icon');
 
             if (icon) icon.textContent = direction ? (direction === 'asc' ? '▲' : '▼') : '';
             if (th.hasAttribute('aria-sort')) {
@@ -653,7 +676,7 @@ export class DynamicTable {
     }
 
     renderDebug(debug) {
-        const panel = this.root.querySelector('[data-dt-panel]');
+        const panel = this.root.querySelector('[data-dynamic-table-panel]');
         if (!panel || !debug) return;
 
         panel.textContent = `${debug.ms} ms · ${debug.memory} MB · eager: ${(debug.relations || []).join(', ') || 'none'}`;
@@ -661,7 +684,7 @@ export class DynamicTable {
 
     /** Rebuild the header when the column set or order changed. */
     renderHeader() {
-        const headRow = this.root.querySelector('[data-dt-table] thead tr');
+        const headRow = this.root.querySelector('[data-dynamic-table-table] thead tr');
         if (!headRow) return;
 
         const columns = this.visibleColumns();
@@ -672,14 +695,14 @@ export class DynamicTable {
         // them out here would shift every column one place the first time the
         // header is repainted.
         if (this.features.row_detail) {
-            cells.push(el('th', { class: `${this.classes.th} dt-expand-cell`, scope: 'col' }, [
-                el('span', { class: 'dt-visually-hidden', text: this.t('detail.title') }),
+            cells.push(el('th', { class: `${this.classes.th} dynamic-table-expand-cell`, scope: 'col' }, [
+                el('span', { class: 'dynamic-table-visually-hidden', text: this.t('detail.title') }),
             ]));
         }
 
         if (selectable) {
-            cells.push(el('th', { class: `${this.classes.th} dt-select-cell`, scope: 'col' }, [
-                el('input', { type: 'checkbox', 'data-dt-select-all': '', 'aria-label': this.t('select_all') }),
+            cells.push(el('th', { class: `${this.classes.th} dynamic-table-select-cell`, scope: 'col' }, [
+                el('input', { type: 'checkbox', 'data-dynamic-table-select-all': '', 'aria-label': this.t('select_all') }),
             ]));
         }
 
@@ -689,9 +712,9 @@ export class DynamicTable {
             const width = this.state.widths?.[column.key] || column.width;
 
             const th = el('th', {
-                class: [this.classes.th, column.sortable && ! headerMenu ? this.classes.thSortable : null, `dt-align-${column.align || 'start'}`],
+                class: [this.classes.th, column.sortable && ! headerMenu ? this.classes.thSortable : null, `dynamic-table-align-${column.align || 'start'}`],
                 scope: 'col',
-                'data-dt-column': column.key,
+                'data-dynamic-table-column': column.key,
                 style: width ? `width:${width}px` : null,
                 'aria-sort': column.sortable ? 'none' : null,
             });
@@ -702,29 +725,29 @@ export class DynamicTable {
             if (headerMenu) {
                 th.append(el('button', {
                     type: 'button',
-                    class: 'dt-header-trigger',
-                    'data-dt-header-menu': column.key,
+                    class: 'dynamic-table-header-trigger',
+                    'data-dynamic-table-header-menu': column.key,
                     'aria-haspopup': 'menu',
                     'aria-expanded': 'false',
                     'aria-label': this.t('header.menu', { column: column.label }),
                 }, [
                     el('span', { text: column.label }),
-                    el('span', { class: 'dt-sort-icon', 'aria-hidden': 'true' }),
-                    el('span', { class: 'dt-header-cog', 'aria-hidden': 'true', text: '⚙' }),
+                    el('span', { class: 'dynamic-table-sort-icon', 'aria-hidden': 'true' }),
+                    el('span', { class: 'dynamic-table-header-cog', 'aria-hidden': 'true', text: '⚙' }),
                 ]));
             } else if (column.sortable) {
-                th.append(el('button', { type: 'button', class: 'dt-sort', 'data-dt-sort': column.key }, [
+                th.append(el('button', { type: 'button', class: 'dynamic-table-sort', 'data-dynamic-table-sort': column.key }, [
                     el('span', { text: column.label }),
-                    el('span', { class: 'dt-sort-icon', 'aria-hidden': 'true' }),
+                    el('span', { class: 'dynamic-table-sort-icon', 'aria-hidden': 'true' }),
                 ]));
             } else {
                 th.append(el('span', { text: column.label }));
             }
 
-            if (this.features.column_resizing) {
+            if (this.features.column_resize) {
                 th.append(el('span', {
                     class: this.classes.resizer,
-                    'data-dt-resizer': column.key,
+                    'data-dynamic-table-resizer': column.key,
                     role: 'separator',
                     'aria-orientation': 'vertical',
                 }));
@@ -734,8 +757,8 @@ export class DynamicTable {
         }
 
         if ((this.boot.rowActions || []).length) {
-            cells.push(el('th', { class: `${this.classes.th} dt-row-actions-cell`, scope: 'col' }, [
-                el('span', { class: 'dt-visually-hidden', text: this.t('actions.title') }),
+            cells.push(el('th', { class: `${this.classes.th} dynamic-table-row-actions-cell`, scope: 'col' }, [
+                el('span', { class: 'dynamic-table-visually-hidden', text: this.t('actions.title') }),
             ]));
         }
 
@@ -756,22 +779,22 @@ export class DynamicTable {
      * the state rather than from the DOM, so a search survives a column change.
      */
     renderSearchRow() {
-        const row = this.root.querySelector('[data-dt-table] [data-dt-search-row]');
+        const row = this.root.querySelector('[data-dynamic-table-table] [data-dynamic-table-search-row]');
         if (!row) return;
 
         const cells = [];
 
-        if (this.features.row_detail) cells.push(el('th', { class: `${this.classes.th} dt-expand-cell` }));
-        if (this.features.selection) cells.push(el('th', { class: `${this.classes.th} dt-select-cell` }));
+        if (this.features.row_detail) cells.push(el('th', { class: `${this.classes.th} dynamic-table-expand-cell` }));
+        if (this.features.selection) cells.push(el('th', { class: `${this.classes.th} dynamic-table-select-cell` }));
 
         for (const column of this.visibleColumns()) {
-            const cell = el('th', { class: this.classes.th, 'data-dt-search-cell': column.key });
+            const cell = el('th', { class: this.classes.th, 'data-dynamic-table-search-cell': column.key });
 
             if (column.filterable) {
                 cell.append(el('input', {
                     type: 'text',
                     class: this.classes.input || '',
-                    'data-dt-column-search': column.key,
+                    'data-dynamic-table-column-search': column.key,
                     value: this.state.columnSearch?.[column.key] || '',
                     'aria-label': this.t('search_column', { column: column.label }),
                 }));
@@ -780,7 +803,7 @@ export class DynamicTable {
             cells.push(cell);
         }
 
-        if ((this.boot.rowActions || []).length) cells.push(el('th', { class: `${this.classes.th} dt-row-actions-cell` }));
+        if ((this.boot.rowActions || []).length) cells.push(el('th', { class: `${this.classes.th} dynamic-table-row-actions-cell` }));
 
         row.replaceChildren(...cells);
     }
@@ -794,12 +817,12 @@ export class DynamicTable {
      * whether a label wrapped.
      */
     syncHeaderOffset() {
-        const element = this.root.querySelector('[data-dt-table]');
+        const element = this.root.querySelector('[data-dynamic-table-table]');
         const headRow = element?.querySelector('thead tr');
 
         if (!element || !headRow) return;
 
-        element.style.setProperty('--dt-head-offset', `${Math.round(headRow.getBoundingClientRect().height)}px`);
+        element.style.setProperty('--dynamic-table-head-offset', `${Math.round(headRow.getBoundingClientRect().height)}px`);
     }
 
     /**
@@ -809,7 +832,7 @@ export class DynamicTable {
      * fits. Without this, widening one column can only come out of another.
      */
     syncSizedLayout() {
-        const element = this.root.querySelector('[data-dt-table]');
+        const element = this.root.querySelector('[data-dynamic-table-table]');
         if (!element) return;
 
         /*
@@ -820,19 +843,19 @@ export class DynamicTable {
          */
         const widths = { ...(this.state.widths || {}) };
 
-        element.querySelectorAll('thead th[data-dt-column]').forEach((th) => {
-            const key = th.getAttribute('data-dt-column');
+        element.querySelectorAll('thead th[data-dynamic-table-column]').forEach((th) => {
+            const key = th.getAttribute('data-dynamic-table-column');
             const declared = parseInt(th.style.width, 10);
 
             if (!widths[key] && Number.isFinite(declared)) widths[key] = declared;
         });
 
-        element.classList.toggle('dt-sized', Object.keys(widths).length > 0);
+        element.classList.toggle('dynamic-table-sized', Object.keys(widths).length > 0);
 
         // The widths go back onto the headers, so a re-render that arrives
         // without them cannot leave the state and the table disagreeing.
-        element.querySelectorAll('thead th[data-dt-column]').forEach((th) => {
-            const width = widths[th.getAttribute('data-dt-column')];
+        element.querySelectorAll('thead th[data-dynamic-table-column]').forEach((th) => {
+            const width = widths[th.getAttribute('data-dynamic-table-column')];
 
             if (width) th.style.width = `${width}px`;
         });
@@ -840,7 +863,7 @@ export class DynamicTable {
         // A column narrowed to the width of "$2" cannot also carry a cell's
         // worth of padding — border-box means the padding would eat the whole
         // column and leave no room even for the ellipsis.
-        element.querySelectorAll('.dt-narrow').forEach((cell) => cell.classList.remove('dt-narrow'));
+        element.querySelectorAll('.dynamic-table-narrow').forEach((cell) => cell.classList.remove('dynamic-table-narrow'));
 
         for (const [key, width] of Object.entries(widths)) {
             if (width >= 64) continue;
@@ -848,27 +871,38 @@ export class DynamicTable {
             const escaped = CSS.escape(key);
 
             element.querySelectorAll(
-                `th[data-dt-column="${escaped}"], th[data-dt-search-cell="${escaped}"], td[data-dt-cell="${escaped}"]`,
-            ).forEach((cell) => cell.classList.add('dt-narrow'));
+                `th[data-dynamic-table-column="${escaped}"], th[data-dynamic-table-search-cell="${escaped}"], td[data-dynamic-table-cell="${escaped}"]`,
+            ).forEach((cell) => cell.classList.add('dynamic-table-narrow'));
         }
     }
 
-    setLoading(loading) {
-        const indicator = this.root.querySelector('[data-dt-loading]');
-        if (indicator) indicator.hidden = !loading;
+    /**
+     * @param {string|null} label what the table is busy doing, when it is
+     *        something other than fetching rows — running a bulk action, say.
+     */
+    setLoading(loading, label = null) {
+        const indicator = this.root.querySelector('[data-dynamic-table-loading]');
 
-        this.root.classList.toggle('dt-is-loading', loading);
+        if (indicator) {
+            indicator.hidden = !loading;
+
+            const text = indicator.querySelector('span:last-child');
+
+            if (text) text.textContent = label ?? this.t('loading');
+        }
+
+        this.root.classList.toggle('dynamic-table-is-loading', loading);
         this.root.setAttribute('aria-busy', loading ? 'true' : 'false');
     }
 
     alert(message, kind = 'info', { timeout = 6000, action = null } = {}) {
-        const host = this.root.querySelector('[data-dt-alerts]');
+        const host = this.root.querySelector('[data-dynamic-table-alerts]');
         if (!host) return;
 
-        const node = el('div', { class: `dt-alert dt-alert-${kind}`, role: kind === 'error' ? 'alert' : 'status' }, [
+        const node = el('div', { class: `dynamic-table-alert dynamic-table-alert-${kind}`, role: kind === 'error' ? 'alert' : 'status' }, [
             el('span', { text: message }),
             action ? el('button', { type: 'button', class: this.classes.button, text: action.label, onclick: action.handler }) : null,
-            el('button', { type: 'button', class: 'dt-alert-close', 'aria-label': this.t('close'), text: '×', onclick: () => node.remove() }),
+            el('button', { type: 'button', class: 'dynamic-table-alert-close', 'aria-label': this.t('close'), text: '×', onclick: () => node.remove() }),
         ]);
 
         host.append(node);
@@ -889,7 +923,7 @@ export class DynamicTable {
     /* ---------------------------------------------------------- */
 
     bind() {
-        const search = this.root.querySelector('[data-dt-search]');
+        const search = this.root.querySelector('[data-dynamic-table-search]');
 
         if (search) {
             const run = debounce(() => {
@@ -906,10 +940,10 @@ export class DynamicTable {
         const columnSearch = debounce(() => this.refresh({ resetPage: true }), 350);
 
         this.root.addEventListener('input', (event) => {
-            const input = event.target.closest?.('[data-dt-column-search]');
+            const input = event.target.closest?.('[data-dynamic-table-column-search]');
             if (!input || !this.root.contains(input)) return;
 
-            const key = input.getAttribute('data-dt-column-search');
+            const key = input.getAttribute('data-dynamic-table-column-search');
             this.state.columnSearch = { ...(this.state.columnSearch || {}) };
 
             if (input.value.trim() === '') delete this.state.columnSearch[key];
@@ -918,7 +952,7 @@ export class DynamicTable {
             columnSearch();
         });
 
-        const perPage = this.root.querySelector('[data-dt-per-page]');
+        const perPage = this.root.querySelector('[data-dynamic-table-per-page]');
 
         if (perPage) {
             perPage.addEventListener('change', () => {
@@ -931,15 +965,15 @@ export class DynamicTable {
 
         // Header interactions are delegated so a re-rendered header keeps working.
         this.root.addEventListener('click', (event) => {
-            const sortButton = event.target.closest('[data-dt-sort]');
+            const sortButton = event.target.closest('[data-dynamic-table-sort]');
 
             if (sortButton && this.root.contains(sortButton)) {
-                this.toggleSort(sortButton.getAttribute('data-dt-sort'), event.shiftKey);
+                this.toggleSort(sortButton.getAttribute('data-dynamic-table-sort'), event.shiftKey);
 
                 return;
             }
 
-            const print = event.target.closest('[data-dt-print]');
+            const print = event.target.closest('[data-dynamic-table-print]');
 
             if (print && this.root.contains(print)) {
                 /*
@@ -951,23 +985,23 @@ export class DynamicTable {
                  * Without JavaScript the link still works — it just stays open.
                  */
                 event.preventDefault();
-                window.open(print.href, `dt-print-${this.key}`);
+                window.open(print.href, `dynamic-table-print-${this.key}`);
 
                 return;
             }
 
-            if (event.target.closest('[data-dt-clear-filters]')) {
+            if (event.target.closest('[data-dynamic-table-clear-filters]')) {
                 event.preventDefault();
                 this.clearFilters();
 
                 return;
             }
 
-            const opener = event.target.closest('[data-dt-open]');
+            const opener = event.target.closest('[data-dynamic-table-open]');
 
             if (opener && this.root.contains(opener)) {
                 event.preventDefault();
-                this.open(opener.getAttribute('data-dt-open'), opener);
+                this.open(opener.getAttribute('data-dynamic-table-open'), opener);
             }
         });
 
@@ -1011,7 +1045,7 @@ export class DynamicTable {
         });
 
         scope.addEventListener('submit', (event) => {
-            const form = event.target.closest?.(`form[data-dt-params="${CSS.escape(this.key)}"]`);
+            const form = event.target.closest?.(`form[data-dynamic-table-params="${CSS.escape(this.key)}"]`);
 
             if (form) {
                 event.preventDefault();
@@ -1020,7 +1054,7 @@ export class DynamicTable {
         });
 
         scope.addEventListener('click', (event) => {
-            const reset = event.target.closest?.(`[data-dt-params-reset="${CSS.escape(this.key)}"]`);
+            const reset = event.target.closest?.(`[data-dynamic-table-params-reset="${CSS.escape(this.key)}"]`);
 
             if (reset) {
                 event.preventDefault();
@@ -1076,7 +1110,7 @@ export class DynamicTable {
      * LIMIT/OFFSET away.
      */
     watchSentinel() {
-        const sentinel = this.root.querySelector('[data-dt-sentinel]');
+        const sentinel = this.root.querySelector('[data-dynamic-table-sentinel]');
 
         if (! sentinel || typeof IntersectionObserver === 'undefined') return;
 
@@ -1138,12 +1172,12 @@ export class DynamicTable {
      * that is fully visible should not move the page at all. Apps with a fixed
      * header can tune the resting position with CSS:
      *
-     *     .dt { scroll-margin-top: 5rem; }
+     *     .dynamic-table { scroll-margin-top: 5rem; }
      */
     scrollIntoView() {
         if (this.boot.scrollOnPage === false) return;
 
-        const scroller = this.root.querySelector('[data-dt-scroller]');
+        const scroller = this.root.querySelector('[data-dynamic-table-scroller]');
 
         // A table with its own height scrolls itself: moving the page instead
         // would leave the reader looking at the middle of the new page.
@@ -1211,7 +1245,7 @@ export class DynamicTable {
             view: viewId,
         };
 
-        const search = this.root.querySelector('[data-dt-search]');
+        const search = this.root.querySelector('[data-dynamic-table-search]');
         if (search) search.value = this.state.search || '';
 
         this.renderHeader();
@@ -1268,7 +1302,7 @@ export class DynamicTable {
     }
 
     paramSelector() {
-        return `[data-dt-param][data-dt-table="${CSS.escape(this.key)}"], [data-dt-params="${CSS.escape(this.key)}"] [data-dt-param]`;
+        return `[data-dynamic-table-param][data-dynamic-table-table="${CSS.escape(this.key)}"], [data-dynamic-table-params="${CSS.escape(this.key)}"] [data-dynamic-table-param]`;
     }
 
     /**
@@ -1281,7 +1315,7 @@ export class DynamicTable {
         const params = {};
 
         this.root.ownerDocument.querySelectorAll(this.paramSelector()).forEach((input) => {
-            const name = input.getAttribute('data-dt-param');
+            const name = input.getAttribute('data-dynamic-table-param');
             if (!name) return;
 
             let value = input.type === 'checkbox' ? (input.checked ? (input.value || true) : '') : input.value;
@@ -1402,10 +1436,10 @@ export class DynamicTable {
 
         // The lock lives on the element, not just on this object, so a second
         // runtime sharing the same DOM cannot open a second copy of the panel.
-        if (!moduleFor || this.opening || this.root.dataset.dtOpening) return;
+        if (!moduleFor || this.opening || this.root.dataset.dynamicTableOpening) return;
 
         this.opening = panel;
-        this.root.dataset.dtOpening = panel;
+        this.root.dataset.dynamicTableOpening = panel;
 
         try {
             const api = await this.load(moduleFor);
@@ -1415,7 +1449,7 @@ export class DynamicTable {
             console.error('[DynamicTable] could not open panel', panel, error);
         } finally {
             this.opening = null;
-            delete this.root.dataset.dtOpening;
+            delete this.root.dataset.dynamicTableOpening;
         }
     }
 }
@@ -1458,7 +1492,6 @@ function normalizeState(state, columns) {
             : columns.filter((column) => column.visible).map((column) => column.key),
         widths: state.widths || {},
         group: state.group || null,
-        trashed: state.trashed || 'without',
         view: state.view || null,
         params: state.params || {},
     };
@@ -1484,9 +1517,9 @@ export function mount(root) {
     // twice (bundled by the app *and* injected by the directive), each copy has
     // its own registry, and without this both would bind their own listeners —
     // which is how one click ends up opening two identical panels.
-    if (root.dataset.dtMounted === 'true') return null;
+    if (root.dataset.dynamicTableMounted === 'true') return null;
 
-    const script = root.querySelector('script[data-dt-boot]');
+    const script = root.querySelector('script[data-dynamic-table-boot]');
     if (!script) return null;
 
     let boot;
@@ -1499,7 +1532,7 @@ export function mount(root) {
         return null;
     }
 
-    root.dataset.dtMounted = 'true';
+    root.dataset.dynamicTableMounted = 'true';
 
     // A table of this key may already exist with an element that has since
     // been replaced. Its observers would otherwise keep running against a
@@ -1523,7 +1556,7 @@ export function mount(root) {
     // Resizing lives in the columns module but is not a panel: its handles are
     // in the header from first paint, so the module has to be there before the
     // first drag rather than when the picker is opened.
-    if (boot.features?.column_resizing) table.load('columns');
+    if (boot.features?.column_resize) table.load('columns');
 
     return table;
 }

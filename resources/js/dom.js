@@ -40,6 +40,21 @@ export function el(tag, attrs = {}, children = []) {
     return node;
 }
 
+/**
+ * Replace a node's children, dropping the conditional ones that came out empty.
+ *
+ * replaceChildren() is native DOM: it stringifies whatever it is handed, so a
+ * `condition ? el(…) : null` argument is rendered as the word "null". el()
+ * already filters its own children — this gives the same guarantee to the
+ * places that fill a node directly.
+ */
+export function mount(node, ...children) {
+    node.replaceChildren(
+        ...children.flat().filter((child) => child !== null && child !== undefined && child !== false),
+    );
+
+    return node;
+}
 export function debounce(fn, wait) {
     let timer = null;
 

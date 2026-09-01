@@ -186,7 +186,7 @@ as plain text:
 ```
 
 The tones the stylesheet paints are `success`, `danger`, `warning`, `info`,
-`primary` and `neutral`, written as `dt-badge-<tone>` next to the theme's own
+`primary` and `neutral`, written as `dynamic-table-badge-<tone>` next to the theme's own
 badge class. An admin template with its own badge CSS says where the tone goes,
 once, in the theme:
 
@@ -386,18 +386,19 @@ Computed accessors cannot be grouped, for the same reason they cannot be sorted.
 
 ## The column picker
 
-Enable `column_picker` (implied by `views`, `column_reordering` and
-`column_resizing`) to let users choose, reorder and resize columns. Order and
-widths are part of table state, so they are what a saved view stores and what an
-export produces.
+Enable `column_picker` to let users choose columns, `column_reorder` to let
+them order them, and `column_resize` for widths. They are independent — ask for
+one, two or all three. Order and widths are part of table state, so they are
+what a saved view stores and what an export produces.
 
 Reordering works with a mouse (drag) and with the keyboard (`Alt` + arrow keys).
 
 The two features are separate on purpose: `column_picker` decides **which**
-columns are shown, `column_reordering` decides **what order** they are in. Most
+columns are shown, `column_reorder` decides **what order** they are in. Most
 tables want the first without the second — let people pick the columns they
-need, but keep the order the designer chose. `column_reordering` implies
-`column_picker`, since the place you reorder columns is that same panel.
+need, but keep the order the designer chose. They share the panel, but each
+puts only its own controls in it: with `column_reorder` alone there is no Add
+column link and no remove buttons.
 
 ### Adding a column that was never declared
 

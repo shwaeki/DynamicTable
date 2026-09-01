@@ -52,7 +52,7 @@ export function dialog(table, { title, body, footer = null, width = null, onClos
         }
     };
 
-    const heading = el('h2', { class: 'dt-modal-title', id: `dt-modal-${Math.random().toString(36).slice(2, 8)}`, text: title });
+    const heading = el('h2', { class: 'dynamic-table-modal-title', id: `dynamic-table-modal-${Math.random().toString(36).slice(2, 8)}`, text: title });
 
     /*
      * Modal or offcanvas is purely presentational: same markup, same focus
@@ -64,7 +64,7 @@ export function dialog(table, { title, body, footer = null, width = null, onClos
     const drawer = panels.mode === 'offcanvas';
 
     const box = el('div', {
-        class: [table.classes.modalBox, drawer ? 'dt-offcanvas-box' : null],
+        class: [table.classes.modalBox, drawer ? 'dynamic-table-offcanvas-box' : null],
         role: 'dialog',
         'aria-modal': 'true',
         'aria-labelledby': heading.id,
@@ -72,22 +72,22 @@ export function dialog(table, { title, body, footer = null, width = null, onClos
         // preferred max-width, since panels differ a lot in how much they need.
         style: drawer ? `width:${panels.width};max-width:100%` : (width ? `max-width:${width}` : null),
     }, [
-        el('div', { class: 'dt-modal-head' }, [
+        el('div', { class: 'dynamic-table-modal-head' }, [
             heading,
             el('button', {
                 type: 'button',
-                class: 'dt-modal-close',
+                class: 'dynamic-table-modal-close',
                 'aria-label': table.t('close'),
                 text: '×',
                 onclick: close,
             }),
         ]),
-        el('div', { class: 'dt-modal-body' }, [body]),
-        footer ? el('div', { class: 'dt-modal-foot' }, [footer]) : null,
+        el('div', { class: 'dynamic-table-modal-body' }, [body]),
+        footer ? el('div', { class: 'dynamic-table-modal-foot' }, [footer]) : null,
     ]);
 
     const overlay = el('div', {
-        class: [table.classes.modal, drawer ? `dt-offcanvas dt-offcanvas-${panels.side}` : null],
+        class: [table.classes.modal, drawer ? `dynamic-table-offcanvas dynamic-table-offcanvas-${panels.side}` : null],
         dir: table.boot.direction,
         onclick: (event) => {
             if (event.target === overlay) close();
@@ -97,7 +97,7 @@ export function dialog(table, { title, body, footer = null, width = null, onClos
     table.root.append(overlay);
     document.addEventListener('keydown', onKeydown, true);
 
-    (box.querySelector('input, select, textarea, button:not(.dt-modal-close)') || box).focus?.();
+    (box.querySelector('input, select, textarea, button:not(.dynamic-table-modal-close)') || box).focus?.();
 
     const instance = { overlay, box, close };
     table._dialog = instance;
@@ -116,7 +116,7 @@ export function dialog(table, { title, body, footer = null, width = null, onClos
 export function closeDialogs(table) {
     table._dialog?.close();
 
-    table.root.querySelectorAll('.dt-modal').forEach((node) => node.remove());
+    table.root.querySelectorAll('.dynamic-table-modal').forEach((node) => node.remove());
     table._dialog = null;
 }
 
@@ -126,21 +126,21 @@ export function closeDialogs(table) {
  *
  * A layer on <body> inherits nothing from the table, so it has to be told. The
  * boot payload is not enough: an application that forces a scheme does it by
- * setting data-dt-scheme on the element — the demo's light/dark switch is
+ * setting data-dynamic-table-scheme on the element — the demo's light/dark switch is
  * exactly this — and that happens long after boot. Read from the DOM and a
  * menu matches the table it belongs to; read from the payload and it follows
  * the operating system instead, which is how you get a dark menu over a light
  * table.
  */
 function schemeOf(table) {
-    const owner = table.root.closest('[data-dt-scheme]');
+    const owner = table.root.closest('[data-dynamic-table-scheme]');
 
-    return owner?.getAttribute('data-dt-scheme') || table.boot.scheme || null;
+    return owner?.getAttribute('data-dynamic-table-scheme') || table.boot.scheme || null;
 }
 
 /** Remove any anchored layer currently on the page, portal and all. */
 function closeLayers() {
-    document.querySelectorAll('.dt-portal, .dt-menu-open').forEach((node) => node.remove());
+    document.querySelectorAll('.dynamic-table-portal, .dynamic-table-menu-open').forEach((node) => node.remove());
 }
 
 /**
@@ -153,15 +153,16 @@ function closeLayers() {
  * — a card with overflow:hidden, the table's own scroll container, a preview
  * pane. Fixed coordinates against the viewport are the same everywhere.
  *
- * The layer keeps the .dt class (and the table's direction and scheme) so the
- * colour tokens and the `.dt .dt-menu` rules still apply, and uses
+ * The layer keeps the .dynamic-table class (and the table's direction and
+ * scheme) so the colour tokens and the `.dynamic-table .dynamic-table-menu`
+ * rules still apply, and uses
  * display:contents so it adds no box of its own.
  */
 function place(table, trigger, node) {
     const layer = el('div', {
-        class: 'dt dt-portal',
+        class: 'dynamic-table dynamic-table-portal',
         dir: table.boot.direction,
-        'data-dt-scheme': schemeOf(table),
+        'data-dynamic-table-scheme': schemeOf(table),
     }, [node]);
 
     document.body.append(layer);
@@ -282,17 +283,17 @@ export function menu(table, trigger, items, options = {}) {
     };
 
     const renderItem = (item) => {
-        if (item === '-') return el('div', { class: 'dt-menu-separator', role: 'separator' });
+        if (item === '-') return el('div', { class: 'dynamic-table-menu-separator', role: 'separator' });
 
-        if (item.heading) return el('div', { class: 'dt-menu-heading', text: item.heading });
+        if (item.heading) return el('div', { class: 'dynamic-table-menu-heading', text: item.heading });
 
         return el('button', {
             type: 'button',
             class: [
                 table.classes.menuItem,
-                'dt-menu-row',
-                item.active ? 'dt-menu-item-active' : null,
-                item.danger ? 'dt-menu-item-danger' : null,
+                'dynamic-table-menu-row',
+                item.active ? 'dynamic-table-menu-item-active' : null,
+                item.danger ? 'dynamic-table-menu-item-danger' : null,
             ],
             role: 'menuitem',
             disabled: item.disabled,
@@ -302,10 +303,10 @@ export function menu(table, trigger, items, options = {}) {
                 item.onSelect?.();
             },
         }, [
-            el('span', { class: 'dt-menu-check', 'aria-hidden': 'true', text: item.active ? '✓' : '' }),
-            item.icon ? el('span', { class: 'dt-menu-icon', 'aria-hidden': 'true', html: item.icon }) : null,
-            el('span', { class: 'dt-menu-label', text: item.label }),
-            item.badge ? el('span', { class: 'dt-menu-badge', text: item.badge }) : null,
+            el('span', { class: 'dynamic-table-menu-check', 'aria-hidden': 'true', text: item.active ? '✓' : '' }),
+            item.icon ? el('span', { class: 'dynamic-table-menu-icon', 'aria-hidden': 'true', html: item.icon }) : null,
+            el('span', { class: 'dynamic-table-menu-label', text: item.label }),
+            item.badge ? el('span', { class: 'dynamic-table-menu-badge', text: item.badge }) : null,
         ]);
     };
 
@@ -321,10 +322,10 @@ export function menu(table, trigger, items, options = {}) {
         return previous !== undefined && next !== undefined && all[index - 1] !== '-';
     });
 
-    const list = el('div', { class: 'dt-menu-list' }, cleaned.map(renderItem));
+    const list = el('div', { class: 'dynamic-table-menu-list' }, cleaned.map(renderItem));
 
     const search = options.search
-        ? el('div', { class: 'dt-menu-search' }, [
+        ? el('div', { class: 'dynamic-table-menu-search' }, [
             el('input', {
                 type: 'search',
                 class: table.classes.input,
@@ -338,11 +339,11 @@ export function menu(table, trigger, items, options = {}) {
                     }
 
                     // Hide a heading whose whole group filtered out.
-                    for (const heading of list.querySelectorAll('.dt-menu-heading')) {
+                    for (const heading of list.querySelectorAll('.dynamic-table-menu-heading')) {
                         let sibling = heading.nextElementSibling;
                         let visible = false;
 
-                        while (sibling && !sibling.classList.contains('dt-menu-heading')) {
+                        while (sibling && !sibling.classList.contains('dynamic-table-menu-heading')) {
                             if (sibling.dataset.search !== undefined && !sibling.hidden) visible = true;
                             sibling = sibling.nextElementSibling;
                         }
@@ -355,7 +356,7 @@ export function menu(table, trigger, items, options = {}) {
         : null;
 
     const node = el('div', {
-        class: [table.classes.menu, 'dt-menu-open'],
+        class: [table.classes.menu, 'dynamic-table-menu-open'],
         role: 'menu',
         dir: table.boot.direction,
     }, [search, list]);
@@ -407,24 +408,24 @@ export function popover(table, trigger, { title = null, body = null, footer = nu
     };
 
     const node = el('div', {
-        class: [table.classes.menu, 'dt-menu-open', 'dt-popover'],
+        class: [table.classes.menu, 'dynamic-table-menu-open', 'dynamic-table-popover'],
         dir: table.boot.direction,
         style: `width:${width}`,
     }, [
         title
-            ? el('div', { class: 'dt-popover-head' }, [
-                el('span', { class: 'dt-popover-title', text: title }),
+            ? el('div', { class: 'dynamic-table-popover-head' }, [
+                el('span', { class: 'dynamic-table-popover-title', text: title }),
                 el('button', {
                     type: 'button',
-                    class: 'dt-popover-close',
+                    class: 'dynamic-table-popover-close',
                     'aria-label': table.t('close'),
                     text: '✕',
                     onclick: () => close(),
                 }),
             ])
             : null,
-        el('div', { class: 'dt-popover-body' }, [body]),
-        footer ? el('div', { class: 'dt-popover-foot' }, [footer]) : null,
+        el('div', { class: 'dynamic-table-popover-body' }, [body]),
+        footer ? el('div', { class: 'dynamic-table-popover-foot' }, [footer]) : null,
     ]);
 
     trigger?.setAttribute?.('aria-expanded', 'true');
@@ -441,8 +442,8 @@ export function popover(table, trigger, { title = null, body = null, footer = nu
 }
 
 export function field(table, label, control) {
-    return el('label', { class: 'dt-field' }, [
-        el('span', { class: 'dt-field-label', text: label }),
+    return el('label', { class: 'dynamic-table-field' }, [
+        el('span', { class: 'dynamic-table-field-label', text: label }),
         control,
     ]);
 }

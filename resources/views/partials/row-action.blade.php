@@ -8,5 +8,5 @@
      */
     $icon = $action['icon'] ?? null;
 @endphp
-@if ($icon)<span class="dt-row-action-icon" aria-hidden="true">{!! $icon !!}</span>@endif
-@if (! $icon || ! empty($action['showLabel']))<span class="dt-row-action-label">{{ $action['label'] }}</span>@endif
+@if ($icon)<span class="dynamic-table-row-action-icon" aria-hidden="true">{!! $icon !!}</span>@endif
+@if (! $icon || ! empty($action['showLabel']))<span class="dynamic-table-row-action-label">{{ $action['label'] }}</span>@endif

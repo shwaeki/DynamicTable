@@ -113,7 +113,7 @@ scrolled out of view — a short table that is fully visible never moves.
 If your application has a fixed header, set where the table comes to rest:
 
 ```css
-.dt { scroll-margin-top: 5rem; }
+.dynamic-table { scroll-margin-top: 5rem; }
 ```
 
 `prefers-reduced-motion` is respected: the jump is instant rather than smooth.

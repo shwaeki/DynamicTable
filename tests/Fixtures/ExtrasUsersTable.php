@@ -16,19 +16,19 @@ class ExtrasUsersTable extends DynamicTable
     protected ?string $tableKey = 'extras_users';
 
     protected array $features = [
-        Feature::CREATE,
+        Feature::INLINE_CREATE,
         Feature::BULK_EDIT,
         Feature::TOOLBAR_ACTIONS,
         Feature::ROW_DETAIL,
         Feature::STICKY_COLUMNS,
-        Feature::FACETS,
+        Feature::FILTER_COUNTS,
     ];
 
     protected array $stickyColumns = ['name'];
 
     protected bool $stickyActions = true;
 
-    protected array $facets = ['status'];
+    protected array $filterCounts = ['status'];
 
     protected array $defaultSort = ['name' => 'asc'];
 

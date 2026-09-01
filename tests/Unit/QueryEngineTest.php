@@ -111,14 +111,37 @@ it('applies the developer query and scopes before anything else', function (): v
     expect($this->engine->build($table, stateFor($table))->count())->toBe(8);
 });
 
-it('excludes soft deleted rows unless asked', function (): void {
+it('leaves soft deleted rows to the model scope, and to query()', function (): void {
     User::query()->limit(3)->get()->each->delete();
 
     $table = app(FullUsersTable::class);
 
-    expect($this->engine->build($table, stateFor($table))->count())->toBe(9)
-        ->and($this->engine->build($table, stateFor($table, ['trashed' => 'with']))->count())->toBe(12)
-        ->and($this->engine->build($table, stateFor($table, ['trashed' => 'only']))->count())->toBe(3);
+    // No feature and no state: the table sees what Eloquent's own global scope
+    // shows it. Reaching the rest is query()->withTrashed(), tested below.
+    expect($this->engine->build($table, stateFor($table))->count())->toBe(9);
+
+    $withTrashed = new class extends DynamicTable
+    {
+        protected string $model = User::class;
+
+        public function query(Builder $query): Builder
+        {
+            return $query->withTrashed();
+        }
+    };
+
+    $onlyTrashed = new class extends DynamicTable
+    {
+        protected string $model = User::class;
+
+        public function query(Builder $query): Builder
+        {
+            return $query->onlyTrashed();
+        }
+    };
+
+    expect($this->engine->build($withTrashed, stateFor($withTrashed))->count())->toBe(12)
+        ->and($this->engine->build($onlyTrashed, stateFor($onlyTrashed))->count())->toBe(3);
 });
 
 it('builds a selection query from ids plus the active filters', function (): void {

@@ -36,13 +36,13 @@ class TransferController extends Controller
     {
         $table = $this->table($request);
         $table->requireFeature(Feature::EXPORT);
-        abort_unless($table->can('export'), 403);
+        abort_unless($table->can('export'), 403, __('dynamic-table::table.errors.forbidden'));
 
         $scope = (string) $request->input('scope', 'view');
-        abort_unless(in_array($scope, ['page', 'view', 'all', 'selected'], true), 422);
+        abort_unless(in_array($scope, ['page', 'view', 'all', 'selected'], true), 422, __('dynamic-table::table.errors.invalid_scope'));
 
-        $format = (string) $request->input('format', 'csv');
-        abort_unless(in_array($format, $this->exports->supportedFormats(), true), 422);
+        $format = (string) $request->input('format', $this->exports->defaultFormat());
+        abort_unless(in_array($format, $this->exports->supportedFormats(), true), 422, __('dynamic-table::table.errors.unsupported_format', ['format' => strtoupper($format)]));
 
         $state = $this->state($request, $table);
 
@@ -78,9 +78,9 @@ class TransferController extends Controller
     {
         $table = $this->table($request);
         $table->requireFeature(Feature::IMPORT);
-        abort_unless($table->can('import'), 403);
+        abort_unless($table->can('import'), 403, __('dynamic-table::table.errors.forbidden'));
 
-        $format = (string) $request->input('format', 'csv');
+        $format = (string) $request->input('format', $this->exports->defaultFormat());
         $path = $this->imports->template($table, $format);
 
         return response()->download($path)->deleteFileAfterSend();
@@ -91,7 +91,7 @@ class TransferController extends Controller
     {
         $table = $this->table($request);
         $table->requireFeature(Feature::IMPORT);
-        abort_unless($table->can('import'), 403);
+        abort_unless($table->can('import'), 403, __('dynamic-table::table.errors.forbidden'));
 
         $request->validate([
             'file' => ['required', 'file', 'max:51200', 'mimes:csv,txt,xlsx,xls'],
@@ -110,7 +110,7 @@ class TransferController extends Controller
     {
         $table = $this->table($request);
         $table->requireFeature(Feature::IMPORT);
-        abort_unless($table->can('import'), 403);
+        abort_unless($table->can('import'), 403, __('dynamic-table::table.errors.forbidden'));
 
         $validated = $request->validate([
             'file' => ['required', 'string'],
@@ -125,10 +125,16 @@ class TransferController extends Controller
         abort_unless(
             hash_equals($this->tokenFor($validated['file']), $validated['token']),
             403,
+            __('dynamic-table::table.errors.forbidden'),
         );
 
         $path = Storage::path($validated['file']);
-        abort_unless(is_file($path), 404);
+
+        // Both import paths delete the upload when they are done with it, so a
+        // second Start import on a dialog still holding the first one's file
+        // lands here. It is the commonest way to reach this line, and it has
+        // an answer — choose the file again — so it says so.
+        abort_unless(is_file($path), 404, __('dynamic-table::table.errors.upload_expired'));
 
         $mapping = [];
 
@@ -138,6 +144,28 @@ class TransferController extends Controller
 
         $mode = $validated['mode'] ?? 'create';
         $options = ['matchBy' => $validated['matchBy'] ?? null];
+
+        // Update mode writes only what it is given, so a column it never
+        // mentions keeps the value the record already has. Create and upsert
+        // can both insert, and an insert has to carry every NOT NULL column.
+        if ($mode !== 'update') {
+            $missing = $this->imports->missingRequired($table, $mapping);
+
+            abort_unless($missing === [], 422, __('dynamic-table::table.errors.missing_required', [
+                'fields' => implode(', ', $missing),
+            ]));
+        }
+
+        // Both modes that match against existing records need the column they
+        // match on to be in the file. Unchecked, the lookup silently finds
+        // nothing every time and upsert inserts a duplicate of every row.
+        if ($mode !== 'create') {
+            $unmapped = $this->imports->matchUnmapped($table, $mapping, $options['matchBy']);
+
+            abort_unless($unmapped === null, 422, __('dynamic-table::table.errors.match_unmapped', [
+                'field' => $unmapped,
+            ]));
+        }
 
         $threshold = (int) config('dynamic-table.excel.queue_threshold', 5000);
         $total = $this->imports->readerFor($path)->countRows($path) ?? 0;
@@ -158,7 +186,78 @@ class TransferController extends Controller
 
         @unlink($path);
 
-        return response()->json(['queued' => false] + $summary);
+        return response()->json(['queued' => false] + $this->signReport($summary, $table->key()));
+    }
+
+    /**
+     * Attach a one-file download token to an import summary.
+     *
+     * The report key is the server's own, and the token is an HMAC of it, so a
+     * client cannot point this at any other file — the same guarantee, and the
+     * same mechanism, as the uploaded file it came from.
+     *
+     * The table key is signed with it, so a report can only be fetched back
+     * through the table that produced it. Otherwise someone who may import one
+     * table could fetch another table's rejected rows, which are that table's
+     * data.
+     *
+     * @param  array<string, mixed>  $summary
+     * @return array<string, mixed>
+     */
+    protected function signReport(array $summary, string $tableKey): array
+    {
+        if (is_string($summary['report'] ?? null)) {
+            $summary['reportToken'] = $this->reportToken($summary['report'], $tableKey);
+        }
+
+        return $summary;
+    }
+
+    protected function reportToken(string $report, string $tableKey): string
+    {
+        return $this->tokenFor($tableKey.'|'.$report);
+    }
+
+    /**
+     * Download the error report for an import that rejected rows.
+     *
+     * Four gates, and it needs all of them: the table resolves from the
+     * registry, import is enabled on it, this viewer may import, and the key
+     * carries a valid HMAC. The prefix check is belt and braces — with a
+     * forged token impossible, it only bounds the damage of a future mistake
+     * in the signing.
+     */
+    public function errors(Request $request): StreamedResponse
+    {
+        $table = $this->table($request);
+        $table->requireFeature(Feature::IMPORT);
+        abort_unless($table->can('import'), 403, __('dynamic-table::table.errors.forbidden'));
+
+        $validated = $request->validate([
+            'report' => ['required', 'string'],
+            'token' => ['required', 'string'],
+        ]);
+
+        abort_unless(
+            hash_equals(
+                $this->reportToken($validated['report'], $table->key()),
+                $validated['token'],
+            ),
+            403,
+            __('dynamic-table::table.errors.forbidden'),
+        );
+
+        abort_unless(
+            str_starts_with($validated['report'], ImportManager::reportDirectory().'/'),
+            403,
+            __('dynamic-table::table.errors.forbidden'),
+        );
+
+        $disk = Storage::disk(config('dynamic-table.excel.disk'));
+
+        abort_unless($disk->exists($validated['report']), 404, __('dynamic-table::table.errors.file_expired'));
+
+        return $disk->download($validated['report'], basename($validated['report']));
     }
 
     public function progress(Request $request): JsonResponse
@@ -168,7 +267,7 @@ class TransferController extends Controller
         $id = (string) $request->input('id', '');
         $progress = TransferProgress::get($id);
 
-        abort_if($progress === null, 404);
+        abort_if($progress === null, 404, __('dynamic-table::table.errors.progress_expired'));
 
         if (($progress['file'] ?? null) !== null) {
             $progress['url'] = route('dynamic-table.download', [
@@ -177,22 +276,29 @@ class TransferController extends Controller
             ]);
         }
 
-        return response()->json($progress);
+        // "file" is a path on the application's own disk, and the browser has
+        // a signed download URL instead. Sending it would tell every viewer
+        // where exports are kept, for nothing they could use.
+        unset($progress['file']);
+
+        // A queued import finishes with its summary in here, so the error
+        // report needs the same token the inline reply hands out.
+        return response()->json($this->signReport($progress, (string) $request->input('table')));
     }
 
     public function download(Request $request): StreamedResponse
     {
         $table = $this->table($request);
-        abort_unless($table->can('export'), 403);
+        abort_unless($table->can('export'), 403, __('dynamic-table::table.errors.forbidden'));
 
         $progress = TransferProgress::get((string) $request->input('id', ''));
 
-        abort_if($progress === null || ($progress['file'] ?? null) === null, 404);
-        abort_unless($progress['table'] === $table->key(), 403);
+        abort_if($progress === null || ($progress['file'] ?? null) === null, 404, __('dynamic-table::table.errors.file_expired'));
+        abort_unless($progress['table'] === $table->key(), 403, __('dynamic-table::table.errors.forbidden'));
 
         $disk = Storage::disk(config('dynamic-table.excel.disk'));
 
-        abort_unless($disk->exists($progress['file']), 404);
+        abort_unless($disk->exists($progress['file']), 404, __('dynamic-table::table.errors.file_expired'));
 
         return $disk->download($progress['file'], (string) $progress['filename']);
     }

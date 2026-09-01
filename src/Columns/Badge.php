@@ -35,7 +35,7 @@ final class Badge
     ];
 
     /** One badge, as ready-to-insert markup. */
-    public static function html(string $label, ?string $tone, string $badgeClass = 'dt-badge'): string
+    public static function html(string $label, ?string $tone, string $badgeClass = 'dynamic-table-badge'): string
     {
         return '<span class="'.e(self::classes($badgeClass, $tone)).'">'.e($label).'</span>';
     }
@@ -56,7 +56,7 @@ final class Badge
             return trim(str_replace('{tone}', $tone ?? 'neutral', $badgeClass));
         }
 
-        return $tone === null ? $badgeClass : trim($badgeClass.' dt-badge-'.$tone);
+        return $tone === null ? $badgeClass : trim($badgeClass.' dynamic-table-badge-'.$tone);
     }
 
     /**

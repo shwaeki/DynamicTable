@@ -104,8 +104,8 @@ it('blocks a table the viewer may not see', function (): void {
 
     $html = app(TableRenderer::class)->render($table)->toHtml();
 
-    expect($html)->toContain('dt-denied')
-        ->and($html)->not->toContain('data-dt-row');
+    expect($html)->toContain('dynamic-table-denied')
+        ->and($html)->not->toContain('data-dynamic-table-row');
 });
 
 it('escapes cell content rendered on the server', function (): void {

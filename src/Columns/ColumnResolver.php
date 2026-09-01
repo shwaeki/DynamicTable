@@ -137,7 +137,7 @@ class ColumnResolver
         // "Editable" means writable, whichever way the writing happens: inline
         // editing, the blank create row and bulk edit all go through the same
         // normalisation, so they agree on which columns may be set.
-        $writable = $features->any(Feature::INLINE_EDIT, Feature::BULK_EDIT, Feature::CREATE);
+        $writable = $features->any(Feature::INLINE_EDIT, Feature::BULK_EDIT, Feature::INLINE_CREATE);
 
         $editable = (bool) ($options['editable'] ?? false);
 

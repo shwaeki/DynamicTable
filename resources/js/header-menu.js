@@ -60,7 +60,7 @@ export default function install(table) {
     }
 
     function widthDialog(column) {
-        const th = table.root.querySelector(`[data-dt-column="${CSS.escape(column.key)}"]`);
+        const th = table.root.querySelector(`[data-dynamic-table-column="${CSS.escape(column.key)}"]`);
         const currentWidth = table.state.widths?.[column.key] || Math.round(th?.getBoundingClientRect().width || 150);
 
         const input = el('input', {
@@ -75,14 +75,14 @@ export default function install(table) {
         const instance = dialog(table, {
             title: table.t('header.width'),
             width: '20rem',
-            body: el('div', { class: 'dt-form' }, [
-                el('label', { class: 'dt-field' }, [
-                    el('span', { class: 'dt-field-label', text: column.label }),
+            body: el('div', { class: 'dynamic-table-form' }, [
+                el('label', { class: 'dynamic-table-field' }, [
+                    el('span', { class: 'dynamic-table-field-label', text: column.label }),
                     input,
                 ]),
-                el('p', { class: 'dt-hint', text: table.t('header.width_hint') }),
+                el('p', { class: 'dynamic-table-hint', text: table.t('header.width_hint') }),
             ]),
-            footer: el('div', { class: 'dt-modal-actions' }, [
+            footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                 el('button', {
                     type: 'button',
                     class: table.classes.button,
@@ -168,11 +168,11 @@ export default function install(table) {
 
         if (items.length) items.push('-');
 
-        if (features.column_resizing) {
+        if (features.column_resize) {
             items.push({ label: table.t('header.width'), icon: '↔', onSelect: () => widthDialog(column) });
         }
 
-        if (features.column_reordering && at > -1) {
+        if (features.column_reorder && at > -1) {
             // In RTL the visually-left neighbour is the *later* one, so the
             // wording and the movement have to be mapped, not assumed.
             const towardsStart = { label: rtl ? table.t('header.move_right') : table.t('header.move_left'), icon: rtl ? '→' : '←', delta: -1 };
@@ -199,13 +199,13 @@ export default function install(table) {
 
     // Delegated, so a re-rendered header keeps working.
     table.root.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-dt-header-menu]');
+        const button = event.target.closest('[data-dynamic-table-header-menu]');
 
         if (! button || ! table.root.contains(button)) return;
 
         event.preventDefault();
         event.stopPropagation();
-        open(button.getAttribute('data-dt-header-menu'), button);
+        open(button.getAttribute('data-dynamic-table-header-menu'), button);
     });
 
     return { open };

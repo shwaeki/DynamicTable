@@ -97,9 +97,8 @@ nothing to do about it, while "Nothing matches these filters" is a fact about
 the *state* — so only the second one appears, and only it carries a **Clear
 filters** button.
 
-Clearing removes the search, the column searches, the filter tree and the
-trashed scope. It deliberately leaves the columns, the sort and the page size
-alone: those are how the reader likes to look at the table and did not cause
+Clearing removes the search, the column searches and the filter tree. It
+deliberately leaves the columns, the sort and the page size alone: those are how the reader likes to look at the table and did not cause
 the empty result.
 
 ### The table loses all its styling after I re-render it with AJAX
@@ -154,7 +153,7 @@ and the header then scrolls away with everything else.
 ### RTL looks wrong in my custom theme
 
 Use logical CSS properties (`margin-inline-start`, `inset-inline-end`,
-`text-align: start`) rather than left/right, and keep the structural `dt-*`
+`text-align: start`) rather than left/right, and keep the structural `dynamic-table-*`
 classes in your class map — they carry the mirroring.
 
 ---
@@ -167,7 +166,7 @@ No. It works with or without it. See
 
 **Does it require Tailwind or Bootstrap?**
 Neither. Pick a theme, or write a class map, or use `'custom'` and style the
-`dt-*` classes yourself.
+`dynamic-table-*` classes yourself.
 
 **Is there a build step?**
 No. No npm, no Vite, no publish.

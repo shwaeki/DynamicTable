@@ -19,7 +19,7 @@ class InlineCreateTable extends DynamicTable
 {
     protected string $model = Product::class;
 
-    protected array $features = [Feature::CREATE];
+    protected array $features = [Feature::INLINE_CREATE];
 
     protected array $defaultSort = ['created_at' => 'desc'];
 

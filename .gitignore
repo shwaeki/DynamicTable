@@ -3,12 +3,14 @@
 /.phpunit.cache
 /.phpunit.result.cache
 /build
+/dist.zip
 /coverage
 composer.lock
 .phpstan-cache
 .DS_Store
 Thumbs.db
 /.idea
+/CLAUDE.md
 /demo/vendor
 /demo/node_modules
 /demo/.env

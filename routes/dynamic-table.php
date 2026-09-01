@@ -40,5 +40,6 @@ Route::get('print', PrintController::class)->name('print');
 Route::post('template', [TransferController::class, 'template'])->name('template');
 Route::post('import/analyze', [TransferController::class, 'analyze'])->name('import.analyze');
 Route::post('import', [TransferController::class, 'import'])->name('import');
+Route::post('import/errors', [TransferController::class, 'errors'])->name('import.errors');
 Route::post('progress', [TransferController::class, 'progress'])->name('progress');
 Route::post('download', [TransferController::class, 'download'])->name('download');

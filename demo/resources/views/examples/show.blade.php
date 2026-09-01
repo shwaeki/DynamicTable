@@ -25,6 +25,15 @@
         </div>
     @endif
 
+    {{--
+        An example whose point is the surrounding markup renders that markup
+        here — the filter bar an admin screen would already have, above the
+        table it drives.
+    --}}
+    @if ($current->partial)
+        @include($current->partial)
+    @endif
+
     @dynamicTable($current->table)
 
     @if ($current->notes() !== [])

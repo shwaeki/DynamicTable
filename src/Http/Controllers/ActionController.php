@@ -34,7 +34,7 @@ class ActionController extends Controller
         $action = $table->findAction($name);
 
         abort_if($action === null, 404, 'Unknown action.');
-        abort_unless($action->isAuthorized($table), 403);
+        abort_unless($action->isAuthorized($table), 403, __('dynamic-table::table.errors.forbidden'));
 
         $state = $this->state($request, $table);
 

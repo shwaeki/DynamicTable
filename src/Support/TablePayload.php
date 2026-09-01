@@ -124,8 +124,8 @@ class TablePayload
             Feature::SORTING,
             Feature::GROUPING,
             Feature::FILTERS,
-            Feature::COLUMN_RESIZING,
-            Feature::COLUMN_REORDERING,
+            Feature::COLUMN_RESIZE,
+            Feature::COLUMN_REORDER,
             Feature::COLUMN_PICKER,
         )) {
             $modules[] = 'header-menu';
@@ -181,7 +181,7 @@ class TablePayload
             ),
             'sticky' => $table->stickyColumnKeys(),
             'stickyActions' => $table->hasStickyActions(),
-            'facets' => $table->facetKeys(),
+            'filterCounts' => $table->filterCountKeys(),
             'editableColumns' => array_values(array_map(
                 static fn ($column): string => $column->key,
                 $table->editableColumns(),
@@ -190,13 +190,13 @@ class TablePayload
             'maxHeight' => $table->maxHeight(),
             'permissions' => [
                 'edit' => $features->has(Feature::INLINE_EDIT) && $table->can('update'),
-                'create' => $features->has(Feature::CREATE) && $table->can('create'),
+                'create' => $features->has(Feature::INLINE_CREATE) && $table->can('create'),
                 'bulkEdit' => $features->has(Feature::BULK_EDIT) && $table->can('update'),
                 'export' => $features->has(Feature::EXPORT) && $table->can('export'),
                 'print' => $features->has(Feature::PRINT) && $table->can('export'),
                 'import' => $features->has(Feature::IMPORT) && $table->can('import'),
-                'views' => $features->has(Feature::VIEWS),
-                'systemViews' => $features->has(Feature::VIEWS) && $table->can('manage-system-views'),
+                'views' => $features->has(Feature::SAVED_VIEWS),
+                'systemViews' => $features->has(Feature::SAVED_VIEWS) && $table->can('manage-system-views'),
             ],
             'exportFormats' => $features->has(Feature::EXPORT)
                 ? app(ExportManager::class)->supportedFormats()
@@ -207,7 +207,6 @@ class TablePayload
             'state' => $state->toArray(),
             'data' => $data,
             'labels' => $this->labels(),
-            'softDeletes' => $table->usesSoftDeletes(),
             'panel' => $this->panelEnabled(),
         ], static fn (mixed $value): bool => $value !== null);
     }
@@ -218,7 +217,7 @@ class TablePayload
      */
     protected function viewName(DynamicTable $table, TableState $state): string
     {
-        if ($state->view === null || ! $table->hasFeature(Feature::VIEWS)) {
+        if ($state->view === null || ! $table->hasFeature(Feature::SAVED_VIEWS)) {
             return $table->title();
         }
 

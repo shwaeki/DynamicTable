@@ -94,7 +94,7 @@
                 </div>
             </fieldset>
 
-            <p class="dt-hint builder-note">{{ __('demo.builder.implies') }}</p>
+            <p class="dynamic-table-hint builder-note">{{ __('demo.builder.implies') }}</p>
         </form>
 
         <div class="builder-output">

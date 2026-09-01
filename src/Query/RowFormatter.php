@@ -98,7 +98,9 @@ class RowFormatter
             $row['h'] = $html;
         }
 
-        if ($table->usesSoftDeletes() && method_exists($record, 'trashed') && $record->trashed()) {
+        // Keyed off the model, not a feature: a table that reaches trashed
+        // rows through its own query() still wants them struck through.
+        if ($table->metadata()->usesSoftDeletes && method_exists($record, 'trashed') && $record->trashed()) {
             $row['trashed'] = true;
         }
 
@@ -155,7 +157,7 @@ class RowFormatter
     {
         $theme = $table->theme();
 
-        return $this->badgeClasses[$theme] ??= (string) (Theme::classes($theme)['badge'] ?? 'dt-badge');
+        return $this->badgeClasses[$theme] ??= (string) (Theme::classes($theme)['badge'] ?? 'dynamic-table-badge');
     }
 
     protected function extract(Model $record, ColumnDefinition $column): mixed
@@ -339,21 +341,10 @@ class RowFormatter
         );
     }
 
-    /**
-     * The pattern a table uses when a column names none.
-     *
-     * config('dynamic-table.formats.date') sets it for the whole application;
-     * left null, each locale keeps the pattern in its own language file, which
-     * is why a date reads as 9 مارس 2026 in Arabic and 9 Mar 2026 in English.
-     */
+    /** @see DateFormat::defaultPattern(), which the importer reads as well. */
     protected function defaultPattern(string $kind): string
     {
-        $kind = in_array($kind, ['date', 'time'], true) ? $kind : 'datetime';
-        $configured = config('dynamic-table.formats.'.$kind);
-
-        return is_string($configured) && $configured !== ''
-            ? $configured
-            : (string) __('dynamic-table::table.formats.'.$kind);
+        return DateFormat::defaultPattern($kind);
     }
 
     protected function number(float $value, ?int $decimals = null): string

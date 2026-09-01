@@ -2,21 +2,30 @@
 
 namespace Shwaeki\DynamicTable\Support;
 
+use Shwaeki\DynamicTable\Exceptions\DynamicTableException;
+
 /**
  * Resolves a table's declared feature list into an immutable, validated set.
  *
  * Declaration rules:
- *   ['views', 'export']   => defaults + views + export
- *   ['-search']           => defaults minus search
- *   ['only:basic']        => nothing but the listed features
+ *   ['saved_views', 'export']  => defaults + saved views + export
+ *   ['-search']                => defaults minus search
+ *   ['only', 'sorting']        => nothing but the listed features
+ *
+ * A name that is not a feature is refused, so a typo cannot quietly leave
+ * something switched off.
  */
 final class FeatureSet
 {
     /** @var array<string, true> */
     private array $enabled;
 
-    /** @param list<string> $declared */
-    public function __construct(array $declared = [])
+    /**
+     * @param  list<string>  $declared
+     * @param  string  $owner  the table class, named in the error when a
+     *                         declared feature does not exist
+     */
+    public function __construct(array $declared = [], string $owner = 'a table')
     {
         $only = false;
         $add = [];
@@ -60,6 +69,20 @@ final class FeatureSet
 
         foreach ($remove as $feature) {
             unset($set[$feature]);
+        }
+
+        /*
+         * A name that is not a feature is a mistake, and a silent one: it would
+         * simply be dropped below, leaving the author sure they had switched
+         * something on. Cheaper to say so than to debug a missing panel.
+         */
+        $unknown = array_values(array_diff(
+            array_unique(array_merge($add, $remove)),
+            Feature::ALL,
+        ));
+
+        if ($unknown !== []) {
+            throw DynamicTableException::unknownFeatures($unknown, Feature::ALL, $owner);
         }
 
         $set = array_intersect_key($set, array_fill_keys(Feature::ALL, true));

@@ -1,6 +1,6 @@
 # Laravel DynamicTable — interactive demo
 
-A real Laravel application that installs the real package and renders 34
+A real Laravel application that installs the real package and renders 45
 interactive examples. There is no shadow implementation: every table on every
 page is `@dynamicTable(SomeTable::class)`, and the source code shown under each
 example is read from the actual file on disk at request time.
@@ -34,12 +34,11 @@ repository, so editing `src/` in the package is reflected immediately.
 
 ```
 app/
-├── DynamicTables/     34 table classes — the examples themselves
+├── DynamicTables/     45 table classes — the examples themselves
 ├── Models/            Company, Department, Role, Category, Product,
 │                      Customer, Order, OrderItem, Invoice, User
 ├── Enums/             OrderStatus (with label()), ProductStatus, UserStatus
-├── Support/           the examples index and its entries
-└── Providers/         a custom theme registered in one array
+└── Support/           the examples index and its entries
 database/
 ├── migrations/        the demo domain
 └── seeders/           deterministic data: 240 staff, 180 products,
@@ -71,7 +70,7 @@ Until you run one, its example page tells you which command to run. Add
 |---|---|
 | [`/basic`](http://127.0.0.1:8000/dynamic-table/examples/basic) | One property. Everything else is discovered. |
 | [`/filters`](http://127.0.0.1:8000/dynamic-table/examples/filters) | The nested AND/OR filter builder. |
-| [`/spreadsheet`](http://127.0.0.1:8000/dynamic-table/examples/spreadsheet) | Range selection, paste from Excel, batched save. |
+| [`/badges`](http://127.0.0.1:8000/dynamic-table/examples/badges) | Coloured pills as a column option, with no render closure. |
 | [`/validation`](http://127.0.0.1:8000/dynamic-table/examples/validation) | Break a rule and watch the error land on the cell. |
 | [`/performance`](http://127.0.0.1:8000/dynamic-table/examples/performance) | Change the page size; the query count does not move. |
 | [`/scale-100k`](http://127.0.0.1:8000/dynamic-table/examples/scale-100k) | A hundred thousand rows, with nothing special configured. |
@@ -88,8 +87,9 @@ Until you run one, its example page tells you which command to run. Add
   (`DYNAMIC_TABLE_PANEL=true`); it is suppressed in production regardless.
 - Bootstrap and Tailwind are both loaded on the page only so the theme examples
   can be compared side by side. A real application loads one, or neither.
-- XLSX appears in the export format list only if `openspout/openspout` or
-  `phpoffice/phpspreadsheet` is installed; CSV always works.
+- The demo requires `openspout/openspout`, so the export and import examples
+  offer both CSV and XLSX. The package itself only suggests it: without a
+  spreadsheet library, CSV still works and XLSX is simply not offered.
 
 ## Tests
 

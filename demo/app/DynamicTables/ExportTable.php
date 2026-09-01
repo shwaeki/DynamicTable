@@ -17,7 +17,7 @@ class ExportTable extends DynamicTable
 {
     protected string $model = Order::class;
 
-    protected array $features = ['export', 'column_picker', 'column_reordering'];
+    protected array $features = ['export', 'column_picker', 'column_reorder'];
 
     protected int $relationDepth = 2;
 

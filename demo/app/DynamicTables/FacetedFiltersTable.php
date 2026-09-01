@@ -21,9 +21,9 @@ class FacetedFiltersTable extends DynamicTable
 {
     protected string $model = Order::class;
 
-    protected array $features = [Feature::FACETS];
+    protected array $features = [Feature::FILTER_COUNTS];
 
-    protected array $facets = ['status'];
+    protected array $filterCounts = ['status'];
 
     protected function columns(): array
     {

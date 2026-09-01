@@ -55,7 +55,7 @@ class TableRenderer
             'state' => $state,
             'assets' => $this->assets,
             'options' => $options,
-            'id' => 'dt-'.$table->key().'-'.substr(md5(uniqid('', true)), 0, 6),
+            'id' => 'dynamic-table-'.$table->key().'-'.substr(md5(uniqid('', true)), 0, 6),
         ])->render());
     }
 
@@ -79,7 +79,7 @@ class TableRenderer
          * sent you has to win over your own habit, or shared links stop
          * meaning anything.
          */
-        if ($table->hasFeature(Feature::VIEWS)) {
+        if ($table->hasFeature(Feature::SAVED_VIEWS)) {
             $default = $this->views->defaultFor($table);
 
             if ($default !== null) {
@@ -94,7 +94,7 @@ class TableRenderer
             $query = request()->query();
             $prefix = $table->key().'_';
 
-            foreach (['search', 'page', 'perPage', 'sort', 'columns', 'filters', 'group', 'trashed', 'view'] as $field) {
+            foreach (['search', 'page', 'perPage', 'sort', 'columns', 'filters', 'group', 'view'] as $field) {
                 foreach ([$prefix.$field, $field] as $candidate) {
                     if (array_key_exists($candidate, $query)) {
                         $input[$field] = $query[$candidate];

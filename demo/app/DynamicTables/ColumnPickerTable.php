@@ -15,7 +15,7 @@ class ColumnPickerTable extends DynamicTable
 {
     protected string $model = User::class;
 
-    protected array $features = ['column_picker', 'column_reordering', 'column_resizing', 'remember_state'];
+    protected array $features = ['column_picker', 'column_reorder', 'column_resize', 'remember_state'];
 
     /*
      * No responsive collapsing here.

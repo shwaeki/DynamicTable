@@ -189,12 +189,17 @@ abstract class DynamicTable
 
     /**
      * @var list<string> Root column paths that report counts in their filter
-     *                   options. Needs the facets feature, and costs one
-     *                   grouped query per opened dropdown.
+     *                   options. Needs the filter_counts feature, and costs
+     *                   one grouped query per opened dropdown.
      */
-    protected array $facets = [];
+    protected array $filterCounts = [];
 
-    /** How deep the filter builder and column picker may walk relationships. */
+    /**
+     * How deep the filter builder and column picker may walk relationships.
+     *
+     * Switch the "relations" feature off to stop them walking any, without
+     * touching this number.
+     */
     protected int $relationDepth = 1;
 
     /** Optional policy/gate ability prefix, e.g. "users" => "viewAny users". */
@@ -371,7 +376,7 @@ abstract class DynamicTable
 
     public function features(): FeatureSet
     {
-        return $this->featureSet ??= new FeatureSet($this->features);
+        return $this->featureSet ??= new FeatureSet($this->features, static::class);
     }
 
     public function hasFeature(string $feature): bool
@@ -576,12 +581,6 @@ abstract class DynamicTable
     }
 
     /**
-     * How pages are presented: numbered pages, or appended as you scroll.
-     *
-     * Infinite scrolling is a presentation choice on top of the same
-     * server-side paging — there is no separate "load everything" path.
-     */
-    /**
      * The Blade view the print button opens.
      *
      * Publishing the views puts an editable copy at
@@ -611,6 +610,12 @@ abstract class DynamicTable
         return $value;
     }
 
+    /**
+     * How pages are presented: numbered pages, or appended as you scroll.
+     *
+     * Infinite scrolling is a presentation choice on top of the same
+     * server-side paging — there is no separate "load everything" path.
+     */
     public function paginationStyle(): string
     {
         return $this->pagination === 'infinite' ? 'infinite' : 'pages';
@@ -744,8 +749,21 @@ abstract class DynamicTable
         ];
     }
 
+    /**
+     * How deep a reader may walk relationships.
+     *
+     * Three things ask: the field catalogue behind the filter builder and the
+     * column picker, a column the picker added that the table never declared,
+     * and a filter condition on a relation path. Switching the relations
+     * feature off answers 0 to all three at once, which is what makes it a
+     * single switch rather than three.
+     */
     public function relationDepth(): int
     {
+        if (! $this->hasFeature(Feature::RELATIONS)) {
+            return 0;
+        }
+
         return max(0, min($this->relationDepth, (int) config('dynamic-table.security.max_relation_depth', 3)));
     }
 
@@ -832,11 +850,6 @@ abstract class DynamicTable
     public function hasParam(string $name): bool
     {
         return $this->param($name) !== null;
-    }
-
-    public function usesSoftDeletes(): bool
-    {
-        return $this->hasFeature(Feature::SOFT_DELETES) && $this->metadata()->usesSoftDeletes;
     }
 
     /**
@@ -979,9 +992,9 @@ abstract class DynamicTable
      *
      * @return list<string>
      */
-    public function facetKeys(): array
+    public function filterCountKeys(): array
     {
-        if (! $this->hasFeature(Feature::FACETS)) {
+        if (! $this->hasFeature(Feature::FILTER_COUNTS)) {
             return [];
         }
 
@@ -989,7 +1002,7 @@ abstract class DynamicTable
         $resolved = $this->resolvedColumns();
 
         return array_values(array_filter(
-            array_map(static fn (string $path): string => $resolver->keyFor($path), $this->facets),
+            array_map(static fn (string $path): string => $resolver->keyFor($path), $this->filterCounts),
             static fn (string $key): bool => isset($resolved[$key]) && ! $resolved[$key]->isRelational(),
         ));
     }

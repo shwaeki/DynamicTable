@@ -10,7 +10,8 @@ use Shwaeki\DynamicTable\DynamicTable;
  *
  * Every class it names is styled by the package's own stylesheet, on the same
  * tokens as everything else — so it is readable in light and dark, follows
- * data-dt-scheme, and needs neither Bootstrap nor Tailwind on the page.
+ * data-dynamic-table-scheme, and needs neither Bootstrap nor Tailwind on the
+ * page.
  */
 class MinimalThemeTable extends DynamicTable
 {

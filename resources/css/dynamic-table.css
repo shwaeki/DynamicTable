@@ -4,8 +4,8 @@
  * This file carries behaviour, not looks: sticky headers, resize handles,
  * dialog layout, RTL mirroring and states. Colours and spacing come from the
  * chosen theme's class map, so a Bootstrap app never inherits Tailwind styling
- * and vice versa. Everything is namespaced under .dt to stay out of the
- * host application's way.
+ * and vice versa. Everything is namespaced under .dynamic-table to stay
+ * out of the host application's way.
  */
 
 /*
@@ -14,121 +14,129 @@
  * Themes contribute layout, spacing and radii; surfaces, text and borders come
  * from these tokens. That is what lets Bootstrap and Tailwind both look right
  * in light and dark, and lets an application force a scheme per table with
- * data-dt-scheme without either framework disagreeing.
+ * data-dynamic-table-scheme without either framework disagreeing.
  */
 
-.dt {
-    --dt-ink: #0f172a;
-    --dt-muted: #64748b;
-    --dt-border: #e2e8f0;
-    --dt-surface: #ffffff;
-    --dt-surface-2: #f8fafc;
-    --dt-hover: #f8fafc;
-    --dt-selected: #eef2ff;
-    --dt-accent: #4f46e5;
-    --dt-accent-ink: #ffffff;
-    --dt-danger: #dc2626;
-    --dt-success: #16a34a;
-    --dt-warning: #d97706;
-    --dt-info: #0284c7;
-    --dt-radius: 6px;
+.dynamic-table {
+    --dynamic-table-ink: #0f172a;
+    --dynamic-table-muted: #64748b;
+    --dynamic-table-border: #e2e8f0;
+    --dynamic-table-surface: #ffffff;
+    --dynamic-table-surface-2: #f8fafc;
+    --dynamic-table-hover: #f8fafc;
+    --dynamic-table-selected: #eef2ff;
+    --dynamic-table-accent: #4f46e5;
+    --dynamic-table-accent-ink: #ffffff;
+    --dynamic-table-danger: #dc2626;
+    --dynamic-table-success: #16a34a;
+    --dynamic-table-warning: #d97706;
+    --dynamic-table-info: #0284c7;
+    --dynamic-table-radius: 6px;
 
     position: relative;
     box-sizing: border-box;
-    color: var(--dt-ink);
+    color: var(--dynamic-table-ink);
     color-scheme: light;
 
     /* Where the table comes to rest when paging scrolls it back into view.
-       Raise it if your application has a fixed header: .dt { scroll-margin-top: 5rem } */
+       Raise it if your application has a fixed header: .dynamic-table { scroll-margin-top: 5rem } */
     scroll-margin-top: 1rem;
 }
 
 /* Follow the operating system unless the page has asked for a scheme. */
 @media (prefers-color-scheme: dark) {
-    .dt:not([data-dt-scheme='light']) {
-        --dt-ink: #e2e8f0;
-        --dt-muted: #94a3b8;
-        --dt-border: #1e293b;
-        --dt-surface: #0f172a;
-        --dt-surface-2: #1e293b;
-        --dt-hover: #1e293b;
-        --dt-selected: #312e81;
-        --dt-accent: #818cf8;
-        --dt-accent-ink: #0f172a;
-        --dt-danger: #f87171;
-        --dt-success: #4ade80;
-        --dt-warning: #fbbf24;
-        --dt-info: #38bdf8;
+    .dynamic-table:not([data-dynamic-table-scheme='light']) {
+        --dynamic-table-ink: #e2e8f0;
+        --dynamic-table-muted: #94a3b8;
+        --dynamic-table-border: #1e293b;
+        --dynamic-table-surface: #0f172a;
+        --dynamic-table-surface-2: #1e293b;
+        --dynamic-table-hover: #1e293b;
+        --dynamic-table-selected: #312e81;
+        --dynamic-table-accent: #818cf8;
+        --dynamic-table-accent-ink: #0f172a;
+        --dynamic-table-danger: #f87171;
+        --dynamic-table-success: #4ade80;
+        --dynamic-table-warning: #fbbf24;
+        --dynamic-table-info: #38bdf8;
 
         color-scheme: dark;
     }
 }
 
 /* An explicit choice always wins, in both directions. */
-.dt[data-dt-scheme='dark'] {
-    --dt-ink: #e2e8f0;
-    --dt-muted: #94a3b8;
-    --dt-border: #1e293b;
-    --dt-surface: #0f172a;
-    --dt-surface-2: #1e293b;
-    --dt-hover: #1e293b;
-    --dt-selected: #312e81;
-    --dt-accent: #818cf8;
-    --dt-accent-ink: #0f172a;
-    --dt-danger: #f87171;
-    --dt-success: #4ade80;
-    --dt-warning: #fbbf24;
-    --dt-info: #38bdf8;
+.dynamic-table[data-dynamic-table-scheme='dark'] {
+    --dynamic-table-ink: #e2e8f0;
+    --dynamic-table-muted: #94a3b8;
+    --dynamic-table-border: #1e293b;
+    --dynamic-table-surface: #0f172a;
+    --dynamic-table-surface-2: #1e293b;
+    --dynamic-table-hover: #1e293b;
+    --dynamic-table-selected: #312e81;
+    --dynamic-table-accent: #818cf8;
+    --dynamic-table-accent-ink: #0f172a;
+    --dynamic-table-danger: #f87171;
+    --dynamic-table-success: #4ade80;
+    --dynamic-table-warning: #fbbf24;
+    --dynamic-table-info: #38bdf8;
 
     color-scheme: dark;
 }
 
 /*
- * Painted with :where() so every rule here has the specificity of .dt alone.
- * A theme class map, or any application stylesheet, overrides it without
- * needing !important.
+ * Painted with :where() so every rule here has the specificity of
+ * .dynamic-table alone. A theme class map, or any application stylesheet,
+ * overrides it without needing !important.
  */
-.dt:where(.dt-surface, [class*='dt-']),
-.dt :where(.dt-table, .dt-toolbar, .dt-footer, .dt-thead, .dt-row, .dt-cell, .dt-th) {
-    border-color: var(--dt-border);
+.dynamic-table:where(.dynamic-table-surface, [class*='dynamic-table-']),
+.dynamic-table :where(.dynamic-table-table, .dynamic-table-toolbar, .dynamic-table-footer, .dynamic-table-thead, .dynamic-table-row, .dynamic-table-cell, .dynamic-table-th) {
+    border-color: var(--dynamic-table-border);
 }
 
-.dt { background: var(--dt-surface); }
-.dt :where(.dt-thead) { background: var(--dt-surface-2); }
-.dt :where(.dt-th) { color: var(--dt-muted); }
-.dt :where(.dt-row) > :where(td, th) { border-top: 1px solid var(--dt-border); }
-.dt :where(.dt-row:hover) { background: var(--dt-hover); }
-.dt :where(.dt-row-selected) { background: var(--dt-selected); }
-.dt :where(.dt-toolbar, .dt-footer) { border-color: var(--dt-border); }
+.dynamic-table { background: var(--dynamic-table-surface); }
+.dynamic-table :where(.dynamic-table-thead) { background: var(--dynamic-table-surface-2); }
+.dynamic-table :where(.dynamic-table-th) { color: var(--dynamic-table-muted); }
+.dynamic-table :where(.dynamic-table-row) > :where(td, th) { border-top: 1px solid var(--dynamic-table-border); }
+.dynamic-table :where(.dynamic-table-row:hover) { background: var(--dynamic-table-hover); }
+.dynamic-table :where(.dynamic-table-row-selected) { background: var(--dynamic-table-selected); }
+.dynamic-table :where(.dynamic-table-toolbar, .dynamic-table-footer) { border-color: var(--dynamic-table-border); }
 
 /* Native controls follow the resolved scheme via color-scheme; give them the
    surface colour too so they never sit on a mismatched background. */
-.dt :where(input, select, textarea) {
-    color: var(--dt-ink);
-    background-color: var(--dt-surface);
-    border-color: var(--dt-border);
+.dynamic-table :where(input, select, textarea) {
+    color: var(--dynamic-table-ink);
+    background-color: var(--dynamic-table-surface);
+    border-color: var(--dynamic-table-border);
 }
 
-.dt :where(button) { color: inherit; }
+/*
+ * The UA paints a button with its own buttontext colour, which is dark in
+ * both schemes — so it needs resetting. At *zero* specificity, though: a theme
+ * that has an opinion about its buttons (white on a primary, Bootstrap's own
+ * .btn-*) has to win. Written as .dynamic-table :where(button) this matched the
+ * specificity of a single theme class and, loading after the page's own CSS,
+ * beat it — every themed button lost its text colour.
+ */
+:where(.dynamic-table) :where(button) { color: inherit; }
 
 /* Surfaces that float above the table. */
-.dt :where(.dt-menu, .dt-modal-box, .dt-sheet-bar) {
-    background: var(--dt-surface);
-    border-color: var(--dt-border);
-    color: var(--dt-ink);
+.dynamic-table :where(.dynamic-table-menu, .dynamic-table-modal-box) {
+    background: var(--dynamic-table-surface);
+    border-color: var(--dynamic-table-border);
+    color: var(--dynamic-table-ink);
 }
 
-.dt :where(.dt-menu-item:hover, .dt-menu-item:focus-visible) { background: var(--dt-hover); }
+.dynamic-table :where(.dynamic-table-menu-item:hover, .dynamic-table-menu-item:focus-visible) { background: var(--dynamic-table-hover); }
 
-.dt :where(.dt-badge) {
-    background: var(--dt-surface-2);
-    border: 1px solid var(--dt-border);
-    color: var(--dt-ink);
+.dynamic-table :where(.dynamic-table-badge) {
+    background: var(--dynamic-table-surface-2);
+    border: 1px solid var(--dynamic-table-border);
+    color: var(--dynamic-table-ink);
 }
 
-.dt :where(.dt-chip) {
-    background: var(--dt-selected);
-    color: var(--dt-accent);
+.dynamic-table :where(.dynamic-table-chip) {
+    background: var(--dynamic-table-selected);
+    color: var(--dynamic-table-accent);
 }
 
 /*
@@ -139,17 +147,17 @@
  * border is transparent rather than absent, so a toned badge is exactly the
  * size of an untoned one and a column of them lines up.
  */
-.dt :where([class*='dt-badge-']) { border-color: transparent; }
-.dt :where(.dt-badge-success) { background: color-mix(in srgb, var(--dt-success) 12%, transparent); color: var(--dt-success); }
-.dt :where(.dt-badge-danger) { background: color-mix(in srgb, var(--dt-danger) 12%, transparent); color: var(--dt-danger); }
-.dt :where(.dt-badge-warning) { background: color-mix(in srgb, var(--dt-warning) 14%, transparent); color: var(--dt-warning); }
-.dt :where(.dt-badge-info) { background: color-mix(in srgb, var(--dt-info) 12%, transparent); color: var(--dt-info); }
-.dt :where(.dt-badge-primary) { background: color-mix(in srgb, var(--dt-accent) 12%, transparent); color: var(--dt-accent); }
-.dt :where(.dt-badge-neutral) { color: var(--dt-muted); }
+.dynamic-table :where([class*='dynamic-table-badge-']) { border-color: transparent; }
+.dynamic-table :where(.dynamic-table-badge-success) { background: color-mix(in srgb, var(--dynamic-table-success) 12%, transparent); color: var(--dynamic-table-success); }
+.dynamic-table :where(.dynamic-table-badge-danger) { background: color-mix(in srgb, var(--dynamic-table-danger) 12%, transparent); color: var(--dynamic-table-danger); }
+.dynamic-table :where(.dynamic-table-badge-warning) { background: color-mix(in srgb, var(--dynamic-table-warning) 14%, transparent); color: var(--dynamic-table-warning); }
+.dynamic-table :where(.dynamic-table-badge-info) { background: color-mix(in srgb, var(--dynamic-table-info) 12%, transparent); color: var(--dynamic-table-info); }
+.dynamic-table :where(.dynamic-table-badge-primary) { background: color-mix(in srgb, var(--dynamic-table-accent) 12%, transparent); color: var(--dynamic-table-accent); }
+.dynamic-table :where(.dynamic-table-badge-neutral) { color: var(--dynamic-table-muted); }
 
-.dt :where(.dt-btn-primary) { background: var(--dt-accent); color: var(--dt-accent-ink); border: 1px solid var(--dt-accent); }
-.dt :where(.dt-btn-danger) { background: var(--dt-danger); color: #fff; border: 1px solid var(--dt-danger); }
-.dt :where(.dt-empty, .dt-hint, .dt-field-label, .dt-column-hint) { color: var(--dt-muted); }
+.dynamic-table :where(.dynamic-table-btn-primary) { background: var(--dynamic-table-accent); color: var(--dynamic-table-accent-ink); border: 1px solid var(--dynamic-table-accent); }
+.dynamic-table :where(.dynamic-table-btn-danger) { background: var(--dynamic-table-danger); color: #fff; border: 1px solid var(--dynamic-table-danger); }
+.dynamic-table :where(.dynamic-table-empty, .dynamic-table-hint, .dynamic-table-field-label, .dynamic-table-column-hint) { color: var(--dynamic-table-muted); }
 
 /*
  * Bootstrap bridge.
@@ -158,35 +166,35 @@
  * package tokens means a Bootstrap table is readable in dark mode even when
  * the host page never sets data-bs-theme.
  */
-.dt-bootstrap :where(.table) {
-    --bs-table-color: var(--dt-ink);
+.dynamic-table-bootstrap :where(.table) {
+    --bs-table-color: var(--dynamic-table-ink);
     --bs-table-bg: transparent;
-    --bs-table-border-color: var(--dt-border);
-    --bs-table-hover-color: var(--dt-ink);
-    --bs-table-hover-bg: var(--dt-hover);
-    --bs-table-active-color: var(--dt-ink);
-    --bs-table-active-bg: var(--dt-selected);
+    --bs-table-border-color: var(--dynamic-table-border);
+    --bs-table-hover-color: var(--dynamic-table-ink);
+    --bs-table-hover-bg: var(--dynamic-table-hover);
+    --bs-table-active-color: var(--dynamic-table-ink);
+    --bs-table-active-bg: var(--dynamic-table-selected);
 }
 
-.dt-bootstrap :where(.card) {
-    background: var(--dt-surface);
-    border-color: var(--dt-border);
-    color: var(--dt-ink);
+.dynamic-table-bootstrap :where(.card) {
+    background: var(--dynamic-table-surface);
+    border-color: var(--dynamic-table-border);
+    color: var(--dynamic-table-ink);
 }
 
-.dt-bootstrap :where(.form-control, .form-select) {
-    background-color: var(--dt-surface);
-    border-color: var(--dt-border);
-    color: var(--dt-ink);
+.dynamic-table-bootstrap :where(.form-control, .form-select) {
+    background-color: var(--dynamic-table-surface);
+    border-color: var(--dynamic-table-border);
+    color: var(--dynamic-table-ink);
 }
 
-.dt *,
-.dt *::before,
-.dt *::after { box-sizing: inherit; }
+.dynamic-table *,
+.dynamic-table *::before,
+.dynamic-table *::after { box-sizing: inherit; }
 
-.dt-hidden { display: none !important; }
+.dynamic-table-hidden { display: none !important; }
 
-.dt-visually-hidden {
+.dynamic-table-visually-hidden {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -202,18 +210,18 @@
 /* Toolbar                                                          */
 /* ---------------------------------------------------------------- */
 
-.dt-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.dt-toolbar-start,
-.dt-toolbar-end { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
-.dt-toolbar-end { margin-inline-start: auto; }
+.dynamic-table-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.dynamic-table-toolbar-start,
+.dynamic-table-toolbar-end { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.dynamic-table-toolbar-end { margin-inline-start: auto; }
 
-.dt-selection-summary { display: inline-flex; align-items: center; gap: .5rem; font-size: .85em; }
+.dynamic-table-selection-summary { display: inline-flex; align-items: center; gap: .5rem; font-size: .85em; }
 
-.dt-link-button {
+.dynamic-table-link-button {
     background: none;
     border: 0;
     padding: 0;
-    color: var(--dt-accent);
+    color: var(--dynamic-table-accent);
     cursor: pointer;
     text-decoration: underline;
     font: inherit;
@@ -231,17 +239,17 @@
  * the box does not. Giving it a height makes the box the thing that scrolls,
  * which is what makes the sticky header actually stick.
  *
- * --dt-max-height is set per table (or globally in the config); `none` gives
+ * --dynamic-table-max-height is set per table (or globally in the config); `none` gives
  * the old page-flow behaviour, at the cost of the sticky header.
  */
-.dt-scroller {
+.dynamic-table-scroller {
     position: relative;
     overflow: auto;
-    max-block-size: var(--dt-max-height, none);
+    max-block-size: var(--dynamic-table-max-height, none);
     overscroll-behavior-y: contain;
 }
 
-.dt-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.dynamic-table-table { width: 100%; border-collapse: separate; border-spacing: 0; }
 
 /*
  * A table whose columns have been given widths.
@@ -259,23 +267,23 @@
  * columns that asked for nothing; when the widths add up to more than the
  * container, the table grows past it and the scroller scrolls.
  */
-.dt-table.dt-sized { table-layout: fixed; width: 100%; }
+.dynamic-table-table.dynamic-table-sized { table-layout: fixed; width: 100%; }
 
 /*
  * A sized column shows what fits and says so with an ellipsis — in the header
  * as well as in the cells. The header keeps its sort and menu affordances: only
  * the label itself is allowed to shrink.
  */
-.dt-table.dt-sized :where(.dt-th, .dt-cell) {
+.dynamic-table-table.dynamic-table-sized :where(.dynamic-table-th, .dynamic-table-cell) {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 
-.dt-table.dt-sized :where(.dt-header-trigger, .dt-sort) { max-width: 100%; }
+.dynamic-table-table.dynamic-table-sized :where(.dynamic-table-header-trigger, .dynamic-table-sort) { max-width: 100%; }
 
 /* The sort arrow and the menu cog keep their size; the label gives way. */
-.dt-table.dt-sized :where(.dt-header-trigger, .dt-sort) > :not(:first-child) { flex: none; }
+.dynamic-table-table.dynamic-table-sized :where(.dynamic-table-header-trigger, .dynamic-table-sort) > :not(:first-child) { flex: none; }
 
 /*
  * Narrow enough that the padding would be the whole column.
@@ -285,10 +293,10 @@
  * .px-3 (padding: 1rem !important) would otherwise hold every column at 32px
  * no matter what width it was given.
  */
-.dt-table.dt-sized :where(.dt-th, .dt-cell).dt-narrow { padding-inline: .25rem !important; }
+.dynamic-table-table.dynamic-table-sized :where(.dynamic-table-th, .dynamic-table-cell).dynamic-table-narrow { padding-inline: .25rem !important; }
 
-.dt-table.dt-sized :where(.dt-header-trigger, .dt-sort) > span:first-child,
-.dt-table.dt-sized .dt-cell > :where(span, a, div) {
+.dynamic-table-table.dynamic-table-sized :where(.dynamic-table-header-trigger, .dynamic-table-sort) > span:first-child,
+.dynamic-table-table.dynamic-table-sized .dynamic-table-cell > :where(span, a, div) {
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -301,19 +309,19 @@
  * fixed layout would otherwise hand them. Truncating a row's actions would be
  * truncating the only way to act on it.
  */
-.dt-table.dt-sized :where(.dt-select-cell, .dt-expand-cell, .dt-control-cell, .dt-row-actions-cell) {
+.dynamic-table-table.dynamic-table-sized :where(.dynamic-table-select-cell, .dynamic-table-expand-cell, .dynamic-table-control-cell, .dynamic-table-row-actions-cell) {
     width: max-content;
     overflow: visible;
     text-overflow: clip;
 }
 
 /* separate borders, so the header keeps its rule while stuck */
-.dt-thead th {
+.dynamic-table-thead th {
     position: sticky;
     top: 0;
     z-index: 3;
-    background: var(--dt-surface-2);
-    box-shadow: inset 0 -1px 0 var(--dt-border);
+    background: var(--dynamic-table-surface-2);
+    box-shadow: inset 0 -1px 0 var(--dynamic-table-border);
 }
 
 /*
@@ -324,14 +332,14 @@
  * offset is the header's measured height, written by the runtime; the fallback
  * keeps the two apart before the first measurement.
  */
-.dt-thead .dt-filter-row th {
-    top: var(--dt-head-offset, 2.5rem);
+.dynamic-table-thead .dynamic-table-filter-row th {
+    top: var(--dynamic-table-head-offset, 2.5rem);
     z-index: 2;
 }
 
-.dt-th { position: relative; user-select: none; }
+.dynamic-table-th { position: relative; user-select: none; }
 
-.dt-sort {
+.dynamic-table-sort {
     display: inline-flex;
     align-items: center;
     gap: .35rem;
@@ -343,13 +351,13 @@
     cursor: pointer;
 }
 
-.dt-sort:focus-visible,
-.dt-cell:focus-visible,
-.dt-column-item:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
+.dynamic-table-sort:focus-visible,
+.dynamic-table-cell:focus-visible,
+.dynamic-table-column-item:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: 1px; }
 
-.dt-sort-icon { font-size: .7em; opacity: .7; }
+.dynamic-table-sort-icon { font-size: .7em; opacity: .7; }
 
-.dt-resizer {
+.dynamic-table-resizer {
     position: absolute;
     inset-block: 0;
     inset-inline-end: -3px;
@@ -358,23 +366,23 @@
     touch-action: none;
 }
 
-.dt-resizer::after {
+.dynamic-table-resizer::after {
     content: '';
     position: absolute;
     inset-block: 25%;
     inset-inline-start: 3px;
     width: 1px;
-    background: var(--dt-border);
+    background: var(--dynamic-table-border);
 }
 
-.dt-resizing { user-select: none; cursor: col-resize; }
+.dynamic-table-resizing { user-select: none; cursor: col-resize; }
 
-.dt-align-start { text-align: start; }
-.dt-align-center { text-align: center; }
-.dt-align-end { text-align: end; }
+.dynamic-table-align-start { text-align: start; }
+.dynamic-table-align-center { text-align: center; }
+.dynamic-table-align-end { text-align: end; }
 
-.dt-cell { vertical-align: middle; }
-.dt-select-cell { width: 2.75rem; text-align: center; }
+.dynamic-table-cell { vertical-align: middle; }
+.dynamic-table-select-cell { width: 2.75rem; text-align: center; }
 
 /*
  * Selection checkboxes.
@@ -384,53 +392,53 @@
  * delete — starts here. Bigger, in the table's accent colour, with the padding
  * around it part of the hit area.
  */
-.dt :where(.dt-select-cell) input[type='checkbox'],
-.dt :where(.dt-bulk-field, .dt-column-item) input[type='checkbox'] {
+.dynamic-table :where(.dynamic-table-select-cell) input[type='checkbox'],
+.dynamic-table :where(.dynamic-table-bulk-field, .dynamic-table-column-item) input[type='checkbox'] {
     inline-size: 1.05rem;
     block-size: 1.05rem;
     margin: 0;
-    accent-color: var(--dt-accent);
+    accent-color: var(--dynamic-table-accent);
     cursor: pointer;
     vertical-align: middle;
 }
 
-.dt .dt-select-cell {
+.dynamic-table .dynamic-table-select-cell {
     /* The whole cell is the target, not just the box inside it. */
     padding-inline: .5rem;
     line-height: 0;
 }
 
-.dt .dt-select-cell input[type='checkbox']:focus-visible {
-    outline: 2px solid var(--dt-accent);
+.dynamic-table .dynamic-table-select-cell input[type='checkbox']:focus-visible {
+    outline: 2px solid var(--dynamic-table-accent);
     outline-offset: 2px;
 }
 
 /* A selected row says so on its checkbox column as well as its background. */
-.dt .dt-row-selected .dt-select-cell { box-shadow: inset 3px 0 0 var(--dt-accent); }
+.dynamic-table .dynamic-table-row-selected .dynamic-table-select-cell { box-shadow: inset 3px 0 0 var(--dynamic-table-accent); }
 
-.dt[dir='rtl'] .dt-row-selected .dt-select-cell { box-shadow: inset -3px 0 0 var(--dt-accent); }
+.dynamic-table[dir='rtl'] .dynamic-table-row-selected .dynamic-table-select-cell { box-shadow: inset -3px 0 0 var(--dynamic-table-accent); }
 
 /* Touch: a 1rem box with 44px of cell around it is the reachable version. */
 @media (hover: none) {
-    .dt :where(.dt-select-cell) input[type='checkbox'] {
+    .dynamic-table :where(.dynamic-table-select-cell) input[type='checkbox'] {
         inline-size: 1.2rem;
         block-size: 1.2rem;
     }
 
-    .dt .dt-select-cell { min-height: 2.75rem; }
+    .dynamic-table .dynamic-table-select-cell { min-height: 2.75rem; }
 }
 
 /* ---------------------------------------------------------------- */
 /* Row actions                                                      */
 /* ---------------------------------------------------------------- */
 
-.dt-row-actions-cell {
+.dynamic-table-row-actions-cell {
     width: 1%;
     white-space: nowrap;
     text-align: end;
 }
 
-.dt-row-action {
+.dynamic-table-row-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -447,7 +455,7 @@
  * keeps the layout above and nothing else, so the package and the framework
  * are never painting the same button against each other.
  */
-.dt-row-action:not(.dt-row-action-custom) {
+.dynamic-table-row-action:not(.dynamic-table-row-action-custom) {
     min-width: 1.75rem;
     height: 1.75rem;
     padding: 0 .35rem;
@@ -460,92 +468,92 @@
     line-height: 1;
 }
 
-.dt-row-action:not(.dt-row-action-custom):hover { background: var(--dt-surface-2); border-color: var(--dt-border); }
-.dt-row-action-danger:not(.dt-row-action-custom):hover { color: var(--dt-danger); border-color: var(--dt-danger); }
-.dt-row-action:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
-.dt-row-action:disabled { opacity: .45; cursor: default; }
-.dt-row-action-label { white-space: nowrap; }
+.dynamic-table-row-action:not(.dynamic-table-row-action-custom):hover { background: var(--dynamic-table-surface-2); border-color: var(--dynamic-table-border); }
+.dynamic-table-row-action-danger:not(.dynamic-table-row-action-custom):hover { color: var(--dynamic-table-danger); border-color: var(--dynamic-table-danger); }
+.dynamic-table-row-action:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: 1px; }
+.dynamic-table-row-action:disabled { opacity: .45; cursor: default; }
+.dynamic-table-row-action-label { white-space: nowrap; }
 
 /* Cells may contain small pieces of markup — a badge, a thumbnail, a link. */
-.dt-cell img { max-height: 2rem; vertical-align: middle; }
-.dt-cell .dt-cell-actions { display: inline-flex; gap: .25rem; align-items: center; }
+.dynamic-table-cell img { max-height: 2rem; vertical-align: middle; }
+.dynamic-table-cell .dynamic-table-cell-actions { display: inline-flex; gap: .25rem; align-items: center; }
 
-.dt-null { opacity: .4; }
-.dt-link { color: var(--dt-accent); text-decoration: none; }
-.dt-link:hover { text-decoration: underline; }
-.dt-thumb { max-height: 2rem; max-width: 4rem; border-radius: 4px; object-fit: cover; }
-.dt-bool-true { color: var(--dt-success); }
-.dt-bool-false { color: var(--dt-muted); }
+.dynamic-table-null { opacity: .4; }
+.dynamic-table-link { color: var(--dynamic-table-accent); text-decoration: none; }
+.dynamic-table-link:hover { text-decoration: underline; }
+.dynamic-table-thumb { max-height: 2rem; max-width: 4rem; border-radius: 4px; object-fit: cover; }
+.dynamic-table-bool-true { color: var(--dynamic-table-success); }
+.dynamic-table-bool-false { color: var(--dynamic-table-muted); }
 
-.dt-row[data-trashed] { opacity: .6; text-decoration: line-through; }
+.dynamic-table-row[data-trashed] { opacity: .6; text-decoration: line-through; }
 
 /* ---------------------------------------------------------------- */
 /* States                                                           */
 /* ---------------------------------------------------------------- */
 
-.dt-loading {
+.dynamic-table-loading {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: .5rem;
-    background: color-mix(in srgb, var(--dt-surface) 70%, transparent);
+    background: color-mix(in srgb, var(--dynamic-table-surface) 70%, transparent);
     backdrop-filter: blur(1px);
     z-index: 3;
 }
 
-.dt-spinner {
+.dynamic-table-spinner {
     width: 1rem;
     height: 1rem;
-    border: 2px solid var(--dt-border);
-    border-top-color: var(--dt-accent);
+    border: 2px solid var(--dynamic-table-border);
+    border-top-color: var(--dynamic-table-accent);
     border-radius: 50%;
-    animation: dt-spin .7s linear infinite;
+    animation: dynamic-table-spin .7s linear infinite;
 }
 
-@keyframes dt-spin { to { transform: rotate(360deg); } }
+@keyframes dynamic-table-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .dt-spinner { animation-duration: 3s; }
-    .dt-cell-saved { transition: none; }
+    .dynamic-table-spinner { animation-duration: 3s; }
+    .dynamic-table-cell-saved { transition: none; }
 }
 
-.dt-empty { text-align: center; }
+.dynamic-table-empty { text-align: center; }
 
-.dt-alerts { display: grid; gap: .25rem; }
-.dt-alerts:empty { display: none; }
+.dynamic-table-alerts { display: grid; gap: .25rem; }
+.dynamic-table-alerts:empty { display: none; }
 
-.dt-alert {
+.dynamic-table-alert {
     display: flex;
     align-items: center;
     gap: .5rem;
     padding: .5rem .75rem;
-    border-inline-start: 3px solid var(--dt-accent);
-    background: color-mix(in srgb, var(--dt-accent) 8%, transparent);
+    border-inline-start: 3px solid var(--dynamic-table-accent);
+    background: color-mix(in srgb, var(--dynamic-table-accent) 8%, transparent);
     font-size: .9em;
 }
 
-.dt-alert-error { border-color: var(--dt-danger); background: color-mix(in srgb, var(--dt-danger) 8%, transparent); }
-.dt-alert-success { border-color: var(--dt-success); background: color-mix(in srgb, var(--dt-success) 8%, transparent); }
-.dt-alert-warning { border-color: var(--dt-warning); background: color-mix(in srgb, var(--dt-warning) 10%, transparent); }
-.dt-alert-close { margin-inline-start: auto; background: none; border: 0; cursor: pointer; font-size: 1.1em; line-height: 1; }
+.dynamic-table-alert-error { border-color: var(--dynamic-table-danger); background: color-mix(in srgb, var(--dynamic-table-danger) 8%, transparent); }
+.dynamic-table-alert-success { border-color: var(--dynamic-table-success); background: color-mix(in srgb, var(--dynamic-table-success) 8%, transparent); }
+.dynamic-table-alert-warning { border-color: var(--dynamic-table-warning); background: color-mix(in srgb, var(--dynamic-table-warning) 10%, transparent); }
+.dynamic-table-alert-close { margin-inline-start: auto; background: none; border: 0; cursor: pointer; font-size: 1.1em; line-height: 1; }
 
-.dt-panel {
+.dynamic-table-panel {
     padding: .35rem .75rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: .75rem;
-    color: var(--dt-muted);
-    border-top: 1px dashed var(--dt-border);
+    color: var(--dynamic-table-muted);
+    border-top: 1px dashed var(--dynamic-table-border);
 }
 
 /* ---------------------------------------------------------------- */
 /* Pagination                                                       */
 /* ---------------------------------------------------------------- */
 
-.dt-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
-.dt-pagination-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-.dt-pagination { display: flex; align-items: center; gap: .2rem; }
+.dynamic-table-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.dynamic-table-pagination-controls { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.dynamic-table-pagination { display: flex; align-items: center; gap: .2rem; }
 
 /*
  * Narrow screens: the chrome wraps rather than overflowing.
@@ -555,23 +563,26 @@
  * layout wider than the phone.
  */
 @media (max-width: 640px) {
-    .dt-footer { flex-direction: column; align-items: stretch; }
-    .dt-summary { text-align: center; }
-    .dt-pagination-controls { justify-content: space-between; }
-    .dt-pagination {
+    .dynamic-table-footer { flex-direction: column; align-items: stretch; }
+    .dynamic-table-summary { text-align: center; }
+    .dynamic-table-pagination-controls { justify-content: space-between; }
+    .dynamic-table-pagination {
         max-width: 100%;
         overflow-x: auto;
         scrollbar-width: thin;
         padding-bottom: .15rem;
     }
-    .dt-toolbar-start,
-    .dt-toolbar-end { width: 100%; }
-    .dt-toolbar-end { margin-inline-start: 0; }
-    .dt-toolbar :where(input[type='search'], .dt-search) { flex: 1 1 100%; min-width: 0; }
+    .dynamic-table-toolbar-start,
+    .dynamic-table-toolbar-end { width: 100%; }
+    .dynamic-table-toolbar-end { margin-inline-start: 0; }
+    .dynamic-table-toolbar :where(input[type='search'], .dynamic-table-search) { flex: 1 1 100%; min-width: 0; }
 }
-.dt-page { min-width: 2rem; }
-.dt-page-current { font-weight: 700; }
-.dt-page-gap { padding: 0 .25rem; opacity: .6; }
+.dynamic-table-page { min-width: 2rem; }
+.dynamic-table-page-current { font-weight: 700; }
+.dynamic-table-page-gap { padding: 0 .25rem; opacity: .6; }
+/* The page number when a table is not counted: a label between the two arrows,
+   sized like a page button so the row does not shift as pages change. */
+.dynamic-table-page-current-only { min-width: 2rem; text-align: center; font-weight: 700; }
 
 /* ---------------------------------------------------------------- */
 /* Dialogs and menus                                                */
@@ -584,9 +595,9 @@
  * the drawer geometry are structure, and they have to survive whatever utility
  * classes the theme's class map brings with it. Tailwind's `p-4 max-w-2xl` and
  * Bootstrap's `.card` are both single-class selectors, so scoping these under
- * .dt is enough to win without a single !important.
+ * .dynamic-table is enough to win without a single !important.
  */
-.dt .dt-modal {
+.dynamic-table .dynamic-table-modal {
     position: fixed;
     inset: 0;
     z-index: 1000;
@@ -597,10 +608,10 @@
     background: rgba(0, 0, 0, .45);
 }
 
-.dt .dt-modal-box {
-    background: var(--dt-surface);
-    color: var(--dt-ink);
-    border-radius: var(--dt-radius);
+.dynamic-table .dynamic-table-modal-box {
+    background: var(--dynamic-table-surface);
+    color: var(--dynamic-table-ink);
+    border-radius: var(--dynamic-table-radius);
     width: 100%;
     max-height: 85vh;
     min-width: 0;
@@ -621,89 +632,182 @@
  * changes — the focus trap, Escape handling and markup are shared, so a panel
  * never knows which presentation it is in.
  */
-.dt .dt-offcanvas { padding: 0; align-items: stretch; }
-.dt .dt-offcanvas.dt-offcanvas-right { justify-content: flex-end; }
-.dt .dt-offcanvas.dt-offcanvas-left { justify-content: flex-start; }
+.dynamic-table .dynamic-table-offcanvas { padding: 0; align-items: stretch; }
+.dynamic-table .dynamic-table-offcanvas.dynamic-table-offcanvas-right { justify-content: flex-end; }
+.dynamic-table .dynamic-table-offcanvas.dynamic-table-offcanvas-left { justify-content: flex-start; }
 
-.dt .dt-offcanvas .dt-offcanvas-box {
+.dynamic-table .dynamic-table-offcanvas .dynamic-table-offcanvas-box {
     height: 100%;
     max-height: 100%;
     margin: 0;
     border-radius: 0;
-    animation: dt-slide-from-right .18s ease-out;
+    animation: dynamic-table-slide-from-right .18s ease-out;
 }
 
-.dt .dt-offcanvas-left .dt-offcanvas-box { animation-name: dt-slide-from-left; }
+.dynamic-table .dynamic-table-offcanvas-left .dynamic-table-offcanvas-box { animation-name: dynamic-table-slide-from-left; }
 
-@keyframes dt-slide-from-right {
+@keyframes dynamic-table-slide-from-right {
     from { transform: translateX(100%); }
     to { transform: translateX(0); }
 }
 
-@keyframes dt-slide-from-left {
+@keyframes dynamic-table-slide-from-left {
     from { transform: translateX(-100%); }
     to { transform: translateX(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .dt .dt-offcanvas .dt-offcanvas-box { animation: none; }
+    .dynamic-table .dynamic-table-offcanvas .dynamic-table-offcanvas-box { animation: none; }
 }
 
 /* On a phone a side drawer is just a full-height sheet. */
 @media (max-width: 640px) {
-    .dt .dt-offcanvas .dt-offcanvas-box { width: 100% !important; }
+    .dynamic-table .dynamic-table-offcanvas .dynamic-table-offcanvas-box { width: 100% !important; }
 }
 
-.dt-modal-head {
+/*
+ * One measure for the panel's gutters, so the head, body and foot line up and
+ * a drawer can breathe a little wider than a dialog without restating them.
+ */
+.dynamic-table .dynamic-table-modal-box { --dynamic-table-panel-gutter: 1rem; }
+.dynamic-table .dynamic-table-offcanvas-box { --dynamic-table-panel-gutter: 1.15rem; }
+
+.dynamic-table-modal-head {
     display: flex;
     align-items: center;
     gap: .5rem;
-    padding: .75rem 1rem;
-    border-bottom: 1px solid var(--dt-border);
+    padding: .85rem var(--dynamic-table-panel-gutter, 1rem);
+    border-bottom: 1px solid var(--dynamic-table-border);
 }
 
-.dt-modal-title { margin: 0; font-size: 1rem; font-weight: 600; }
-.dt-modal-close { margin-inline-start: auto; background: none; border: 0; font-size: 1.25rem; line-height: 1; cursor: pointer; }
-.dt .dt-modal-body { padding: 1rem; overflow: auto; flex: 1 1 auto; min-height: 0; }
-.dt-modal-foot { padding: .75rem 1rem; border-top: 1px solid var(--dt-border); }
-.dt-modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
+.dynamic-table-modal-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -.01em;
+}
+
+/* A real hit target, not a bare glyph. 2rem square is the smallest thing a
+   thumb finds reliably, and it gives the hover state something to fill. */
+.dynamic-table-modal-close {
+    margin-inline-start: auto;
+    display: inline-grid;
+    place-items: center;
+    inline-size: 2rem;
+    block-size: 2rem;
+    flex: none;
+    background: none;
+    border: 0;
+    border-radius: var(--dynamic-table-radius);
+    font-size: 1.15rem;
+    line-height: 1;
+    color: var(--dynamic-table-muted);
+    cursor: pointer;
+}
+
+.dynamic-table-modal-close:hover { background: var(--dynamic-table-hover); color: var(--dynamic-table-ink); }
+.dynamic-table-modal-close:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: -2px; }
+
+.dynamic-table .dynamic-table-modal-body {
+    padding: var(--dynamic-table-panel-gutter, 1rem);
+    overflow: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.dynamic-table-modal-foot {
+    padding: .75rem var(--dynamic-table-panel-gutter, 1rem);
+    border-top: 1px solid var(--dynamic-table-border);
+    background: var(--dynamic-table-surface);
+}
+
+.dynamic-table-modal-actions { display: flex; justify-content: flex-end; gap: .5rem; }
 
 /*
- * Anchored layers live on <body>, inside a .dt wrapper that adds no box of its
+ * A drawer is tall and narrow, so anything that capped its own height for a
+ * dialog has to stop doing that and let the body do the scrolling instead.
+ * Otherwise a full-height panel shows a short list with a second scrollbar
+ * inside it and dead space underneath.
+ */
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-modal-body { display: flex; flex-direction: column; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-column-list,
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-column-add-results { max-height: none; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-column-add { flex: 1 1 auto; min-height: 0; grid-template-rows: auto auto 1fr; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-column-picker { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-column-list { flex: 1 1 auto; }
+
+/*
+ * A mapping row is a heading and the column it feeds. Side by side they need
+ * about 24rem before the select stops being usable, so in a drawer they stack
+ * and the arrow goes — it was only ever pointing across the gap that is now
+ * gone.
+ */
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-mapping-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: .15rem;
+    padding-block: .35rem;
+}
+
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-mapping-arrow { display: none; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-step-fields { grid-template-columns: minmax(0, 1fr); }
+
+/* The panel scrolls as a whole; the mapping and the sample stop competing for
+   it with scrollbars of their own. */
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-mapping { max-height: none; overflow: visible; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-preview { max-height: 11rem; }
+
+/* Three selects and a button do not fit side by side in a 30rem drawer, so it
+   borrows the narrow layout rather than growing a third row of its own. */
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-condition {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+        'field field  remove'
+        'op    value  value';
+    row-gap: .35rem;
+}
+
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-condition > :nth-child(1) { grid-area: field; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-condition > :nth-child(2) { grid-area: op; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-condition > :nth-child(3) { grid-area: value; min-inline-size: 0; }
+.dynamic-table .dynamic-table-offcanvas-box .dynamic-table-condition > :nth-child(4) { grid-area: remove; }
+
+/*
+ * Anchored layers live on <body>, inside a .dynamic-table wrapper that adds
+ * no box of its
  * own — so they keep the table's tokens, direction and scheme while escaping
  * every ancestor that clips or scrolls.
  */
-.dt-portal { display: contents; }
+.dynamic-table-portal { display: contents; }
 
 /* Scoped, so a theme's own z-index utility (Tailwind's z-40) cannot bury it. */
-.dt .dt-menu { z-index: 900; max-height: 26rem; display: flex; flex-direction: column; min-width: 15rem; }
-.dt-menu-list { overflow: auto; }
-.dt-menu-search { padding: .35rem; border-bottom: 1px solid var(--dt-border); }
-.dt-menu-heading { padding: .35rem .5rem; font-size: .75rem; text-transform: uppercase; opacity: .6; }
-.dt-menu-separator { height: 1px; margin: .25rem 0; background: var(--dt-border); }
+.dynamic-table .dynamic-table-menu { z-index: 900; max-height: 26rem; display: flex; flex-direction: column; min-width: 15rem; }
+.dynamic-table-menu-list { overflow: auto; }
+.dynamic-table-menu-search { padding: .35rem; border-bottom: 1px solid var(--dynamic-table-border); }
+.dynamic-table-menu-heading { padding: .35rem .5rem; font-size: .75rem; text-transform: uppercase; opacity: .6; }
+.dynamic-table-menu-separator { height: 1px; margin: .25rem 0; background: var(--dynamic-table-border); }
 
 /* A separator with nothing after it is a rule under empty space. The menu
    builder already prunes these; this covers anything built by hand. */
-.dt-menu-separator:last-child,
-.dt-menu-separator:first-child,
-.dt-menu-separator + .dt-menu-separator { display: none; }
-.dt-menu-item { cursor: pointer; }
-.dt-menu-item-active { font-weight: 600; }
-.dt-menu-item-danger { color: var(--dt-danger); }
-.dt-menu-item:disabled { opacity: .4; cursor: default; }
+.dynamic-table-menu-separator:last-child,
+.dynamic-table-menu-separator:first-child,
+.dynamic-table-menu-separator + .dynamic-table-menu-separator { display: none; }
+.dynamic-table-menu-item { cursor: pointer; }
+.dynamic-table-menu-item-active { font-weight: 600; }
+.dynamic-table-menu-item-danger { color: var(--dynamic-table-danger); }
+.dynamic-table-menu-item:disabled { opacity: .4; cursor: default; }
 
-.dt-menu-row { display: flex; align-items: center; gap: .5rem; width: 100%; }
-.dt-menu-check { flex: none; width: .9rem; color: var(--dt-accent); font-size: .8rem; }
-.dt-menu-icon { flex: none; width: 1.1rem; text-align: center; opacity: .8; }
-.dt-menu-label { flex: 1; text-align: start; }
+.dynamic-table-menu-row { display: flex; align-items: center; gap: .5rem; width: 100%; }
+.dynamic-table-menu-check { flex: none; width: .9rem; color: var(--dynamic-table-accent); font-size: .8rem; }
+.dynamic-table-menu-icon { flex: none; width: 1.1rem; text-align: center; opacity: .8; }
+.dynamic-table-menu-label { flex: 1; text-align: start; }
 
-.dt-menu-badge {
+.dynamic-table-menu-badge {
     flex: none;
     font-size: .7rem;
     padding: .05rem .4rem;
     border-radius: 999px;
-    background: var(--dt-surface-2);
-    color: var(--dt-muted);
+    background: var(--dynamic-table-surface-2);
+    color: var(--dynamic-table-muted);
 }
 
 /* ---------------------------------------------------------------- */
@@ -715,7 +819,7 @@
  * the full width — a label people have to hit exactly is a worse target than
  * the cell they can see.
  */
-.dt-header-trigger {
+.dynamic-table-header-trigger {
     display: flex;
     align-items: center;
     gap: .35rem;
@@ -731,7 +835,7 @@
 
 /* A gear, centred on the text's own middle: the glyph's box is taller than the
    mark, so it is centred by the flex line rather than by its own line-height. */
-.dt-header-cog {
+.dynamic-table-header-cog {
     margin-inline-start: auto;
     display: inline-flex;
     align-items: center;
@@ -745,46 +849,46 @@
     transition: opacity .12s ease;
 }
 
-.dt-th:hover .dt-header-cog,
-.dt-header-trigger:focus-visible .dt-header-cog,
-.dt-header-trigger[aria-expanded='true'] .dt-header-cog { opacity: .75; }
+.dynamic-table-th:hover .dynamic-table-header-cog,
+.dynamic-table-header-trigger:focus-visible .dynamic-table-header-cog,
+.dynamic-table-header-trigger[aria-expanded='true'] .dynamic-table-header-cog { opacity: .75; }
 
-.dt-header-trigger:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
+.dynamic-table-header-trigger:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: 1px; }
 
 @media (hover: none) {
-    .dt-header-cog { opacity: .6; }
+    .dynamic-table-header-cog { opacity: .6; }
 }
 
 /* A column carrying a condition says so, the way Dynamics marks a filtered
    header — otherwise a filter set from the header menu is invisible until the
    filter panel is opened. */
-.dt-filtered-icon {
+.dynamic-table-filtered-icon {
     font-size: .6em;
-    color: var(--dt-accent);
+    color: var(--dynamic-table-accent);
 }
 
-.dt [data-dt-filtered] { background: color-mix(in srgb, var(--dt-accent) 8%, transparent); }
+.dynamic-table [data-dynamic-table-filtered] { background: color-mix(in srgb, var(--dynamic-table-accent) 8%, transparent); }
 
 /* One condition, one column: the small card the header menu opens. It is a
    popover rather than a dialog — a modal would take over the screen to ask a
    question the size of a dropdown. */
-.dt-popover { padding: 0; }
+.dynamic-table-popover { padding: 0; }
 
-.dt-popover-head {
+.dynamic-table-popover-head {
     display: flex;
     align-items: center;
     gap: .5rem;
     padding: .55rem .65rem;
-    border-bottom: 1px solid var(--dt-border);
+    border-bottom: 1px solid var(--dynamic-table-border);
 }
 
-.dt-popover-title { font-weight: 600; font-size: .9em; }
+.dynamic-table-popover-title { font-weight: 600; font-size: .9em; }
 
-.dt-popover-close {
+.dynamic-table-popover-close {
     margin-inline-start: auto;
     border: 0;
     background: none;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
     font: inherit;
     line-height: 1;
     cursor: pointer;
@@ -792,21 +896,21 @@
     border-radius: 4px;
 }
 
-.dt-popover-close:hover { color: var(--dt-ink); background: var(--dt-hover); }
+.dynamic-table-popover-close:hover { color: var(--dynamic-table-ink); background: var(--dynamic-table-hover); }
 
-.dt-popover-body { padding: .65rem; }
+.dynamic-table-popover-body { padding: .65rem; }
 
-.dt-popover-foot {
+.dynamic-table-popover-foot {
     padding: .55rem .65rem;
-    border-top: 1px solid var(--dt-border);
+    border-top: 1px solid var(--dynamic-table-border);
 }
 
-.dt-popover-actions { display: flex; justify-content: flex-end; gap: .4rem; }
+.dynamic-table-popover-actions { display: flex; justify-content: flex-end; gap: .4rem; }
 
-.dt-quick-filter { gap: .5rem; }
-.dt-quick-filter .dt-quick-value { display: grid; gap: .35rem; }
-.dt-quick-filter select,
-.dt-quick-filter input { width: 100%; }
+.dynamic-table-quick-filter { gap: .5rem; }
+.dynamic-table-quick-filter .dynamic-table-quick-value { display: grid; gap: .35rem; }
+.dynamic-table-quick-filter select,
+.dynamic-table-quick-filter input { width: 100%; }
 
 
 
@@ -818,14 +922,14 @@
  * The view picker doubles as the table's heading, the way a Dynamics view does:
  * the current view's name *is* the title, and it happens to be clickable.
  */
-.dt-view-picker {
+.dynamic-table-view-picker {
     display: inline-flex;
     align-items: center;
     gap: .45rem;
     max-width: 22rem;
     padding: .25rem .5rem;
     border: 1px solid transparent;
-    border-radius: var(--dt-radius);
+    border-radius: var(--dynamic-table-radius);
     background: none;
     color: inherit;
     font: inherit;
@@ -836,15 +940,15 @@
     transition: background-color .12s ease, border-color .12s ease;
 }
 
-.dt-view-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dynamic-table-view-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.dt-view-picker:hover,
-.dt-view-picker[aria-expanded='true'] {
-    background: var(--dt-hover);
-    border-color: var(--dt-border);
+.dynamic-table-view-picker:hover,
+.dynamic-table-view-picker[aria-expanded='true'] {
+    background: var(--dynamic-table-hover);
+    border-color: var(--dynamic-table-border);
 }
 
-.dt-view-picker:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 1px; }
+.dynamic-table-view-picker:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: 1px; }
 
 /*
  * The chevron is drawn, not typed.
@@ -854,17 +958,17 @@
  * arrow this replaces. Two borders rotated 45° are centred by the flex line and
  * behave the same everywhere.
  */
-.dt-caret {
+.dynamic-table-caret {
     flex: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     inline-size: 1em;
     block-size: 1em;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
 }
 
-.dt-caret::before {
+.dynamic-table-caret::before {
     content: '';
     inline-size: 6px;
     block-size: 6px;
@@ -877,7 +981,7 @@
 }
 
 /* Open: point at the menu it opened. */
-.dt-view-picker[aria-expanded='true'] .dt-caret::before {
+.dynamic-table-view-picker[aria-expanded='true'] .dynamic-table-caret::before {
     margin-block-start: 1px;
     transform: rotate(-135deg);
 }
@@ -886,144 +990,362 @@
 /* Grouping                                                         */
 /* ---------------------------------------------------------------- */
 
-.dt-group-row > td {
-    background: var(--dt-surface-2);
+.dynamic-table-group-row > td {
+    background: var(--dynamic-table-surface-2);
     font-size: .85rem;
     padding: .35rem .8rem;
     position: sticky;
     inset-inline-start: 0;
 }
 
-.dt-group-label { color: var(--dt-muted); }
+.dynamic-table-group-label { color: var(--dynamic-table-muted); }
 
-.dt-form { display: grid; gap: .75rem; }
-.dt-field { display: grid; gap: .25rem; }
-.dt-field-inline { display: flex; align-items: center; gap: .5rem; }
-.dt-field-label { font-size: .8rem; opacity: .8; }
-.dt-subtitle { margin: .75rem 0 .25rem; font-size: .85rem; font-weight: 600; }
-.dt-hint { font-size: .8rem; opacity: .7; margin: 0 0 .5rem; }
-.dt-error { color: var(--dt-danger); }
+.dynamic-table-form { display: grid; gap: .75rem; }
+.dynamic-table-field { display: grid; gap: .25rem; }
+.dynamic-table-field-inline { display: flex; align-items: center; gap: .5rem; }
+.dynamic-table-field-label { font-size: .8rem; opacity: .8; }
+.dynamic-table-subtitle { margin: .75rem 0 .25rem; font-size: .85rem; font-weight: 600; }
+.dynamic-table-hint { font-size: .8rem; opacity: .7; margin: 0 0 .5rem; }
+.dynamic-table-error { color: var(--dynamic-table-danger); }
 
 /* ---------------------------------------------------------------- */
 /* Filter builder                                                   */
 /* ---------------------------------------------------------------- */
 
-.dt-filter-group {
-    border: 1px solid var(--dt-border);
-    border-radius: var(--dt-radius);
-    padding: .6rem;
-    display: grid;
-    gap: .5rem;
+/*
+ * Nesting is drawn as a spine, not a tint.
+ *
+ * Two stacked background washes (4% and 7% of the accent) were the previous
+ * signal, and by the second level they were indistinguishable — on a dark
+ * scheme almost invisible. A rule down the inline-start edge, with the group's
+ * And/Or sitting on it, says the same thing structurally: this is a branch,
+ * and everything indented under the rule belongs to it. Logical properties, so
+ * the tree grows from the right in Arabic and Hebrew without a second rule.
+ */
+.dynamic-table-filter-group { display: grid; gap: .5rem; }
+
+.dynamic-table-filter-group:not(.dynamic-table-filter-depth-0) {
+    border-inline-start: 2px solid color-mix(in srgb, var(--dynamic-table-accent) 35%, var(--dynamic-table-border));
+    padding-inline-start: .9rem;
+    margin-inline-start: .25rem;
 }
 
-.dt-filter-depth-1 { background: color-mix(in srgb, var(--dt-accent) 4%, transparent); }
-.dt-filter-depth-2 { background: color-mix(in srgb, var(--dt-accent) 7%, transparent); }
+/* The trunk carries no rule; it is the whole tree, not a branch of it. */
+.dynamic-table-filter-depth-0 { gap: .6rem; }
 
-.dt-condition {
+/*
+ * The logic selector is the label on the branch, so it is sized like one — a
+ * chip, not a form control the width of the panel. The group's remove sits at
+ * the far end of the same line.
+ */
+.dynamic-table-filter-logic { display: flex; align-items: center; gap: .4rem; }
+
+.dynamic-table-filter-logic select {
+    inline-size: auto;
+    min-inline-size: 4.75rem;
+    font-weight: 600;
+    font-size: .8rem;
+    padding-block: .2rem;
+}
+
+.dynamic-table-filter-group-remove { margin-inline-start: auto; }
+
+/*
+ * A condition is one thing, so it is drawn as one thing.
+ *
+ * Stacked bare, three conditions were six loose rows of controls with nothing
+ * to say where one ended and the next began — worst in a drawer, where each
+ * takes two lines. The tint is the same faint surface the column rows use, so
+ * the two panels read as one family.
+ */
+.dynamic-table-condition {
     display: grid;
     grid-template-columns: minmax(8rem, 1.4fr) minmax(7rem, 1fr) minmax(8rem, 1.4fr) auto;
     gap: .4rem;
     align-items: center;
+    padding: .45rem;
+    border-radius: var(--dynamic-table-radius);
+    background: color-mix(in srgb, var(--dynamic-table-surface-2) 60%, transparent);
 }
 
+/*
+ * Narrow: two rows, not three.
+ *
+ * The field is the subject of the condition, so it takes the top line with the
+ * remove button beside it — the button removes the condition, and belongs with
+ * its heading rather than stranded on a line of its own. The operator and its
+ * value read as one phrase ("equals 42"), so they share the second line.
+ *
+ * Children are addressed by position because renderCondition() emits four
+ * unclassed controls: field, operator, value, remove.
+ */
 @media (max-width: 640px) {
-    .dt-condition { grid-template-columns: 1fr auto; }
+    .dynamic-table-condition {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+            'field field  remove'
+            'op    value  value';
+        row-gap: .35rem;
+    }
+
+    .dynamic-table-condition > :nth-child(1) { grid-area: field; }
+    .dynamic-table-condition > :nth-child(2) { grid-area: op; }
+    .dynamic-table-condition > :nth-child(3) { grid-area: value; min-inline-size: 0; }
+    .dynamic-table-condition > :nth-child(4) { grid-area: remove; }
 }
 
-.dt-condition-remove {
+/*
+ * Quiet until you mean it. A column of permanently red crosses reads as a
+ * column of errors; the row is not wrong, it is just removable.
+ */
+.dynamic-table-condition-remove {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 1.75rem;
+    block-size: 1.75rem;
+    flex: none;
     background: none;
     border: 0;
+    border-radius: var(--dynamic-table-radius);
     cursor: pointer;
-    font-size: 1.1rem;
+    font-size: 1rem;
     line-height: 1;
-    color: var(--dt-danger);
+    color: var(--dynamic-table-muted);
 }
 
-.dt-filter-range { display: flex; align-items: center; gap: .3rem; }
-.dt-filter-group-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
-.dt-filter-novalue { opacity: .5; }
+.dynamic-table-condition-remove:hover {
+    color: var(--dynamic-table-danger);
+    background: color-mix(in srgb, var(--dynamic-table-danger) 12%, transparent);
+}
+
+.dynamic-table-condition-remove:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: -2px; }
+
+.dynamic-table-filter-range { display: flex; align-items: center; gap: .3rem; }
+
+/* Set off from the conditions above them, so it is obvious which group a new
+   filter would join. */
+.dynamic-table-filter-group-actions {
+    display: flex;
+    gap: .4rem;
+    flex-wrap: wrap;
+    align-items: center;
+    padding-block-start: .1rem;
+}
+
+.dynamic-table-filter-novalue { opacity: .5; }
 
 /* ---------------------------------------------------------------- */
 /* Column picker                                                    */
 /* ---------------------------------------------------------------- */
 
-.dt-column-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .1rem; max-height: 22rem; overflow: auto; }
+.dynamic-table-column-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .25rem;
+    max-height: 22rem;
+    overflow: auto;
+    /*
+     * Rows are their own height, always.
+     *
+     * A grid stretches its auto rows to fill spare space, so in a full-height
+     * drawer seven columns were spread down the whole panel with a finger's
+     * gap between each.
+     */
+    align-content: start;
+}
 
-.dt-column-item {
+/*
+ * Each column is a thing you pick up and move, so each row is drawn as a thing:
+ * a faint surface with a radius, rather than a name floating on the panel.
+ * Faint on purpose — seven of these stack up, and the list has to stay a list.
+ */
+.dynamic-table-column-item {
     display: flex;
     align-items: center;
     gap: .5rem;
-    padding: .3rem .4rem;
-    border-radius: 4px;
+    padding: .3rem .45rem;
+    border-radius: var(--dynamic-table-radius);
+    background: color-mix(in srgb, var(--dynamic-table-surface-2) 65%, transparent);
+    /* Steady the row against the 1px the drop indicator adds, so the list does
+       not shuffle a pixel as you drag over it. */
+    border-block-start: 1px solid transparent;
 }
 
-.dt-column-item:hover { background: color-mix(in srgb, var(--dt-accent) 6%, transparent); }
-.dt-column-label { display: flex; align-items: center; gap: .5rem; flex: 1; cursor: pointer; }
-.dt-column-hint { font-size: .7rem; opacity: .6; }
+/*
+ * Not --dynamic-table-hover: it is the same value as surface-2 in the light
+ * scheme, so hovering a tinted row would change nothing.
+ */
+.dynamic-table-column-item:hover {
+    background: color-mix(in srgb, var(--dynamic-table-accent) 9%, var(--dynamic-table-surface-2));
+}
+.dynamic-table-column-label { display: flex; align-items: center; gap: .5rem; flex: 1; cursor: pointer; }
 
-.dt-column-actions {
+/* Which relation a column came through — "customer" on Customer Name. It is
+   provenance, not a value, so it sits apart from the name and stays quiet. */
+.dynamic-table-column-hint {
+    flex: none;
+    font-size: .68rem;
+    color: var(--dynamic-table-muted);
+    padding: .05rem .35rem;
+    border-radius: 999px;
+    background: var(--dynamic-table-surface-2);
+    max-inline-size: 8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/*
+ * The panel's two actions, weighted apart.
+ *
+ * They used to be a matched pair of accent-coloured links, which said they
+ * were equally important and equally safe. They are neither: one is the reason
+ * the panel exists, the other throws away the reader's arrangement.
+ */
+.dynamic-table-column-actions {
     display: flex;
-    flex-wrap: wrap;
-    gap: .9rem;
-    padding-bottom: .5rem;
-    margin-bottom: .35rem;
-    border-bottom: 1px solid var(--dt-border);
+    align-items: center;
+    gap: .5rem;
+    padding-bottom: .65rem;
+    margin-bottom: .5rem;
+    border-bottom: 1px solid var(--dynamic-table-border);
 }
 
-.dt-column-actions .dt-link-button { display: inline-flex; align-items: center; gap: .35rem; }
+.dynamic-table-column-add-button { display: inline-flex; align-items: center; gap: .4rem; }
+
+/* Optically centred: a "+" sits high in most faces at small sizes. */
+.dynamic-table-column-add-glyph {
+    font-size: 1.05em;
+    line-height: 1;
+    margin-block-start: -.05em;
+}
+
+/*
+ * The panels' second-class action: real, but never the reason anyone opened
+ * the panel. "Reset to default", "Download template", "Error report".
+ *
+ * Drawn as text rather than as a button because weight is how a panel says
+ * which control it expects to be used. Given the same padding and radius as a
+ * button anyway, so it still has a hit target and somewhere to show hover.
+ */
+.dynamic-table-quiet-button {
+    justify-self: start;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: .8rem;
+    color: var(--dynamic-table-muted);
+    padding: .3rem .5rem;
+    border-radius: var(--dynamic-table-radius);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.dynamic-table-quiet-button:hover { color: var(--dynamic-table-ink); background: var(--dynamic-table-hover); }
+.dynamic-table-quiet-button:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: -2px; }
+
+/* Same control, pushed to the far end where it cannot be hit by accident. */
+.dynamic-table-column-reset { margin-inline-start: auto; }
+
+/* The count belongs to the heading it qualifies, not to the list. */
+.dynamic-table-panel-heading {
+    display: flex;
+    align-items: baseline;
+    gap: .4rem;
+    margin: 0 0 .35rem;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--dynamic-table-muted);
+}
+
+.dynamic-table-panel-count {
+    font-weight: 600;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+}
 
 /* A type glyph per column, as Dynamics marks its list. Fixed width so the
    names line up rather than stepping in and out. */
-.dt-column-icon {
+.dynamic-table-column-icon {
     flex: none;
     display: inline-grid;
     place-items: center;
     min-width: 2.1rem;
     padding: .05rem .3rem;
-    border: 1px solid var(--dt-border);
+    border: 1px solid var(--dynamic-table-border);
     border-radius: 4px;
     font-size: .62rem;
     font-weight: 600;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
 }
 
-.dt-column-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dynamic-table-column-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.dt-column-remove {
+.dynamic-table-column-remove {
     flex: none;
+    display: inline-grid;
+    place-items: center;
+    inline-size: 1.6rem;
+    block-size: 1.6rem;
     border: 0;
     background: none;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
     font: inherit;
     line-height: 1;
-    padding: .15rem .3rem;
-    border-radius: 4px;
+    border-radius: var(--dynamic-table-radius);
     cursor: pointer;
+    /* Present but recessive until the row is under the pointer: a column of
+       crosses at full strength reads as a list of problems. */
+    opacity: .45;
+    transition: opacity .12s ease;
 }
 
-.dt-column-remove:hover { color: var(--dt-danger); background: color-mix(in srgb, var(--dt-danger) 10%, transparent); }
+.dynamic-table-column-item:hover .dynamic-table-column-remove,
+.dynamic-table-column-remove:focus-visible { opacity: 1; }
 
-.dt-column-add { display: grid; gap: .5rem; }
+.dynamic-table-column-remove:hover { color: var(--dynamic-table-danger); background: color-mix(in srgb, var(--dynamic-table-danger) 12%, transparent); }
+.dynamic-table-column-remove:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: -2px; }
 
-.dt-column-add-results { max-height: 24rem; overflow: auto; display: grid; gap: .05rem; }
+@media (prefers-reduced-motion: reduce) {
+    .dynamic-table-column-remove { transition: none; }
+}
 
-.dt-column-group {
+/* A pointer that cannot hover never earns the reveal, so never hide it. */
+@media (hover: none) {
+    .dynamic-table-column-remove { opacity: 1; }
+}
+
+.dynamic-table-column-add { display: grid; gap: .5rem; min-height: 0; }
+
+.dynamic-table-column-add-results {
+    max-height: 24rem;
+    overflow: auto;
+    display: grid;
+    gap: .05rem;
+    align-content: start;
+}
+
+.dynamic-table-column-group {
     margin: .5rem 0 .15rem;
     font-size: .68rem;
     font-weight: 700;
     letter-spacing: .05em;
     text-transform: uppercase;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
 }
 
-.dt-column-add-item {
+.dynamic-table-column-add-item {
     display: flex;
     align-items: center;
     gap: .5rem;
     width: 100%;
     padding: .35rem .4rem;
     border: 0;
-    border-radius: var(--dt-radius);
+    border-radius: var(--dynamic-table-radius);
     background: none;
     font: inherit;
     color: inherit;
@@ -1031,63 +1353,302 @@
     cursor: pointer;
 }
 
-.dt-column-add-item:hover { background: color-mix(in srgb, var(--dt-accent) 8%, transparent); }
-.dt-drag-handle { cursor: grab; opacity: .5; }
-.dt-dragging { opacity: .4; }
-.dt-drop-target { box-shadow: inset 0 2px 0 var(--dt-accent); }
+.dynamic-table-column-add-item:hover { background: color-mix(in srgb, var(--dynamic-table-accent) 8%, transparent); }
+.dynamic-table-drag-handle {
+    flex: none;
+    cursor: grab;
+    color: var(--dynamic-table-muted);
+    opacity: .45;
+    line-height: 1;
+}
+
+.dynamic-table-column-item:hover .dynamic-table-drag-handle { opacity: .8; }
+.dynamic-table-column-item:active .dynamic-table-drag-handle { cursor: grabbing; }
+.dynamic-table-dragging { opacity: .4; }
+
+/* On the row's leading edge, where the row will land — a rule, not a shadow,
+   so it reads as an insertion point. */
+.dynamic-table-drop-target { border-block-start-color: var(--dynamic-table-accent); }
 
 /* ---------------------------------------------------------------- */
 /* Inline editing                                                   */
 /* ---------------------------------------------------------------- */
 
-.dt-cell-editing { padding: .15rem !important; }
-.dt-cell-editing input,
-.dt-cell-editing select { width: 100%; }
-.dt-cell-saving { opacity: .6; }
-.dt-cell-saved { transition: background-color .4s ease; background: color-mix(in srgb, var(--dt-success) 18%, transparent); }
-.dt-cell-invalid { outline: 2px solid var(--dt-danger); outline-offset: -2px; }
-.dt-cell-error { display: block; font-size: .7rem; color: var(--dt-danger); }
-
-/* ---------------------------------------------------------------- */
-
-.dt-sheet { outline: none; }
-.dt-sheet-selected { background: color-mix(in srgb, var(--dt-accent) 12%, transparent); }
-.dt-sheet-cursor { outline: 2px solid var(--dt-accent); outline-offset: -2px; }
-.dt-sheet-dirty { background: color-mix(in srgb, var(--dt-warning) 16%, transparent); }
-
-.dt-sheet-bar {
-    position: sticky;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    gap: .5rem;
-    padding: .5rem .75rem;
-    border-top: 1px solid var(--dt-border);
-    background: var(--dt-surface);
-}
+.dynamic-table-cell-editing { padding: .15rem !important; }
+.dynamic-table-cell-editing input,
+.dynamic-table-cell-editing select { width: 100%; }
+.dynamic-table-cell-saving { opacity: .6; }
+.dynamic-table-cell-saved { transition: background-color .4s ease; background: color-mix(in srgb, var(--dynamic-table-success) 18%, transparent); }
+.dynamic-table-cell-invalid { outline: 2px solid var(--dynamic-table-danger); outline-offset: -2px; }
+.dynamic-table-cell-error { display: block; font-size: .7rem; color: var(--dynamic-table-danger); }
 
 /* ---------------------------------------------------------------- */
 /* Transfer                                                         */
 /* ---------------------------------------------------------------- */
 
-.dt-mapping { display: grid; gap: .35rem; max-height: 18rem; overflow: auto; }
-.dt-mapping-row { display: grid; grid-template-columns: 1fr auto 1fr; gap: .5rem; align-items: center; }
-.dt-mapping-source { font-weight: 600; font-size: .85rem; }
-.dt-preview { overflow: auto; max-height: 14rem; font-size: .8rem; }
-.dt-preview td, .dt-preview th { padding: .2rem .4rem; border: 1px solid var(--dt-border); white-space: nowrap; }
+/*
+ * What the export is about to hand you.
+ *
+ * The two selects underneath are the controls; this is the answer they add up
+ * to, and it is the one thing worth reading before clicking Export. It leads
+ * with the row count because that is what people check — a range for a page, a
+ * total for a filtered view, and plain words where there is no number the panel
+ * can honestly give.
+ *
+ * Deliberately not a preview of the rows: the reader is looking at those
+ * already, behind the panel.
+ */
+.dynamic-table-export-summary {
+    display: grid;
+    gap: .2rem;
+    padding: .7rem .8rem;
+    border: 1px solid var(--dynamic-table-border);
+    border-inline-start: 3px solid var(--dynamic-table-accent);
+    border-radius: var(--dynamic-table-radius);
+    background: color-mix(in srgb, var(--dynamic-table-surface-2) 60%, transparent);
+}
 
-.dt-progress { display: grid; gap: .25rem; }
-.dt-progress-track { height: .5rem; border-radius: 999px; background: var(--dt-border); overflow: hidden; }
-.dt-progress-bar { height: 100%; width: 0; background: var(--dt-accent); transition: width .3s ease; }
-.dt-progress-label { font-size: .75rem; opacity: .75; }
+.dynamic-table-export-headline { display: flex; align-items: center; gap: .5rem; }
+
+.dynamic-table-export-rows {
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    color: var(--dynamic-table-ink);
+}
+
+/* The extension, as a stamp on the file rather than as another line of text. */
+.dynamic-table-export-format {
+    margin-inline-start: auto;
+    flex: none;
+    padding: .1rem .45rem;
+    border-radius: 999px;
+    background: var(--dynamic-table-accent);
+    color: var(--dynamic-table-accent-ink);
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+}
+
+.dynamic-table-export-caption { margin: 0; font-size: .8rem; color: var(--dynamic-table-muted); }
+
+/* Every column named, but never more than two lines of them: the count is the
+   fact, the names are the reassurance. */
+.dynamic-table-export-columns {
+    margin: .3rem 0 0;
+    padding-block-start: .4rem;
+    border-block-start: 1px solid var(--dynamic-table-border);
+    font-size: .75rem;
+    line-height: 1.45;
+    color: var(--dynamic-table-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/*
+ * The import steps.
+ *
+ * A numbered rail, which the content earns: you cannot map a file you have not
+ * chosen, and the panel enforces that by holding steps back rather than by
+ * hiding them. The line down the rail is the one the filter panel draws beside
+ * a nested group — same recipe, so the two panels read as one family.
+ */
+.dynamic-table-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .25rem;
+}
+
+.dynamic-table-step {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.4rem minmax(0, 1fr);
+    column-gap: .7rem;
+    padding-block-end: 1rem;
+}
+
+.dynamic-table-step:last-child { padding-block-end: 0; }
+
+/* The line runs from under one marker to the top of the next, so the rail is
+   continuous through the gap between steps. Centred with a logical inset, so
+   it is on the correct side in Arabic and Hebrew without a second rule. */
+.dynamic-table-step:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    inset-block: 1.65rem .1rem;
+    inset-inline-start: calc(.7rem - 1px);
+    inline-size: 2px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--dynamic-table-accent) 35%, var(--dynamic-table-border));
+}
+
+.dynamic-table-step-marker {
+    inline-size: 1.4rem;
+    block-size: 1.4rem;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid var(--dynamic-table-border);
+    background: var(--dynamic-table-surface-2);
+    color: var(--dynamic-table-muted);
+    font-size: .7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+.dynamic-table-step-body { min-inline-size: 0; display: grid; gap: .4rem; align-content: start; }
+
+.dynamic-table-step-title {
+    margin: 0;
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    line-height: 1.4rem;
+    color: var(--dynamic-table-ink);
+}
+
+/* Done: said once, by the marker. The body stays ordinary — a finished step is
+   still where you go to change your mind. */
+.dynamic-table-step-done .dynamic-table-step-marker {
+    background: var(--dynamic-table-accent);
+    border-color: var(--dynamic-table-accent);
+    color: var(--dynamic-table-accent-ink);
+}
+
+.dynamic-table-step-current .dynamic-table-step-marker {
+    border-color: var(--dynamic-table-accent);
+    color: var(--dynamic-table-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--dynamic-table-accent) 15%, transparent);
+}
+
+/* Waiting: not hidden, so the panel says up front what it will ask for. */
+.dynamic-table-step-waiting .dynamic-table-step-title { color: var(--dynamic-table-muted); }
+
+.dynamic-table-step-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .5rem; }
+
+/*
+ * Heading on the left, column on the right, one row each.
+ *
+ * The source is the fixed half — it is what the file says and cannot be
+ * changed — so it takes its width from its content and the select gets the
+ * rest, rather than the two splitting the panel down the middle.
+ */
+.dynamic-table-mapping {
+    display: grid;
+    gap: .2rem;
+    max-height: 18rem;
+    overflow: auto;
+    padding: .3rem;
+    border-radius: var(--dynamic-table-radius);
+    background: color-mix(in srgb, var(--dynamic-table-surface-2) 60%, transparent);
+}
+
+.dynamic-table-mapping-row {
+    display: grid;
+    grid-template-columns: minmax(5rem, 11rem) auto minmax(0, 1fr);
+    gap: .5rem;
+    align-items: center;
+    padding: .2rem .3rem;
+    border-radius: var(--dynamic-table-radius);
+}
+
+.dynamic-table-mapping-row:hover { background: color-mix(in srgb, var(--dynamic-table-accent) 9%, var(--dynamic-table-surface-2)); }
+
+.dynamic-table-mapping-source {
+    font-weight: 600;
+    font-size: .8rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dynamic-table-mapping-arrow { color: var(--dynamic-table-muted); font-size: .8rem; }
+
+/*
+ * A row feeding a column the file cannot leave empty, marked on its leading
+ * edge. Every row carries the transparent border so marking one does not move
+ * the other three.
+ */
+.dynamic-table-mapping-row { border-inline-start: 2px solid transparent; }
+.dynamic-table-mapping-required { border-inline-start-color: color-mix(in srgb, var(--dynamic-table-accent) 55%, transparent); }
+
+/*
+ * A sample of the file, not a second table. Rules between rows only, and the
+ * heading row stays put while the sample scrolls sideways.
+ */
+.dynamic-table-preview {
+    overflow: auto;
+    max-height: 14rem;
+    font-size: .78rem;
+    border: 1px solid var(--dynamic-table-border);
+    border-radius: var(--dynamic-table-radius);
+}
+
+.dynamic-table-preview table { border-collapse: collapse; inline-size: 100%; font-size: inherit; }
+
+.dynamic-table-preview th,
+.dynamic-table-preview td {
+    padding: .3rem .5rem;
+    border: 0;
+    border-block-end: 1px solid var(--dynamic-table-border);
+    white-space: nowrap;
+    text-align: start;
+}
+
+.dynamic-table-preview thead th {
+    position: sticky;
+    inset-block-start: 0;
+    background: var(--dynamic-table-surface-2);
+    color: var(--dynamic-table-muted);
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.dynamic-table-preview tbody tr:last-child td { border-block-end: 0; }
+
+.dynamic-table-progress { display: grid; gap: .25rem; }
+.dynamic-table-progress-track { height: .5rem; border-radius: 999px; background: var(--dynamic-table-border); overflow: hidden; }
+.dynamic-table-progress-bar { height: 100%; width: 0; background: var(--dynamic-table-accent); transition: width .3s ease; }
+.dynamic-table-progress-label { font-size: .75rem; opacity: .75; }
+
+.dynamic-table-status:not(:empty) {
+    display: grid;
+    gap: .35rem;
+    justify-items: start;
+    padding: .6rem .7rem;
+    border-radius: var(--dynamic-table-radius);
+    background: color-mix(in srgb, var(--dynamic-table-surface-2) 70%, transparent);
+}
+
+.dynamic-table-status > p { margin: 0; }
+.dynamic-table-status-summary { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Which rows an import rejected, and why. Scrolls rather than growing the
+   dialog past the viewport when a whole file is wrong. */
+.dynamic-table-import-errors {
+    margin: .25rem 0 0;
+    padding-inline-start: 1.1rem;
+    max-height: 10rem;
+    overflow: auto;
+    font-size: .8rem;
+    color: var(--dynamic-table-danger);
+}
 
 /* ---------------------------------------------------------------- */
 /* Saved views manager                                              */
 /* ---------------------------------------------------------------- */
 
-.dt-views { display: grid; gap: .15rem; }
+.dynamic-table-views { display: grid; gap: .15rem; }
 
-.dt-view-row {
+.dynamic-table-view-row {
     display: flex;
     align-items: center;
     gap: .5rem;
@@ -1095,26 +1656,26 @@
     border-radius: 7px;
 }
 
-.dt-view-row:hover { background: var(--dt-hover); }
-.dt-view-row.is-active { background: var(--dt-selected); }
+.dynamic-table-view-row:hover { background: var(--dynamic-table-hover); }
+.dynamic-table-view-row.is-active { background: var(--dynamic-table-selected); }
 
-.dt-view-star {
+.dynamic-table-view-star {
     flex: none;
     width: 1.75rem; height: 1.75rem;
     display: grid; place-items: center;
     border: 0; border-radius: 6px;
     background: none; cursor: pointer;
     font-size: 1rem; line-height: 1;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
 }
 
-.dt-view-star.is-default { color: var(--dt-warning); }
-.dt-view-star:disabled { opacity: .35; cursor: default; }
-.dt-view-star:hover:not(:disabled) { background: var(--dt-surface-2); }
+.dynamic-table-view-star.is-default { color: var(--dynamic-table-warning); }
+.dynamic-table-view-star:disabled { opacity: .35; cursor: default; }
+.dynamic-table-view-star:hover:not(:disabled) { background: var(--dynamic-table-surface-2); }
 
-.dt-view-icon { flex: none; width: 1.35rem; text-align: center; font-size: .9rem; }
+.dynamic-table-view-icon { flex: none; width: 1.35rem; text-align: center; font-size: .9rem; }
 
-.dt-view-name {
+.dynamic-table-view-name {
     flex: 1;
     display: grid;
     text-align: start;
@@ -1123,49 +1684,49 @@
     padding: .1rem 0;
 }
 
-.dt-view-owner { color: var(--dt-muted); font-size: .72rem; }
+.dynamic-table-view-owner { color: var(--dynamic-table-muted); font-size: .72rem; }
 
 /* ---------------------------------------------------------------- */
 /* Sharing a view                                                   */
 /* ---------------------------------------------------------------- */
 
-.dt-share-list { display: flex; flex-wrap: wrap; gap: .3rem; }
+.dynamic-table-share-list { display: flex; flex-wrap: wrap; gap: .3rem; }
 
-.dt-share-pill {
+.dynamic-table-share-pill {
     display: inline-flex; align-items: center; gap: .35rem;
     padding: .15rem .3rem .15rem .6rem;
     border-radius: 999px;
-    background: var(--dt-selected);
+    background: var(--dynamic-table-selected);
     font-size: .8rem;
 }
 
-.dt-share-pill button {
+.dynamic-table-share-pill button {
     border: 0; background: none; cursor: pointer;
     font: inherit; line-height: 1; color: inherit;
     padding: 0 .2rem; opacity: .7;
 }
 
-.dt-share-pill button:hover { opacity: 1; color: var(--dt-danger); }
+.dynamic-table-share-pill button:hover { opacity: 1; color: var(--dynamic-table-danger); }
 
-.dt-share-results { display: grid; gap: 1px; max-height: 12rem; overflow: auto; }
+.dynamic-table-share-results { display: grid; gap: 1px; max-height: 12rem; overflow: auto; }
 
-.dt-share-candidate {
+.dynamic-table-share-candidate {
     border: 0; background: none; cursor: pointer;
     font: inherit; text-align: start;
     padding: .35rem .5rem; border-radius: 6px; color: inherit;
 }
 
-.dt-share-candidate:hover { background: var(--dt-hover); }
+.dynamic-table-share-candidate:hover { background: var(--dynamic-table-hover); }
 
-.dt-view-action {
+.dynamic-table-view-action {
     border: 0; background: none; cursor: pointer;
     font: inherit; font-size: .78rem;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
     padding: .15rem .35rem; border-radius: 5px;
 }
 
-.dt-view-action:hover { background: var(--dt-surface-2); color: var(--dt-ink); }
-.dt-view-action-danger:hover { color: var(--dt-danger); }
+.dynamic-table-view-action:hover { background: var(--dynamic-table-surface-2); color: var(--dynamic-table-ink); }
+.dynamic-table-view-action-danger:hover { color: var(--dynamic-table-danger); }
 
 /* ---------------------------------------------------------------- */
 /* Responsive: collapsing columns into a child row                  */
@@ -1173,26 +1734,26 @@
 
 /* Hidden by the responsive module, never by a media query: which columns fit
    depends on how many there are and how wide they are, not on device width. */
-.dt-col-hidden { display: none !important; }
+.dynamic-table-col-hidden { display: none !important; }
 
-.dt-control-cell { width: 2.5rem; text-align: center; padding-inline: .35rem; }
+.dynamic-table-control-cell { width: 2.5rem; text-align: center; padding-inline: .35rem; }
 
-.dt-control {
+.dynamic-table-control {
     width: 1.35rem; height: 1.35rem;
     display: inline-grid; place-items: center;
-    border: 1px solid var(--dt-accent);
+    border: 1px solid var(--dynamic-table-accent);
     border-radius: 999px;
-    background: var(--dt-accent);
-    color: var(--dt-accent-ink);
+    background: var(--dynamic-table-accent);
+    color: var(--dynamic-table-accent-ink);
     font: inherit; font-size: .85rem; line-height: 1;
     cursor: pointer;
 }
 
-.dt-control:focus-visible { outline: 2px solid var(--dt-accent); outline-offset: 2px; }
+.dynamic-table-control:focus-visible { outline: 2px solid var(--dynamic-table-accent); outline-offset: 2px; }
 
-.dt-child > td { padding: .5rem .9rem .8rem; background: var(--dt-surface-2); }
+.dynamic-table-child > td { padding: .5rem .9rem .8rem; background: var(--dynamic-table-surface-2); }
 
-.dt-child-list {
+.dynamic-table-child-list {
     margin: 0;
     display: grid;
     grid-template-columns: minmax(6rem, auto) 1fr;
@@ -1200,29 +1761,29 @@
     font-size: .85rem;
 }
 
-.dt-child-list dt { color: var(--dt-muted); font-weight: 500; }
-.dt-child-list dd { margin: 0; }
+.dynamic-table-child-list dt { color: var(--dynamic-table-muted); font-weight: 500; }
+.dynamic-table-child-list dd { margin: 0; }
 
 @media (max-width: 480px) {
-    .dt-child-list { grid-template-columns: 1fr; gap: .1rem; }
-    .dt-child-list dd { margin-bottom: .4rem; }
+    .dynamic-table-child-list { grid-template-columns: 1fr; gap: .1rem; }
+    .dynamic-table-child-list dd { margin-bottom: .4rem; }
 }
 
 /* ---------------------------------------------------------------- */
 /* Responsive: cards                                                */
 /* ---------------------------------------------------------------- */
 
-.dt-responsive-cards .dt-thead { display: none; }
-.dt-responsive-cards .dt-table,
-.dt-responsive-cards .dt-tbody,
-.dt-responsive-cards .dt-row { display: block; width: 100%; }
+.dynamic-table-responsive-cards .dynamic-table-thead { display: none; }
+.dynamic-table-responsive-cards .dynamic-table-table,
+.dynamic-table-responsive-cards .dynamic-table-tbody,
+.dynamic-table-responsive-cards .dynamic-table-row { display: block; width: 100%; }
 
-.dt-responsive-cards .dt-row {
+.dynamic-table-responsive-cards .dynamic-table-row {
     padding: .6rem .2rem;
-    border-top: 1px solid var(--dt-border);
+    border-top: 1px solid var(--dynamic-table-border);
 }
 
-.dt-responsive-cards .dt-cell {
+.dynamic-table-responsive-cards .dynamic-table-cell {
     display: grid;
     grid-template-columns: 40% 60%;
     gap: .5rem;
@@ -1230,25 +1791,25 @@
     padding: .15rem .4rem;
 }
 
-.dt-responsive-cards .dt-cell::before {
+.dynamic-table-responsive-cards .dynamic-table-cell::before {
     content: attr(data-label);
     font-size: .75rem;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
 }
 
-.dt-responsive-cards .dt-select-cell { grid-template-columns: 1fr; }
-.dt-responsive-cards .dt-select-cell::before { content: none; }
+.dynamic-table-responsive-cards .dynamic-table-select-cell { grid-template-columns: 1fr; }
+.dynamic-table-responsive-cards .dynamic-table-select-cell::before { content: none; }
 
 /* RTL is handled by logical properties throughout; this only mirrors icons. */
-.dt[dir='rtl'] .dt-sort-icon { transform: scaleX(-1); }
+.dynamic-table[dir='rtl'] .dynamic-table-sort-icon { transform: scaleX(-1); }
 
 /* ---------------------------------------------------------------- */
 /* Empty states                                                     */
 /* ---------------------------------------------------------------- */
 
-.dt .dt-empty-state { display: grid; justify-items: center; gap: .5rem; }
-.dt .dt-empty-title { margin: 0; font-weight: 600; }
-.dt .dt-empty-hint { margin: 0; color: var(--dt-muted); font-size: .9em; }
+.dynamic-table .dynamic-table-empty-state { display: grid; justify-items: center; gap: .5rem; }
+.dynamic-table .dynamic-table-empty-title { margin: 0; font-weight: 600; }
+.dynamic-table .dynamic-table-empty-hint { margin: 0; color: var(--dynamic-table-muted); font-size: .9em; }
 
 /* ---------------------------------------------------------------- */
 /* Cell renderers                                                   */
@@ -1257,59 +1818,59 @@
 /* All server-rendered, all built from tokens, none of them needing a library
    or a line of JavaScript. */
 
-.dt .dt-progress { display: flex; align-items: center; gap: .5rem; min-inline-size: 7rem; }
+.dynamic-table .dynamic-table-progress { display: flex; align-items: center; gap: .5rem; min-inline-size: 7rem; }
 
-.dt .dt-progress-track {
+.dynamic-table .dynamic-table-progress-track {
     flex: 1;
     block-size: .45rem;
     border-radius: 999px;
-    background: var(--dt-border);
+    background: var(--dynamic-table-border);
     overflow: hidden;
 }
 
-.dt .dt-progress-bar {
+.dynamic-table .dynamic-table-progress-bar {
     display: block;
     block-size: 100%;
     border-radius: 999px;
-    background: var(--dt-accent);
+    background: var(--dynamic-table-accent);
 }
 
-.dt .dt-progress-value { font-variant-numeric: tabular-nums; font-size: .85em; color: var(--dt-muted); }
+.dynamic-table .dynamic-table-progress-value { font-variant-numeric: tabular-nums; font-size: .85em; color: var(--dynamic-table-muted); }
 
-.dt .dt-rating-stars { color: var(--dt-warning); letter-spacing: .05em; }
+.dynamic-table .dynamic-table-rating-stars { color: var(--dynamic-table-warning); letter-spacing: .05em; }
 
-.dt .dt-sparkline { display: inline-flex; align-items: center; gap: .5rem; }
+.dynamic-table .dynamic-table-sparkline { display: inline-flex; align-items: center; gap: .5rem; }
 
-.dt .dt-sparkline svg {
+.dynamic-table .dynamic-table-sparkline svg {
     inline-size: 4.5rem;
     block-size: 1.25rem;
     overflow: visible;
 }
 
-.dt .dt-sparkline polyline {
+.dynamic-table .dynamic-table-sparkline polyline {
     fill: none;
-    stroke: var(--dt-accent);
+    stroke: var(--dynamic-table-accent);
     stroke-width: 1.5;
     stroke-linecap: round;
     stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
 }
 
-.dt .dt-sparkline-value { font-variant-numeric: tabular-nums; font-size: .85em; color: var(--dt-muted); }
+.dynamic-table .dynamic-table-sparkline-value { font-variant-numeric: tabular-nums; font-size: .85em; color: var(--dynamic-table-muted); }
 
-.dt .dt-chips { display: inline-flex; flex-wrap: wrap; gap: .25rem; }
+.dynamic-table .dynamic-table-chips { display: inline-flex; flex-wrap: wrap; gap: .25rem; }
 
-.dt .dt-chips .dt-chip {
+.dynamic-table .dynamic-table-chips .dynamic-table-chip {
     padding: .05rem .45rem;
-    border: 1px solid var(--dt-border);
+    border: 1px solid var(--dynamic-table-border);
     border-radius: 999px;
-    background: var(--dt-surface-2);
+    background: var(--dynamic-table-surface-2);
     font-size: .78em;
 }
 
-.dt .dt-chip-more { color: var(--dt-muted); }
+.dynamic-table .dynamic-table-chip-more { color: var(--dynamic-table-muted); }
 
-.dt .dt-avatar {
+.dynamic-table .dynamic-table-avatar {
     inline-size: 1.75rem;
     block-size: 1.75rem;
     border-radius: 50%;
@@ -1323,82 +1884,82 @@
 
 /* Sticky to the bottom of the scroll area: a total you have to scroll to find
    is a total nobody reads. */
-.dt .dt-tfoot .dt-summary-row > td {
+.dynamic-table .dynamic-table-tfoot .dynamic-table-summary-row > td {
     position: sticky;
     bottom: 0;
     z-index: 2;
-    background: var(--dt-surface-2);
-    border-top: 1px solid var(--dt-border);
+    background: var(--dynamic-table-surface-2);
+    border-top: 1px solid var(--dynamic-table-border);
     font-weight: 600;
     white-space: nowrap;
 }
 
-.dt .dt-summary-label {
+.dynamic-table .dynamic-table-summary-label {
     display: block;
     font-size: .68em;
     font-weight: 500;
     letter-spacing: .04em;
     text-transform: uppercase;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
 }
 
-.dt .dt-summary-value { font-variant-numeric: tabular-nums; }
+.dynamic-table .dynamic-table-summary-value { font-variant-numeric: tabular-nums; }
 
 /* ---------------------------------------------------------------- */
 /* Row detail expander                                              */
 /* ---------------------------------------------------------------- */
 
-.dt .dt-expand-cell {
+.dynamic-table .dynamic-table-expand-cell {
     width: 2.25rem;
     padding-inline: 0.25rem;
     text-align: center;
 }
 
-.dt .dt-expand {
+.dynamic-table .dynamic-table-expand {
     border: 0;
     background: none;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
     cursor: pointer;
     font-size: 1.1em;
     line-height: 1;
     padding: 0.25rem;
-    border-radius: var(--dt-radius);
+    border-radius: var(--dynamic-table-radius);
     transition: transform 120ms ease;
 }
 
-.dt .dt-expand:hover {
-    color: var(--dt-ink);
-    background: var(--dt-hover);
+.dynamic-table .dynamic-table-expand:hover {
+    color: var(--dynamic-table-ink);
+    background: var(--dynamic-table-hover);
 }
 
 /* Points along the reading direction when closed, down when open. */
-.dt .dt-expand-open {
+.dynamic-table .dynamic-table-expand-open {
     transform: rotate(90deg);
-    color: var(--dt-ink);
+    color: var(--dynamic-table-ink);
 }
 
-.dt[dir='rtl'] .dt-expand {
+.dynamic-table[dir='rtl'] .dynamic-table-expand {
     transform: rotate(180deg);
 }
 
-.dt[dir='rtl'] .dt-expand-open {
+.dynamic-table[dir='rtl'] .dynamic-table-expand-open {
     transform: rotate(90deg);
 }
 
-.dt .dt-detail-row > td {
-    background: var(--dt-surface-2);
-    border-bottom: 1px solid var(--dt-border);
+.dynamic-table .dynamic-table-detail-row > td {
+    background: var(--dynamic-table-surface-2);
+    border-bottom: 1px solid var(--dynamic-table-border);
     padding: 0.85rem 1rem;
 }
 
-.dt .dt-detail-loading,
-.dt .dt-detail-error {
-    color: var(--dt-muted);
+.dynamic-table .dynamic-table-detail-loading,
+.dynamic-table .dynamic-table-detail-error {
+    color: var(--dynamic-table-muted);
     font-size: 0.9em;
 }
 
-.dt .dt-detail-error {
-    color: var(--dt-danger);
+.dynamic-table .dynamic-table-detail-error {
+    color: var(--dynamic-table-danger);
 }
 
 /* ---------------------------------------------------------------- */
@@ -1407,51 +1968,51 @@
 
 /* Offsets are measured by the sticky module and written as logical insets, so
    the same rules freeze the correct edge in RTL. */
-.dt .dt-sticky-cell {
+.dynamic-table .dynamic-table-sticky-cell {
     position: sticky;
     z-index: 2;
-    background: var(--dt-surface);
+    background: var(--dynamic-table-surface);
 }
 
-.dt .dt-thead .dt-sticky-cell {
+.dynamic-table .dynamic-table-thead .dynamic-table-sticky-cell {
     z-index: 4;
-    background: var(--dt-surface-2);
+    background: var(--dynamic-table-surface-2);
 }
 
 /* Frozen and sticky at once, but still below the header row it hangs from. */
-.dt .dt-thead .dt-filter-row .dt-sticky-cell { z-index: 3; }
+.dynamic-table .dynamic-table-thead .dynamic-table-filter-row .dynamic-table-sticky-cell { z-index: 3; }
 
-.dt .dt-row:hover .dt-sticky-cell {
-    background: var(--dt-hover);
+.dynamic-table .dynamic-table-row:hover .dynamic-table-sticky-cell {
+    background: var(--dynamic-table-hover);
 }
 
-.dt .dt-row-selected .dt-sticky-cell {
-    background: var(--dt-selected);
+.dynamic-table .dynamic-table-row-selected .dynamic-table-sticky-cell {
+    background: var(--dynamic-table-selected);
 }
 
 /* One divider at the boundary, not between every frozen column. */
-.dt [data-dt-sticky-last] {
-    box-shadow: 1px 0 0 var(--dt-border), 4px 0 6px -4px rgb(15 23 42 / 0.18);
+.dynamic-table [data-dynamic-table-sticky-last] {
+    box-shadow: 1px 0 0 var(--dynamic-table-border), 4px 0 6px -4px rgb(15 23 42 / 0.18);
 }
 
-.dt[dir='rtl'] [data-dt-sticky-last] {
-    box-shadow: -1px 0 0 var(--dt-border), -4px 0 6px -4px rgb(15 23 42 / 0.18);
+.dynamic-table[dir='rtl'] [data-dynamic-table-sticky-last] {
+    box-shadow: -1px 0 0 var(--dynamic-table-border), -4px 0 6px -4px rgb(15 23 42 / 0.18);
 }
 
-.dt .dt-sticky-end {
-    box-shadow: -1px 0 0 var(--dt-border), -4px 0 6px -4px rgb(15 23 42 / 0.18);
+.dynamic-table .dynamic-table-sticky-end {
+    box-shadow: -1px 0 0 var(--dynamic-table-border), -4px 0 6px -4px rgb(15 23 42 / 0.18);
 }
 
 /* ---------------------------------------------------------------- */
 /* Infinite scrolling                                               */
 /* ---------------------------------------------------------------- */
 
-.dt .dt-sentinel {
+.dynamic-table .dynamic-table-sentinel {
     height: 1px;
 }
 
 /* Page numbers mean nothing when the pages are stitched together. */
-.dt [data-dt-infinite] .dt-pagination {
+.dynamic-table [data-dynamic-table-infinite] .dynamic-table-pagination {
     display: none;
 }
 
@@ -1459,41 +2020,33 @@
 /* Inline create and bulk edit                                      */
 /* ---------------------------------------------------------------- */
 
-.dt .dt-new-row > td {
-    background: var(--dt-selected);
+.dynamic-table .dynamic-table-new-row > td {
+    background: var(--dynamic-table-selected);
     vertical-align: middle;
 }
 
-.dt .dt-new-row .dt-row-actions-cell {
+.dynamic-table .dynamic-table-new-row .dynamic-table-row-actions-cell {
     white-space: nowrap;
     display: flex;
     gap: 0.35rem;
 }
 
-.dt .dt-bulk-field .dt-field-label {
+.dynamic-table .dynamic-table-bulk-field .dynamic-table-field-label {
     display: flex;
     align-items: center;
     gap: 0.4rem;
 }
 
-.dt .dt-hint {
-    color: var(--dt-muted);
+.dynamic-table .dynamic-table-hint {
+    color: var(--dynamic-table-muted);
     font-size: 0.9em;
     margin: 0 0 0.5rem;
 }
 
-.dt .dt-form-errors:not(:empty) {
-    color: var(--dt-danger);
+.dynamic-table .dynamic-table-form-errors:not(:empty) {
+    color: var(--dynamic-table-danger);
     font-size: 0.9em;
     margin-top: 0.5rem;
-}
-
-/* A count beside a filter option: how many rows that choice would keep. */
-.dt .dt-facet-count {
-    color: var(--dt-muted);
-    font-variant-numeric: tabular-nums;
-    margin-inline-start: auto;
-    font-size: 0.85em;
 }
 
 /* ---------------------------------------------------------------- */
@@ -1502,125 +2055,125 @@
 
 /* These two need no Bootstrap and no Tailwind: every class they name is
    defined here, on the same tokens as everything else, so they are readable in
-   light and dark and follow data-dt-scheme like the rest. */
+   light and dark and follow data-dynamic-table-scheme like the rest. */
 
-.dt-minimal {
-    background: var(--dt-surface);
-    border-radius: var(--dt-radius);
+.dynamic-table-minimal {
+    background: var(--dynamic-table-surface);
+    border-radius: var(--dynamic-table-radius);
 }
 
-.dt-minimal .dt-toolbar {
+.dynamic-table-minimal .dynamic-table-toolbar {
     padding: 0.65rem 0.75rem;
     gap: 0.5rem;
-    border-bottom: 1px solid var(--dt-border);
+    border-bottom: 1px solid var(--dynamic-table-border);
 }
 
-.dt-minimal .dt-button {
+.dynamic-table-minimal .dynamic-table-button {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
     padding: 0.35rem 0.7rem;
     font: inherit;
     font-size: 0.9em;
-    color: var(--dt-ink);
-    background: var(--dt-surface);
-    border: 1px solid var(--dt-border);
-    border-radius: var(--dt-radius);
+    color: var(--dynamic-table-ink);
+    background: var(--dynamic-table-surface);
+    border: 1px solid var(--dynamic-table-border);
+    border-radius: var(--dynamic-table-radius);
     cursor: pointer;
 }
 
-.dt-minimal .dt-button:hover:not(:disabled) {
-    background: var(--dt-hover);
+.dynamic-table-minimal .dynamic-table-button:hover:not(:disabled) {
+    background: var(--dynamic-table-hover);
 }
 
-.dt-minimal .dt-button:disabled {
+.dynamic-table-minimal .dynamic-table-button:disabled {
     opacity: 0.5;
     cursor: default;
 }
 
-.dt-minimal .dt-button-primary {
-    background: var(--dt-accent);
-    border-color: var(--dt-accent);
-    color: var(--dt-accent-ink);
+.dynamic-table-minimal .dynamic-table-button-primary {
+    background: var(--dynamic-table-accent);
+    border-color: var(--dynamic-table-accent);
+    color: var(--dynamic-table-accent-ink);
 }
 
-.dt-minimal .dt-button-danger {
-    background: var(--dt-danger);
-    border-color: var(--dt-danger);
-    color: var(--dt-accent-ink);
+.dynamic-table-minimal .dynamic-table-button-danger {
+    background: var(--dynamic-table-danger);
+    border-color: var(--dynamic-table-danger);
+    color: var(--dynamic-table-accent-ink);
 }
 
-.dt-minimal .dt-input,
-.dt-minimal .dt-select {
+.dynamic-table-minimal .dynamic-table-input,
+.dynamic-table-minimal .dynamic-table-select {
     font: inherit;
     font-size: 0.9em;
-    color: var(--dt-ink);
-    background: var(--dt-surface);
-    border: 1px solid var(--dt-border);
-    border-radius: var(--dt-radius);
+    color: var(--dynamic-table-ink);
+    background: var(--dynamic-table-surface);
+    border: 1px solid var(--dynamic-table-border);
+    border-radius: var(--dynamic-table-radius);
     padding: 0.35rem 0.5rem;
 }
 
-.dt-minimal .dt-search {
+.dynamic-table-minimal .dynamic-table-search {
     min-width: 14rem;
 }
 
-.dt-minimal .dt-input:focus,
-.dt-minimal .dt-select:focus {
-    outline: 2px solid color-mix(in srgb, var(--dt-accent) 45%, transparent);
+.dynamic-table-minimal .dynamic-table-input:focus,
+.dynamic-table-minimal .dynamic-table-select:focus {
+    outline: 2px solid color-mix(in srgb, var(--dynamic-table-accent) 45%, transparent);
     outline-offset: 1px;
 }
 
-.dt-minimal .dt-th {
+.dynamic-table-minimal .dynamic-table-th {
     padding: 0.6rem 0.75rem;
     font-size: 0.78em;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
     white-space: nowrap;
 }
 
-.dt-minimal .dt-cell {
+.dynamic-table-minimal .dynamic-table-cell {
     padding: 0.65rem 0.75rem;
 }
 
-.dt-minimal .dt-footer {
+.dynamic-table-minimal .dynamic-table-footer {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
-    border-top: 1px solid var(--dt-border);
+    border-top: 1px solid var(--dynamic-table-border);
     font-size: 0.9em;
 }
 
-.dt-minimal .dt-empty {
+.dynamic-table-minimal .dynamic-table-empty {
     padding: 3rem 0.75rem;
     text-align: center;
-    color: var(--dt-muted);
+    color: var(--dynamic-table-muted);
 }
 
 /* Bordered: the same theme ruled like a spreadsheet, for wide numeric grids. */
-.dt-bordered .dt-table {
-    border: 1px solid var(--dt-border);
+.dynamic-table-bordered .dynamic-table-table {
+    border: 1px solid var(--dynamic-table-border);
     border-inline-end: 0;
     border-block-end: 0;
 }
 
 /* Borders on two edges only: with separate borders, four would draw every
    internal line twice. */
-.dt-bordered .dt-th,
-.dt-bordered .dt-cell {
-    border-inline-end: 1px solid var(--dt-border);
-    border-block-end: 1px solid var(--dt-border);
+.dynamic-table-bordered .dynamic-table-th,
+.dynamic-table-bordered .dynamic-table-cell {
+    border-inline-end: 1px solid var(--dynamic-table-border);
+    border-block-end: 1px solid var(--dynamic-table-border);
     padding: 0.4rem 0.55rem;
 }
 
-.dt-bordered .dt-th {
+.dynamic-table-bordered .dynamic-table-th {
     text-transform: none;
     font-size: 0.85em;
     letter-spacing: 0;
-    color: var(--dt-ink);
-    background: var(--dt-surface-2);
+    color: var(--dynamic-table-ink);
+    background: var(--dynamic-table-surface-2);
 }

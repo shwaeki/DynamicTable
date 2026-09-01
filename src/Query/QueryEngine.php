@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Shwaeki\DynamicTable\Columns\ColumnDefinition;
 use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Filters\FilterEngine;
@@ -97,7 +96,15 @@ class QueryEngine
             return [];
         }
 
-        $query = $this->build($table, $state)->reorder();
+        /*
+         * The same filtered set as the page, but without its eager loads.
+         *
+         * build() attaches one for every relation column, and they would each
+         * run again here for a single row of aggregates whose relations are
+         * never read — turning one summary column into one query plus one per
+         * relation, on every request.
+         */
+        $query = $this->build($table, $state)->reorder()->setEagerLoads([]);
         $selects = [];
         $grammar = $query->getQuery()->getGrammar();
 
@@ -159,20 +166,6 @@ class QueryEngine
         }
 
         $query = ParamFilters::apply($table, $table->query($query));
-
-        if ($table->usesSoftDeletes() && $state->trashed !== 'without') {
-            // Expressed through the global scope rather than the SoftDeletes
-            // macros so the builder stays a plain Eloquent\Builder.
-            $query->withoutGlobalScope(SoftDeletingScope::class);
-
-            if ($state->trashed === 'only') {
-                $column = method_exists($model, 'getDeletedAtColumn')
-                    ? $model->getDeletedAtColumn()
-                    : 'deleted_at';
-
-                $query->whereNotNull($model->qualifyColumn($column));
-            }
-        }
 
         return $query;
     }

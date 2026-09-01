@@ -13,7 +13,7 @@ export default function install(table) {
     const open = new Set();
 
     function rowFor(id) {
-        return table.root.querySelector(`[data-dt-row="${CSS.escape(String(id))}"]`);
+        return table.root.querySelector(`[data-dynamic-table-row="${CSS.escape(String(id))}"]`);
     }
 
     function span(row) {
@@ -22,11 +22,11 @@ export default function install(table) {
 
     function close(id) {
         open.delete(id);
-        table.root.querySelector(`[data-dt-detail-row="${CSS.escape(String(id))}"]`)?.remove();
+        table.root.querySelector(`[data-dynamic-table-detail-row="${CSS.escape(String(id))}"]`)?.remove();
 
-        const button = rowFor(id)?.querySelector('[data-dt-detail]');
+        const button = rowFor(id)?.querySelector('[data-dynamic-table-detail]');
         button?.setAttribute('aria-expanded', 'false');
-        button?.classList.remove('dt-expand-open');
+        button?.classList.remove('dynamic-table-expand-open');
     }
 
     async function show(id) {
@@ -36,12 +36,12 @@ export default function install(table) {
 
         open.add(id);
 
-        const button = row.querySelector('[data-dt-detail]');
+        const button = row.querySelector('[data-dynamic-table-detail]');
         button?.setAttribute('aria-expanded', 'true');
-        button?.classList.add('dt-expand-open');
+        button?.classList.add('dynamic-table-expand-open');
 
         const cell = el('td', { colspan: span(row) });
-        const detail = el('tr', { class: 'dt-detail-row', 'data-dt-detail-row': id }, [cell]);
+        const detail = el('tr', { class: 'dynamic-table-detail-row', 'data-dynamic-table-detail-row': id }, [cell]);
 
         row.after(detail);
 
@@ -51,7 +51,7 @@ export default function install(table) {
             return;
         }
 
-        cell.append(el('span', { class: 'dt-detail-loading', text: table.t('loading') }));
+        cell.append(el('span', { class: 'dynamic-table-detail-loading', text: table.t('loading') }));
 
         try {
             const response = await table.post(table.endpoints.rowDetail, {
@@ -66,7 +66,7 @@ export default function install(table) {
             if (detail.isConnected) cell.innerHTML = response.html || '';
         } catch (error) {
             if (detail.isConnected) {
-                cell.replaceChildren(el('span', { class: 'dt-detail-error', text: error.message }));
+                cell.replaceChildren(el('span', { class: 'dynamic-table-detail-error', text: error.message }));
             }
         }
     }
@@ -77,12 +77,12 @@ export default function install(table) {
     }
 
     table.root.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-dt-detail]');
+        const button = event.target.closest('[data-dynamic-table-detail]');
 
         if (! button || ! table.root.contains(button)) return;
 
         event.preventDefault();
-        toggle(button.getAttribute('data-dt-detail'));
+        toggle(button.getAttribute('data-dynamic-table-detail'));
     });
 
     // Rows were repainted: the expander state and the cached HTML both belong

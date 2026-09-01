@@ -9,8 +9,7 @@
         "grid",
         "filters",
         "views",
-        "excel",
-        "spreadsheet"
+        "excel"
     ],
     "homepage": "https://github.com/shwaeki/DynamicTable",
     "license": "MIT",
@@ -35,15 +34,16 @@
         "symfony/finder": "^6.2|^7.0|^8.0"
     },
     "require-dev": {
+        "larastan/larastan": "^2.9|^3.0",
+        "laravel/pint": "^1.18",
+        "openspout/openspout": "^4.0",
         "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
         "pestphp/pest": "^2.0|^3.0|^4.0",
-        "larastan/larastan": "^2.9|^3.0",
-        "laravel/pint": "^1.18"
+        "phpoffice/phpspreadsheet": "^1.29|^2.0|^3.0|^4.0"
     },
     "suggest": {
-        "maatwebsite/excel": "Required for the xlsx Excel export/import adapter (^3.1|^4.0).",
-        "openspout/openspout": "Lightweight streaming alternative for very large exports (^4.0).",
-        "livewire/livewire": "Optional adapter to embed DynamicTable inside a Livewire component (^3.0|^4.0)."
+        "openspout/openspout": "Preferred XLSX export/import driver — constant memory, so a million-row export costs what a ten-row one does (^4.0).",
+        "phpoffice/phpspreadsheet": "Alternative XLSX driver, used when openspout is absent (^1.29|^2.0|^3.0|^4.0)."
     },
     "autoload": {
         "psr-4": {

@@ -30,7 +30,7 @@ it('renders every example page without an exception', function (Example $example
     $response->assertOk()
         ->assertSee($example->title)
         ->assertSee('data-dynamic-table', escape: false)
-        ->assertSee('data-dt-boot', escape: false);
+        ->assertSee('data-dynamic-table-boot', escape: false);
 })->with(fn () => collect(examples())->map(fn (Example $e) => [$e->id => $e])->collapse()->all());
 
 it('renders real rows in every example', function (Example $example): void {
@@ -43,7 +43,7 @@ it('renders real rows in every example', function (Example $example): void {
         return;
     }
 
-    expect(substr_count($html, 'data-dt-row='))->toBeGreaterThan(0);
+    expect(substr_count($html, 'data-dynamic-table-row='))->toBeGreaterThan(0);
 })->with(fn () => collect(examples())->map(fn (Example $e) => [$e->id => $e])->collapse()->all());
 
 it('points every example at a real table class', function (): void {
@@ -73,7 +73,7 @@ it('gives every example a unique stable id', function (): void {
 });
 
 it('serves the package assets the examples reference', function (): void {
-    foreach (['core.js', 'dom.js', 'ui.js', 'filters.js', 'columns.js', 'views.js', 'actions.js', 'inline-edit.js', 'transfer.js', 'responsive.js', 'header-menu.js', 'spreadsheet.js', 'dynamic-table.css'] as $file) {
+    foreach (['core.js', 'dom.js', 'ui.js', 'filters.js', 'columns.js', 'views.js', 'actions.js', 'inline-edit.js', 'transfer.js', 'responsive.js', 'header-menu.js', 'detail.js', 'sticky.js', 'dynamic-table.css'] as $file) {
         $this->get(app(AssetManager::class)->url($file))->assertOk();
     }
 });
@@ -147,16 +147,16 @@ it('only enables the features an example declares', function (): void {
     $basic = $this->get(app(ExampleRegistry::class)->find('basic')->url())->getContent();
 
     expect($basic)
-        ->toContain('data-dt-search')
-        ->not->toContain('data-dt-open="export"')
-        ->not->toContain('data-dt-select-all');
+        ->toContain('data-dynamic-table-search')
+        ->not->toContain('data-dynamic-table-open="export"')
+        ->not->toContain('data-dynamic-table-select-all');
 
     $everything = $this->get(app(ExampleRegistry::class)->find('everything')->url())->getContent();
 
     expect($everything)
-        ->toContain('data-dt-open="export"')
-        ->toContain('data-dt-open="views"')
-        ->toContain('data-dt-select-all');
+        ->toContain('data-dynamic-table-open="export"')
+        ->toContain('data-dynamic-table-open="views"')
+        ->toContain('data-dynamic-table-select-all');
 });
 
 it('rejects an unknown example id', function (): void {

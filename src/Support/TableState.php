@@ -38,7 +38,6 @@ final class TableState
         public readonly array $columns = [],
         public readonly array $widths = [],
         public readonly ?string $group = null,
-        public readonly string $trashed = 'without',
         public readonly array $selection = [],
         public readonly ?string $view = null,
         public readonly array $params = [],
@@ -91,7 +90,7 @@ final class TableState
 
         $widths = [];
 
-        if ($features->has(Feature::COLUMN_RESIZING) && is_array($input['widths'] ?? null)) {
+        if ($features->has(Feature::COLUMN_RESIZE) && is_array($input['widths'] ?? null)) {
             foreach ($input['widths'] as $key => $width) {
                 if (is_string($key) && $table->columnFor($key) !== null && is_numeric($width)) {
                     // Only wide enough to stay grabbable: a narrow column is a
@@ -112,12 +111,6 @@ final class TableState
             $group = $groupColumn !== null && ! $groupColumn->isComputed() ? $candidate : null;
         }
 
-        $trashed = 'without';
-
-        if ($table->usesSoftDeletes() && in_array($input['trashed'] ?? null, ['with', 'only'], true)) {
-            $trashed = $input['trashed'];
-        }
-
         $state = new self(
             search: $search,
             columnSearch: $columnSearch,
@@ -129,7 +122,6 @@ final class TableState
             columns: $columns,
             widths: $widths,
             group: $group,
-            trashed: $trashed,
             selection: self::normalizeSelection($input['selection'] ?? null),
             view: isset($input['view']) && is_scalar($input['view']) ? (string) $input['view'] : null,
             params: self::normalizeParams($input['params'] ?? null, $table),
@@ -156,10 +148,20 @@ final class TableState
 
         $entries = [];
 
+        // A URL carries the sort as one comma-separated string —
+        // "-total,reference" — because that is what syncUrl() writes. Read as a
+        // single field name it matches no column, so a multi-level sort was
+        // silently dropped on reload and the table fell back to its default.
         if (is_string($input) && $input !== '') {
-            $direction = str_starts_with($input, '-') ? 'desc' : 'asc';
-            $entries[] = ['field' => ltrim($input, '-+'), 'direction' => $direction];
-        } elseif (is_array($input)) {
+            // array_values, because array_filter keeps keys and a gap would
+            // make this stop looking like a list two lines down.
+            $input = array_values(array_filter(
+                array_map('trim', explode(',', $input)),
+                static fn (string $part): bool => $part !== '',
+            ));
+        }
+
+        if (is_array($input)) {
             foreach (array_is_list($input) ? $input : [$input] as $entry) {
                 if (is_string($entry)) {
                     $entries[] = [
@@ -213,7 +215,11 @@ final class TableState
     {
         $resolved = $table->resolvedColumns();
 
-        if ($table->hasFeature(Feature::COLUMN_PICKER) && is_array($input) && $input !== []) {
+        // Either feature can produce a column list: the picker changes which
+        // are in it, reordering changes the order of it.
+        $mayChoose = $table->features()->any(Feature::COLUMN_PICKER, Feature::COLUMN_REORDER);
+
+        if ($mayChoose && is_array($input) && $input !== []) {
             $columns = [];
 
             foreach ($input as $key) {
@@ -330,8 +336,7 @@ final class TableState
         return $this->search === ''
             && $this->columnSearch === []
             && $this->filters->isEmpty()
-            && $this->params === []
-            && $this->trashed === 'without';
+            && $this->params === [];
     }
 
     public function hasSelection(): bool
@@ -352,7 +357,6 @@ final class TableState
             'columns' => $this->columns,
             'widths' => $this->widths,
             'group' => $this->group,
-            'trashed' => $this->trashed === 'without' ? null : $this->trashed,
             'view' => $this->view,
             'params' => $this->params,
         ], static fn (mixed $value): bool => $value !== null && $value !== '' && $value !== []);
@@ -371,7 +375,6 @@ final class TableState
             'columnSearch' => $this->columnSearch,
             'group' => $this->group,
             'perPage' => $this->perPage,
-            'trashed' => $this->trashed === 'without' ? null : $this->trashed,
         ], static fn (mixed $value): bool => $value !== null && $value !== [] && $value !== '');
     }
 }

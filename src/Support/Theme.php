@@ -108,35 +108,35 @@ class Theme
     protected static function base(): array
     {
         return [
-            'root' => 'dt',
-            'toolbar' => 'dt-toolbar',
-            'toolbarStart' => 'dt-toolbar-start',
-            'toolbarEnd' => 'dt-toolbar-end',
-            'scroller' => 'dt-scroller',
-            'table' => 'dt-table',
-            'thead' => 'dt-thead',
-            'headRow' => 'dt-head-row',
-            'th' => 'dt-th',
-            'thSortable' => 'dt-th-sortable',
-            'resizer' => 'dt-resizer',
-            'filterRow' => 'dt-filter-row',
-            'tbody' => 'dt-tbody',
-            'row' => 'dt-row',
-            'rowSelected' => 'dt-row-selected',
-            'cell' => 'dt-cell',
-            'cellEditing' => 'dt-cell-editing',
-            'cellInvalid' => 'dt-cell-invalid',
-            'footer' => 'dt-footer',
-            'pagination' => 'dt-pagination',
-            'empty' => 'dt-empty',
-            'loading' => 'dt-loading',
-            'panel' => 'dt-panel',
-            'menu' => 'dt-menu',
-            'menuItem' => 'dt-menu-item',
-            'modal' => 'dt-modal',
-            'modalBox' => 'dt-modal-box',
-            'chip' => 'dt-chip',
-            'group' => 'dt-group',
+            'root' => 'dynamic-table',
+            'toolbar' => 'dynamic-table-toolbar',
+            'toolbarStart' => 'dynamic-table-toolbar-start',
+            'toolbarEnd' => 'dynamic-table-toolbar-end',
+            'scroller' => 'dynamic-table-scroller',
+            'table' => 'dynamic-table-table',
+            'thead' => 'dynamic-table-thead',
+            'headRow' => 'dynamic-table-head-row',
+            'th' => 'dynamic-table-th',
+            'thSortable' => 'dynamic-table-th-sortable',
+            'resizer' => 'dynamic-table-resizer',
+            'filterRow' => 'dynamic-table-filter-row',
+            'tbody' => 'dynamic-table-tbody',
+            'row' => 'dynamic-table-row',
+            'rowSelected' => 'dynamic-table-row-selected',
+            'cell' => 'dynamic-table-cell',
+            'cellEditing' => 'dynamic-table-cell-editing',
+            'cellInvalid' => 'dynamic-table-cell-invalid',
+            'footer' => 'dynamic-table-footer',
+            'pagination' => 'dynamic-table-pagination',
+            'empty' => 'dynamic-table-empty',
+            'loading' => 'dynamic-table-loading',
+            'panel' => 'dynamic-table-panel',
+            'menu' => 'dynamic-table-menu',
+            'menuItem' => 'dynamic-table-menu-item',
+            'modal' => 'dynamic-table-modal',
+            'modalBox' => 'dynamic-table-modal-box',
+            'chip' => 'dynamic-table-chip',
+            'group' => 'dynamic-table-group',
         ];
     }
 
@@ -146,38 +146,38 @@ class Theme
      * It deliberately contributes no surface, text or border *colour*: those
      * come from the package's own tokens, so the table is readable in light and
      * dark whether or not the host application supports dark mode, and so an
-     * explicit data-dt-scheme is obeyed. Tailwind's `dark:` variants could not
-     * do that — under the default media strategy they follow the operating
-     * system and cannot be overridden per element.
+     * explicit data-dynamic-table-scheme is obeyed. Tailwind's `dark:` variants
+     * could not do that — under the default media strategy they follow the
+     * operating system and cannot be overridden per element.
      *
      * @return array<string, string>
      */
     protected static function tailwind(): array
     {
         return [
-            'root' => 'dt dt-tailwind text-sm',
-            'toolbar' => 'dt-toolbar flex flex-wrap items-center gap-2 p-3 border-b',
+            'root' => 'dynamic-table dynamic-table-tailwind text-sm',
+            'toolbar' => 'dynamic-table-toolbar flex flex-wrap items-center gap-2 p-3 border-b',
             'search' => 'w-56 rounded-md border px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40',
             'button' => 'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm font-medium disabled:opacity-50 hover:opacity-90',
-            'buttonPrimary' => 'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium disabled:opacity-50 dt-btn-primary',
-            'buttonDanger' => 'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium dt-btn-danger',
+            'buttonPrimary' => 'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium disabled:opacity-50 dynamic-table-btn-primary',
+            'buttonDanger' => 'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium dynamic-table-btn-danger',
             'input' => 'w-full rounded-md border px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40',
             'select' => 'rounded-md border px-2 py-1 text-sm',
             'wrapper' => 'overflow-hidden rounded-lg border shadow-sm',
-            'scroller' => 'dt-scroller overflow-x-auto',
-            'table' => 'dt-table w-full border-collapse text-sm',
-            'thead' => 'dt-thead',
-            'th' => 'dt-th whitespace-nowrap px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide',
-            'row' => 'dt-row',
-            'rowSelected' => 'dt-row-selected',
-            'cell' => 'dt-cell px-3 py-2 align-middle',
-            'footer' => 'dt-footer flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 text-sm',
-            'empty' => 'dt-empty px-3 py-12 text-center',
-            'badge' => 'dt-badge inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-            'menu' => 'dt-menu absolute z-40 mt-1 min-w-[14rem] rounded-md border p-1 shadow-lg',
-            'menuItem' => 'dt-menu-item flex w-full items-center gap-2 rounded px-2 py-1.5 text-start',
-            'modalBox' => 'dt-modal-box w-full max-w-2xl rounded-lg p-4 shadow-xl',
-            'chip' => 'dt-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
+            'scroller' => 'dynamic-table-scroller overflow-x-auto',
+            'table' => 'dynamic-table-table w-full border-collapse text-sm',
+            'thead' => 'dynamic-table-thead',
+            'th' => 'dynamic-table-th whitespace-nowrap px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide',
+            'row' => 'dynamic-table-row',
+            'rowSelected' => 'dynamic-table-row-selected',
+            'cell' => 'dynamic-table-cell px-3 py-2 align-middle',
+            'footer' => 'dynamic-table-footer flex flex-wrap items-center justify-between gap-2 border-t px-3 py-2 text-sm',
+            'empty' => 'dynamic-table-empty px-3 py-12 text-center',
+            'badge' => 'dynamic-table-badge inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+            'menu' => 'dynamic-table-menu absolute z-40 mt-1 min-w-[14rem] rounded-md border p-1 shadow-lg',
+            'menuItem' => 'dynamic-table-menu-item flex w-full items-center gap-2 rounded px-2 py-1.5 text-start',
+            'modalBox' => 'dynamic-table-modal-box w-full max-w-2xl rounded-lg p-4 shadow-xl',
+            'chip' => 'dynamic-table-chip inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
         ];
     }
 
@@ -194,8 +194,8 @@ class Theme
     protected static function bootstrap(): array
     {
         return [
-            'root' => 'dt dt-bootstrap',
-            'toolbar' => 'dt-toolbar d-flex flex-wrap align-items-center gap-2 p-2 border-bottom',
+            'root' => 'dynamic-table dynamic-table-bootstrap',
+            'toolbar' => 'dynamic-table-toolbar d-flex flex-wrap align-items-center gap-2 p-2 border-bottom',
             'search' => 'form-control form-control-sm',
             'button' => 'btn btn-sm btn-outline-secondary',
             'buttonPrimary' => 'btn btn-sm btn-primary',
@@ -203,20 +203,20 @@ class Theme
             'input' => 'form-control form-control-sm',
             'select' => 'form-select form-select-sm',
             'wrapper' => 'card',
-            'scroller' => 'dt-scroller table-responsive',
-            'table' => 'dt-table table table-hover align-middle mb-0',
-            'thead' => 'dt-thead',
-            'th' => 'dt-th text-nowrap',
-            'row' => 'dt-row',
-            'rowSelected' => 'dt-row-selected',
-            'cell' => 'dt-cell',
-            'footer' => 'dt-footer d-flex flex-wrap align-items-center justify-content-between gap-2 border-top p-2',
-            'empty' => 'dt-empty text-center py-5',
-            'badge' => 'dt-badge badge',
-            'menu' => 'dt-menu dropdown-menu show shadow',
-            'menuItem' => 'dt-menu-item dropdown-item',
-            'modalBox' => 'dt-modal-box card shadow-lg',
-            'chip' => 'dt-chip badge',
+            'scroller' => 'dynamic-table-scroller table-responsive',
+            'table' => 'dynamic-table-table table table-hover align-middle mb-0',
+            'thead' => 'dynamic-table-thead',
+            'th' => 'dynamic-table-th text-nowrap',
+            'row' => 'dynamic-table-row',
+            'rowSelected' => 'dynamic-table-row-selected',
+            'cell' => 'dynamic-table-cell',
+            'footer' => 'dynamic-table-footer d-flex flex-wrap align-items-center justify-content-between gap-2 border-top p-2',
+            'empty' => 'dynamic-table-empty text-center py-5',
+            'badge' => 'dynamic-table-badge badge',
+            'menu' => 'dynamic-table-menu dropdown-menu show shadow',
+            'menuItem' => 'dynamic-table-menu-item dropdown-item',
+            'modalBox' => 'dynamic-table-modal-box card shadow-lg',
+            'chip' => 'dynamic-table-chip badge',
         ];
     }
 
@@ -232,14 +232,14 @@ class Theme
     protected static function minimal(): array
     {
         return [
-            'root' => 'dt dt-minimal',
-            'button' => 'dt-button',
-            'buttonPrimary' => 'dt-button dt-button-primary',
-            'buttonDanger' => 'dt-button dt-button-danger',
-            'input' => 'dt-input',
-            'search' => 'dt-input dt-search',
-            'select' => 'dt-select',
-            'badge' => 'dt-badge',
+            'root' => 'dynamic-table dynamic-table-minimal',
+            'button' => 'dynamic-table-button',
+            'buttonPrimary' => 'dynamic-table-button dynamic-table-button-primary',
+            'buttonDanger' => 'dynamic-table-button dynamic-table-button-danger',
+            'input' => 'dynamic-table-input',
+            'search' => 'dynamic-table-input dynamic-table-search',
+            'select' => 'dynamic-table-select',
+            'badge' => 'dynamic-table-badge',
         ];
     }
 
@@ -255,7 +255,7 @@ class Theme
     protected static function bordered(): array
     {
         return array_merge(static::minimal(), [
-            'root' => 'dt dt-minimal dt-bordered',
+            'root' => 'dynamic-table dynamic-table-minimal dynamic-table-bordered',
         ]);
     }
 }

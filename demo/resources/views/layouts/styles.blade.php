@@ -1,7 +1,8 @@
 <style>
     /* The demo chrome. The tables themselves are painted entirely by the
-       package's own tokens — nothing here reaches inside .dt. Both are driven
-       by the same scheme choice, so the page and the table never disagree. */
+       package's own tokens — nothing here reaches inside .dynamic-table. Both
+       are driven by the same scheme choice, so the page and the table never
+       disagree. */
 
     :root {
         --ink: #0f172a;
@@ -424,7 +425,7 @@
     .builder-preview[aria-busy='true'] { opacity: .55; }
 
     /* A table inside the preview owns the card: no double border, no gap. */
-    .builder-preview .dt { border: 0; border-radius: 0; }
+    .builder-preview .dynamic-table { border: 0; border-radius: 0; }
 
     .builder-code pre { max-height: 24rem; }
 

@@ -28,6 +28,8 @@ final class Example
         public readonly array $notes = [],
         public readonly array $extraFiles = [],
         public readonly array $keywords = [],
+        /** A Blade partial rendered above the table, for an example whose point is markup. */
+        public readonly ?string $partial = null,
         /** Seed command this example needs before it has any rows, if any. */
         public readonly ?string $seedCommand = null,
     ) {}

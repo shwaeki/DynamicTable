@@ -23,7 +23,7 @@ class SavedViewsTable extends DynamicTable
 {
     protected string $model = Customer::class;
 
-    protected array $features = ['views', 'column_picker', 'column_reordering'];
+    protected array $features = ['saved_views', 'column_picker', 'column_reorder'];
 
     protected int $relationDepth = 2;
 

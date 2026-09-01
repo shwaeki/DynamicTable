@@ -28,10 +28,10 @@ class BuilderOptions
     {
         return [
             'Basics' => [Feature::SEARCH, Feature::FILTERS, Feature::SORTING, Feature::PAGINATION, Feature::RESPONSIVE, Feature::HEADER_MENU],
-            'Columns' => [Feature::COLUMN_PICKER, Feature::COLUMN_REORDERING, Feature::COLUMN_RESIZING, Feature::COLUMN_SEARCH, Feature::STICKY_COLUMNS, Feature::GROUPING],
+            'Columns' => [Feature::COLUMN_PICKER, Feature::COLUMN_REORDER, Feature::COLUMN_RESIZE, Feature::COLUMN_SEARCH, Feature::STICKY_COLUMNS, Feature::GROUPING],
             'Selecting & acting' => [Feature::SELECTION, Feature::BULK_ACTIONS, Feature::BULK_EDIT, Feature::ROW_ACTIONS, Feature::TOOLBAR_ACTIONS],
-            'Writing' => [Feature::INLINE_EDIT, Feature::CREATE, Feature::IMPORT, Feature::EXPORT, Feature::PRINT],
-            'More' => [Feature::VIEWS, Feature::ROW_DETAIL, Feature::FACETS, Feature::SOFT_DELETES, Feature::URL_STATE, Feature::REMEMBER_STATE],
+            'Writing' => [Feature::INLINE_EDIT, Feature::INLINE_CREATE, Feature::IMPORT, Feature::EXPORT, Feature::PRINT],
+            'More' => [Feature::SAVED_VIEWS, Feature::ROW_DETAIL, Feature::FILTER_COUNTS, Feature::RELATIONS, Feature::URL_STATE, Feature::REMEMBER_STATE],
         ];
     }
 

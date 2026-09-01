@@ -13,17 +13,17 @@ class FullUsersTable extends DynamicTable
     protected ?string $tableKey = 'full_users';
 
     protected array $features = [
-        'views',
+        'saved_views',
         'export',
         'import',
         'bulk-actions',
         'inline_edit',
         'column_picker',
-        'column_reordering',
-        'column_resizing',
+        'column_reorder',
+        'column_resize',
         'column_search',
-        'soft_deletes',
         'url_state',
+        'grouping',
     ];
 
     protected array $searchable = ['name', 'email', 'department.name'];

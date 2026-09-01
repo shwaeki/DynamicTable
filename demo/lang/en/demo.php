@@ -59,4 +59,16 @@ return [
         'line_total' => 'Line total',
         'no_items' => 'No items on this order.',
     ],
+    'param_filters' => [
+        'title' => 'Filter this table',
+        'any' => 'Any',
+        'status' => 'Status',
+        'country' => 'Country',
+        'min_total' => 'Total at least',
+        'placed' => 'Placed',
+        'week' => 'Last week',
+        'month' => 'Last month',
+        'year' => 'Last year',
+        'reset' => 'Reset',
+    ],
 ];

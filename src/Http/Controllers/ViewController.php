@@ -22,7 +22,7 @@ class ViewController extends Controller
     public function index(Request $request): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::VIEWS);
+        $table->requireFeature(Feature::SAVED_VIEWS);
 
         return response()->json([
             'views' => $this->views->payloadFor($table),
@@ -34,7 +34,7 @@ class ViewController extends Controller
     public function store(Request $request): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::VIEWS);
+        $table->requireFeature(Feature::SAVED_VIEWS);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:150'],
@@ -54,10 +54,10 @@ class ViewController extends Controller
     public function update(Request $request, string $view): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::VIEWS);
+        $table->requireFeature(Feature::SAVED_VIEWS);
 
         $model = $this->views->find($table, $view);
-        abort_if($model === null || $model->exists === false, 404);
+        abort_if($model === null || $model->exists === false, 404, __('dynamic-table::table.errors.view_not_found'));
 
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:150'],
@@ -77,10 +77,10 @@ class ViewController extends Controller
     public function destroy(Request $request, string $view): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::VIEWS);
+        $table->requireFeature(Feature::SAVED_VIEWS);
 
         $model = $this->views->find($table, $view);
-        abort_if($model === null || $model->exists === false, 404);
+        abort_if($model === null || $model->exists === false, 404, __('dynamic-table::table.errors.view_not_found'));
 
         $this->views->delete($table, $model);
 
@@ -95,10 +95,10 @@ class ViewController extends Controller
     public function share(Request $request, string $view): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::VIEWS);
+        $table->requireFeature(Feature::SAVED_VIEWS);
 
         $model = $this->views->find($table, $view);
-        abort_if($model === null || $model->exists === false, 404);
+        abort_if($model === null || $model->exists === false, 404, __('dynamic-table::table.errors.view_not_found'));
 
         $validated = $request->validate([
             'users' => ['present', 'array', 'max:500'],
@@ -118,14 +118,14 @@ class ViewController extends Controller
     public function shares(Request $request, string $view): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::VIEWS);
+        $table->requireFeature(Feature::SAVED_VIEWS);
 
         $model = $this->views->find($table, $view);
-        abort_if($model === null || $model->exists === false, 404);
+        abort_if($model === null || $model->exists === false, 404, __('dynamic-table::table.errors.view_not_found'));
 
         // The directory is only searchable by someone who can actually share
         // this view, so it never becomes a general user-enumeration endpoint.
-        abort_unless($model->isOwnedBy($this->views->userId()), 403);
+        abort_unless($model->isOwnedBy($this->views->userId()), 403, __('dynamic-table::table.errors.forbidden'));
         abort_unless($this->views->sharingEnabled(), 400, 'View sharing is disabled.');
 
         $search = trim((string) $request->input('search', ''));
@@ -139,10 +139,10 @@ class ViewController extends Controller
     public function setDefault(Request $request, string $view): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::VIEWS);
+        $table->requireFeature(Feature::SAVED_VIEWS);
 
         $model = $this->views->find($table, $view);
-        abort_if($model === null || $model->exists === false, 404);
+        abort_if($model === null || $model->exists === false, 404, __('dynamic-table::table.errors.view_not_found'));
 
         // Sending default=false clears it, so the star is a toggle.
         $this->views->setDefault($table, $model, $request->boolean('default', true));

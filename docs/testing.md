@@ -80,16 +80,16 @@ selection, inline editing — deserve browser coverage. With Dusk:
 ```php
 $browser->visit('/users')
     ->waitFor('[data-dynamic-table]')
-    ->type('[data-dt-search]', 'ada')
-    ->waitUntilMissing('.dt-is-loading')
+    ->type('[data-dynamic-table-search]', 'ada')
+    ->waitUntilMissing('.dynamic-table-is-loading')
     ->assertSee('ada@example.com')
-    ->click('[data-dt-open="filters"]')
-    ->waitFor('.dt-filter-builder');
+    ->click('[data-dynamic-table-open="filters"]')
+    ->waitFor('.dynamic-table-filter-builder');
 ```
 
-Stable hooks to select on: `[data-dynamic-table]`, `[data-dt-search]`,
-`[data-dt-row]`, `[data-dt-cell]`, `[data-dt-sort]`, `[data-dt-open]`,
-`[data-dt-select]`, `[data-dt-pagination]`, `.dt-is-loading`. These are treated
+Stable hooks to select on: `[data-dynamic-table]`, `[data-dynamic-table-search]`,
+`[data-dynamic-table-row]`, `[data-dynamic-table-cell]`, `[data-dynamic-table-sort]`, `[data-dynamic-table-open]`,
+`[data-dynamic-table-select]`, `[data-dynamic-table-pagination]`, `.dynamic-table-is-loading`. These are treated
 as public API for test purposes and will not change without a major release.
 
 To wait for a refresh from JavaScript:

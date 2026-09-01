@@ -22,15 +22,15 @@ final class Feature
 
     public const RESPONSIVE = 'responsive';
 
-    public const VIEWS = 'views';
+    public const SAVED_VIEWS = 'saved_views';
 
     public const HEADER_MENU = 'header_menu';
 
     public const COLUMN_PICKER = 'column_picker';
 
-    public const COLUMN_REORDERING = 'column_reordering';
+    public const COLUMN_REORDER = 'column_reorder';
 
-    public const COLUMN_RESIZING = 'column_resizing';
+    public const COLUMN_RESIZE = 'column_resize';
 
     public const SELECTION = 'selection';
 
@@ -42,13 +42,27 @@ final class Feature
 
     public const BULK_EDIT = 'bulk_edit';
 
-    public const CREATE = 'create';
+    public const INLINE_CREATE = 'inline_create';
 
     public const ROW_DETAIL = 'row_detail';
 
     public const STICKY_COLUMNS = 'sticky_columns';
 
-    public const FACETS = 'facets';
+    public const FILTER_COUNTS = 'filter_counts';
+
+    /**
+     * Whether a reader may reach through relationships.
+     *
+     * On (the default) the filter builder and the column picker offer the
+     * fields of the model's singular relations as well as its own. Off, they
+     * offer only the model's own fields, and a filter on a relation path is
+     * refused — the same effect as $relationDepth = 0, but sayable in the
+     * feature list and switchable per table.
+     *
+     * A relation column the table itself declares is unaffected: that is the
+     * developer's choice, not the reader's.
+     */
+    public const RELATIONS = 'relations';
 
     public const INLINE_EDIT = 'inline_edit';
 
@@ -59,8 +73,6 @@ final class Feature
     public const EXPORT = 'export';
 
     public const IMPORT = 'import';
-
-    public const SOFT_DELETES = 'soft_deletes';
 
     public const REMEMBER_STATE = 'remember_state';
 
@@ -74,6 +86,7 @@ final class Feature
         self::PAGINATION,
         self::RESPONSIVE,
         self::HEADER_MENU,
+        self::RELATIONS,
     ];
 
     public const ALL = [
@@ -84,25 +97,25 @@ final class Feature
         self::PAGINATION,
         self::RESPONSIVE,
         self::HEADER_MENU,
-        self::VIEWS,
+        self::SAVED_VIEWS,
         self::COLUMN_PICKER,
-        self::COLUMN_REORDERING,
-        self::COLUMN_RESIZING,
+        self::COLUMN_REORDER,
+        self::COLUMN_RESIZE,
         self::SELECTION,
         self::BULK_ACTIONS,
         self::ROW_ACTIONS,
         self::TOOLBAR_ACTIONS,
         self::BULK_EDIT,
-        self::CREATE,
+        self::INLINE_CREATE,
         self::ROW_DETAIL,
         self::STICKY_COLUMNS,
-        self::FACETS,
+        self::FILTER_COUNTS,
+        self::RELATIONS,
         self::INLINE_EDIT,
         self::GROUPING,
         self::PRINT,
         self::EXPORT,
         self::IMPORT,
-        self::SOFT_DELETES,
         self::REMEMBER_STATE,
         self::URL_STATE,
     ];
@@ -115,10 +128,15 @@ final class Feature
     public const IMPLIES = [
         self::BULK_ACTIONS => [self::SELECTION],
         self::BULK_EDIT => [self::SELECTION],
-        self::CREATE => [self::INLINE_EDIT],
-        self::COLUMN_REORDERING => [self::COLUMN_PICKER],
-        self::COLUMN_RESIZING => [self::COLUMN_PICKER],
-        self::VIEWS => [self::COLUMN_PICKER],
+        self::INLINE_CREATE => [self::INLINE_EDIT],
+        // saved_views is the only one that still implies the picker, and
+        // it is a data dependency rather than a convenience: a view stores a
+        // column selection, so something has to be allowed to restore it.
+        //
+        // column_reorder and column_resize deliberately imply nothing. They
+        // share the picker's panel, but sharing a panel is not a reason to
+        // hand the reader Add column and Remove as well.
+        self::SAVED_VIEWS => [self::COLUMN_PICKER],
     ];
 
     /**
@@ -128,17 +146,17 @@ final class Feature
      */
     public const MODULES = [
         self::FILTERS => ['filters'],
-        self::VIEWS => ['views'],
+        self::SAVED_VIEWS => ['views'],
         self::COLUMN_PICKER => ['columns'],
-        self::COLUMN_REORDERING => ['columns'],
-        self::COLUMN_RESIZING => ['columns'],
+        self::COLUMN_REORDER => ['columns'],
+        self::COLUMN_RESIZE => ['columns'],
         self::INLINE_EDIT => ['inline-edit'],
         self::BULK_ACTIONS => ['actions'],
         self::SELECTION => ['actions'],
         self::ROW_ACTIONS => ['actions'],
         self::TOOLBAR_ACTIONS => ['actions'],
         self::BULK_EDIT => ['actions'],
-        self::CREATE => ['inline-edit'],
+        self::INLINE_CREATE => ['inline-edit'],
         self::ROW_DETAIL => ['detail'],
         self::STICKY_COLUMNS => ['sticky'],
         self::EXPORT => ['transfer'],

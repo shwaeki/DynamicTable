@@ -24,6 +24,21 @@ class DynamicTableException extends RuntimeException
         return new self("[{$class}] must define a \$model property or override query().");
     }
 
+    /**
+     * @param  list<string>  $unknown
+     * @param  list<string>  $known
+     */
+    public static function unknownFeatures(array $unknown, array $known, string $class): self
+    {
+        sort($known);
+
+        return new self(
+            'Unknown feature '.(count($unknown) > 1 ? 'names' : 'name').' ['.implode(', ', $unknown)."] on [{$class}].\n".
+            "An unrecognised name would otherwise be ignored, silently leaving the feature off.\n".
+            'Available: '.implode(', ', $known).'.'
+        );
+    }
+
     public static function invalidField(string $field): self
     {
         return new self("The field [{$field}] is not available on this table.");

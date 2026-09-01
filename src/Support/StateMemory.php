@@ -32,7 +32,7 @@ use Shwaeki\DynamicTable\DynamicTable;
 class StateMemory
 {
     /** The parts of the state worth carrying between visits. */
-    protected const REMEMBERED = ['search', 'columnSearch', 'filters', 'sort', 'perPage', 'columns', 'widths', 'group', 'trashed', 'view'];
+    protected const REMEMBERED = ['search', 'columnSearch', 'filters', 'sort', 'perPage', 'columns', 'widths', 'group', 'view'];
 
     public function enabled(DynamicTable $table): bool
     {

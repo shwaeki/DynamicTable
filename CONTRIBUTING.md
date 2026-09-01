@@ -6,7 +6,7 @@ Thanks for considering a contribution.
 
 ```bash
 git clone https://github.com/shwaeki/DynamicTable.git
-cd laravel-dynamictable
+cd DynamicTable
 composer install
 composer test
 ```
@@ -20,6 +20,10 @@ composer lint       # Laravel Pint
 composer analyse    # PHPStan / larastan level 5
 composer test       # Pest
 ```
+
+On Windows, the first `composer analyse` after a cache clear can fail with
+`Access is denied` while PHPStan's workers race to write Testbench's service
+cache inside `vendor/`. Run it again; the second run is the real result.
 
 All three must pass. There is no CI to catch what they miss, so run them
 yourself — and say in the pull request which PHP and Laravel versions you ran
@@ -68,7 +72,8 @@ These are non-negotiable, and there are tests enforcing most of them:
 
 ## Coding style
 
-Laravel Pint with the `laravel` preset, `declare(strict_types=1)` everywhere.
+Laravel Pint with the `laravel` preset. `pint --test` is the whole style
+rule; there is nothing to memorise and nothing to argue about.
 
 Comments should explain *why*, not restate the code. If a piece of code encodes
 a decision or a trade-off, say what the alternative was and why it lost.

@@ -26,8 +26,8 @@ export default function install(table) {
     let hidden = [];
     let frame = null;
 
-    const scroller = table.root.querySelector('[data-dt-scroller]');
-    const element = table.root.querySelector('[data-dt-table]');
+    const scroller = table.root.querySelector('[data-dynamic-table-scroller]');
+    const element = table.root.querySelector('[data-dynamic-table-table]');
 
     if (! scroller || ! element) return {};
 
@@ -38,7 +38,7 @@ export default function install(table) {
     if (config.mode === 'cards') {
         const query = window.matchMedia(`(max-width: ${config.breakpoint}px)`);
 
-        const applyCards = () => table.root.classList.toggle('dt-responsive-cards', query.matches);
+        const applyCards = () => table.root.classList.toggle('dynamic-table-responsive-cards', query.matches);
 
         query.addEventListener('change', applyCards);
         applyCards();
@@ -55,14 +55,26 @@ export default function install(table) {
     /** Columns currently in the header, in order, ignoring our own control column. */
     function headerCells() {
         return [...element.querySelectorAll('thead tr:first-child > th')]
-            .filter((th) => th.hasAttribute('data-dt-column'));
+            .filter((th) => th.hasAttribute('data-dynamic-table-column'));
     }
 
+    /**
+     * A column is three cells, not two: the header, the body cells, and — when
+     * column search is on — the search cell under the header.
+     *
+     * Leaving the third one behind did more than show a search box for a column
+     * that is no longer there. Every cell of that row still claimed the width of
+     * an input, so the table could not shrink; measure() went on hiding columns
+     * that were already hidden, and the row it was aligned to had one cell too
+     * many. Whoever adds a fourth per-column cell has to add it here too.
+     */
     function setColumnHidden(key, isHidden) {
+        const escaped = CSS.escape(key);
+
         for (const cell of element.querySelectorAll(
-            `[data-dt-column="${CSS.escape(key)}"], [data-dt-cell="${CSS.escape(key)}"]`,
+            `[data-dynamic-table-column="${escaped}"], [data-dynamic-table-search-cell="${escaped}"], [data-dynamic-table-cell="${escaped}"]`,
         )) {
-            cell.classList.toggle('dt-col-hidden', isHidden);
+            cell.classList.toggle('dynamic-table-col-hidden', isHidden);
         }
     }
 
@@ -75,9 +87,22 @@ export default function install(table) {
     function measure() {
         const map = columnsByKey();
 
+        /*
+         * A column the reader is searching in is pinned for as long as the
+         * search lasts.
+         *
+         * Collapsing it would take away the only box that can clear it — the
+         * table would stay filtered by a criterion with nothing on screen to
+         * show for it, and on a phone there is no way to widen the window to
+         * get it back. Clearing the box instead would change the result set on
+         * a resize, which is worse. Emptying the box makes the column ordinary
+         * again on the next measure.
+         */
+        const searching = new Set(Object.keys(table.state.columnSearch || {}));
+
         const candidates = headerCells()
-            .map((th) => th.getAttribute('data-dt-column'))
-            .filter((key) => ! fixed.has(key))
+            .map((th) => th.getAttribute('data-dynamic-table-column'))
+            .filter((key) => ! fixed.has(key) && ! searching.has(key))
             .sort((a, b) => (map.get(b)?.priority ?? 100) - (map.get(a)?.priority ?? 100));
 
         // Start from everything visible, then remove until it fits.
@@ -96,10 +121,10 @@ export default function install(table) {
 
         // Keep the child rows in the column order the user sees, not the order
         // we happened to hide them in.
-        const order = headerCells().map((th) => th.getAttribute('data-dt-column'));
+        const order = headerCells().map((th) => th.getAttribute('data-dynamic-table-column'));
         hidden.sort((a, b) => order.indexOf(a) - order.indexOf(b));
 
-        table.root.classList.toggle('dt-has-collapsed', hidden.length > 0);
+        table.root.classList.toggle('dynamic-table-has-collapsed', hidden.length > 0);
         renderControls();
         refreshOpenChildren();
     }
@@ -111,29 +136,29 @@ export default function install(table) {
     function renderControls() {
         const needed = hidden.length > 0;
         const headRow = element.querySelector('thead tr:first-child');
-        const filterRow = element.querySelector('thead .dt-filter-row');
+        const searchRow = element.querySelector('thead [data-dynamic-table-search-row]');
 
         if (! headRow) return;
 
-        let headControl = headRow.querySelector('.dt-control-cell');
+        let headControl = headRow.querySelector('.dynamic-table-control-cell');
 
         if (needed && ! headControl) {
             headControl = el('th', {
-                class: 'dt-control-cell',
+                class: 'dynamic-table-control-cell',
                 scope: 'col',
                 'aria-label': table.t('responsive.details'),
             });
             headRow.prepend(headControl);
 
-            if (filterRow) filterRow.prepend(el('th', { class: 'dt-control-cell' }));
+            if (searchRow) searchRow.prepend(el('th', { class: 'dynamic-table-control-cell' }));
         } else if (! needed && headControl) {
             headControl.remove();
-            filterRow?.querySelector('.dt-control-cell')?.remove();
+            searchRow?.querySelector('.dynamic-table-control-cell')?.remove();
         }
 
-        for (const row of element.querySelectorAll('tbody > tr[data-dt-row]')) {
-            const id = row.getAttribute('data-dt-row');
-            let cell = row.querySelector('.dt-control-cell');
+        for (const row of element.querySelectorAll('tbody > tr[data-dynamic-table-row]')) {
+            const id = row.getAttribute('data-dynamic-table-row');
+            let cell = row.querySelector('.dynamic-table-control-cell');
 
             if (! needed) {
                 cell?.remove();
@@ -146,12 +171,12 @@ export default function install(table) {
 
             const open = expanded.has(id);
 
-            cell = el('td', { class: 'dt-control-cell' }, [
+            cell = el('td', { class: 'dynamic-table-control-cell' }, [
                 el('button', {
                     type: 'button',
-                    class: 'dt-control',
+                    class: 'dynamic-table-control',
                     'aria-expanded': String(open),
-                    'aria-label': table.t('responsive.details'),
+                    'aria-label': table.t(open ? 'responsive.hide_details' : 'responsive.details'),
                     text: open ? '−' : '+',
                     onclick: () => toggle(row),
                 }),
@@ -162,7 +187,7 @@ export default function install(table) {
     }
 
     function toggle(row) {
-        const id = row.getAttribute('data-dt-row');
+        const id = row.getAttribute('data-dynamic-table-row');
 
         if (expanded.has(id)) {
             expanded.delete(id);
@@ -172,19 +197,20 @@ export default function install(table) {
             openChild(row);
         }
 
-        const button = row.querySelector('.dt-control');
+        const button = row.querySelector('.dynamic-table-control');
 
         if (button) {
             const open = expanded.has(id);
             button.textContent = open ? '−' : '+';
             button.setAttribute('aria-expanded', String(open));
+            button.setAttribute('aria-label', table.t(open ? 'responsive.hide_details' : 'responsive.details'));
         }
     }
 
     function closeChild(row) {
         const next = row.nextElementSibling;
 
-        if (next?.classList.contains('dt-child')) next.remove();
+        if (next?.classList.contains('dynamic-table-child')) next.remove();
     }
 
     function openChild(row) {
@@ -193,10 +219,10 @@ export default function install(table) {
         if (! hidden.length) return;
 
         const map = columnsByKey();
-        const list = el('dl', { class: 'dt-child-list' });
+        const list = el('dl', { class: 'dynamic-table-child-list' });
 
         for (const key of hidden) {
-            const source = row.querySelector(`[data-dt-cell="${CSS.escape(key)}"]`);
+            const source = row.querySelector(`[data-dynamic-table-cell="${CSS.escape(key)}"]`);
 
             if (! source) continue;
 
@@ -211,14 +237,14 @@ export default function install(table) {
 
         const span = row.children.length;
 
-        row.after(el('tr', { class: 'dt-child' }, [
+        row.after(el('tr', { class: 'dynamic-table-child' }, [
             el('td', { colspan: span }, [list]),
         ]));
     }
 
     function refreshOpenChildren() {
-        for (const row of element.querySelectorAll('tbody > tr[data-dt-row]')) {
-            if (expanded.has(row.getAttribute('data-dt-row'))) openChild(row);
+        for (const row of element.querySelectorAll('tbody > tr[data-dynamic-table-row]')) {
+            if (expanded.has(row.getAttribute('data-dynamic-table-row'))) openChild(row);
             else closeChild(row);
         }
     }

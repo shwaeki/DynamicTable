@@ -47,33 +47,33 @@
     id="{{ $id }}"
     class="{{ $classes['root'] }} {{ $classes['wrapper'] ?? '' }}"
     dir="{{ $boot['direction'] }}"
-    @if (! empty($boot['scheme'])) data-dt-scheme="{{ $boot['scheme'] }}" @endif
+    @if (! empty($boot['scheme'])) data-dynamic-table-scheme="{{ $boot['scheme'] }}" @endif
     data-dynamic-table
     data-table="{{ $boot['key'] }}"
     role="region"
     aria-label="{{ $boot['title'] }}"
 >
-    <script type="application/json" data-dt-boot>@json($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)</script>
+    <script type="application/json" data-dynamic-table-boot>@json($boot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)</script>
 
-    <div class="{{ $classes['toolbar'] }}" data-dt-toolbar>
-        <div class="dt-toolbar-start">
+    <div class="{{ $classes['toolbar'] }}" data-dynamic-table-toolbar>
+        <div class="dynamic-table-toolbar-start">
             @if ($features['search'] ?? false)
-                <label class="dt-visually-hidden" for="{{ $id }}-search">{{ $t('search') }}</label>
+                <label class="dynamic-table-visually-hidden" for="{{ $id }}-search">{{ $t('search') }}</label>
                 <input
                     id="{{ $id }}-search"
                     type="search"
                     class="{{ $classes['search'] ?? $classes['input'] ?? '' }}"
                     placeholder="{{ $t('search') }}"
                     value="{{ $boot['state']['search'] ?? '' }}"
-                    data-dt-search
+                    data-dynamic-table-search
                     autocomplete="off"
                 >
             @endif
 
             @if ($features['filters'] ?? false)
-                <button type="button" class="{{ $classes['button'] ?? '' }}" data-dt-open="filters" aria-haspopup="dialog">
+                <button type="button" class="{{ $classes['button'] ?? '' }}" data-dynamic-table-open="filters" aria-haspopup="dialog">
                     {{ $t('filters') }}
-                    <span class="{{ $classes['chip'] ?? '' }} dt-hidden" data-dt-filter-count>0</span>
+                    <span class="{{ $classes['chip'] ?? '' }} dynamic-table-hidden" data-dynamic-table-filter-count>0</span>
                 </button>
             @endif
 
@@ -81,33 +81,33 @@
                 @include('dynamic-table::partials.toolbar-action', ['action' => $action, 'classes' => $classes])
             @endforeach
 
-            <span class="dt-selection-summary dt-hidden" data-dt-selection-summary></span>
+            <span class="dynamic-table-selection-summary dynamic-table-hidden" data-dynamic-table-selection-summary></span>
         </div>
 
-        <div class="dt-toolbar-end">
-            @if ($features['views'] ?? false)
+        <div class="dynamic-table-toolbar-end">
+            @if ($features['saved_views'] ?? false)
                 {{-- The current view is the heading, as in Dynamics 365 views. --}}
                 <button
                     type="button"
-                    class="dt-view-picker"
-                    data-dt-open="views"
+                    class="dynamic-table-view-picker"
+                    data-dynamic-table-open="views"
                     aria-haspopup="menu"
                     aria-expanded="false"
                     title="{{ $t('views.title') }}"
                 >
-                    <span class="dt-view-name" data-dt-view-label>{{ $boot['viewName'] ?? $t('views.title') }}</span>
-                    <span class="dt-caret" aria-hidden="true"></span>
+                    <span class="dynamic-table-view-name" data-dynamic-table-view-label>{{ $boot['viewName'] ?? $t('views.title') }}</span>
+                    <span class="dynamic-table-caret" aria-hidden="true"></span>
                 </button>
             @endif
 
-            @if ($features['column_picker'] ?? false)
-                <button type="button" class="{{ $classes['button'] ?? '' }}" data-dt-open="columns" aria-haspopup="dialog">
+            @if (($features['column_picker'] ?? false) || ($features['column_reorder'] ?? false))
+                <button type="button" class="{{ $classes['button'] ?? '' }}" data-dynamic-table-open="columns" aria-haspopup="dialog">
                     {{ $t('columns') }}
                 </button>
             @endif
 
             @if (($features['export'] ?? false) && ($boot['permissions']['export'] ?? false))
-                <button type="button" class="{{ $classes['button'] ?? '' }}" data-dt-open="export">
+                <button type="button" class="{{ $classes['button'] ?? '' }}" data-dynamic-table-open="export">
                     {{ $t('export.title') }}
                 </button>
             @endif
@@ -118,12 +118,12 @@
                     class="{{ $classes['button'] ?? '' }}"
                     href="{{ $boot['endpoints']['print'] }}?table={{ $boot['key'] }}"
                     target="_blank"
-                    data-dt-print
+                    data-dynamic-table-print
                 >{{ $t('print.title') }}</a>
             @endif
 
             @if (($features['import'] ?? false) && ($boot['permissions']['import'] ?? false))
-                <button type="button" class="{{ $classes['button'] ?? '' }}" data-dt-open="import">
+                <button type="button" class="{{ $classes['button'] ?? '' }}" data-dynamic-table-open="import">
                     {{ $t('import.title') }}
                 </button>
             @endif
@@ -132,22 +132,22 @@
                 @include('dynamic-table::partials.toolbar-action', ['action' => $action, 'classes' => $classes])
             @endforeach
 
-            @if (($features['create'] ?? false) && ($boot['permissions']['create'] ?? false))
-                <button type="button" class="{{ $classes['buttonPrimary'] ?? '' }}" data-dt-create>
+            @if (($features['inline_create'] ?? false) && ($boot['permissions']['create'] ?? false))
+                <button type="button" class="{{ $classes['buttonPrimary'] ?? '' }}" data-dynamic-table-create>
                     {{ $t('create.title') }}
                 </button>
             @endif
 
             @if (($boot['actions'] ?? []) || ($features['bulk_edit'] ?? false))
-                <div class="dt-actions dt-hidden" data-dt-actions>
+                <div class="dynamic-table-actions dynamic-table-hidden" data-dynamic-table-actions>
                     @if ($features['bulk_edit'] ?? false)
-                        <button type="button" class="{{ $classes['button'] ?? '' }}" data-dt-open="bulk-edit">
+                        <button type="button" class="{{ $classes['button'] ?? '' }}" data-dynamic-table-open="bulk-edit">
                             {{ $t('bulk_edit.title') }}
                         </button>
                     @endif
 
                     @if ($boot['actions'] ?? [])
-                        <button type="button" class="{{ $classes['buttonPrimary'] ?? '' }}" data-dt-open="actions">
+                        <button type="button" class="{{ $classes['buttonPrimary'] ?? '' }}" data-dynamic-table-open="actions">
                             {{ $t('actions.title') }}
                         </button>
                     @endif
@@ -156,17 +156,17 @@
         </div>
     </div>
 
-    <div class="dt-alerts" data-dt-alerts aria-live="polite"></div>
+    <div class="dynamic-table-alerts" data-dynamic-table-alerts aria-live="polite"></div>
 
     {{-- The height lives on the element, because a sticky header needs a box that scrolls. --}}
     <div
         class="{{ $classes['scroller'] }}"
-        data-dt-scroller
-        @if (! empty($boot['maxHeight'])) style="--dt-max-height: {{ $boot['maxHeight'] }}" @endif
+        data-dynamic-table-scroller
+        @if (! empty($boot['maxHeight'])) style="--dynamic-table-max-height: {{ $boot['maxHeight'] }}" @endif
     >
         @php
             /*
-             * Sized columns switch the table to fixed layout; see .dt-sized.
+             * Sized columns switch the table to fixed layout; see .dynamic-table-sized.
              *
              * A width declared on the column counts, not only one the reader
              * dragged: auto layout treats a width as a suggestion and refuses
@@ -191,18 +191,18 @@
             $narrow = array_filter($sizes, fn ($width) => $width < 64);
         @endphp
 
-        <table class="{{ $classes['table'] }} @if ($sized) dt-sized @endif" data-dt-table>
+        <table class="{{ $classes['table'] }} @if ($sized) dynamic-table-sized @endif" data-dynamic-table-table>
             <thead class="{{ $classes['thead'] }}">
                 <tr class="{{ $classes['headRow'] }}">
                     @if ($expandable)
-                        <th class="{{ $classes['th'] }} dt-expand-cell" scope="col">
-                            <span class="dt-visually-hidden">{{ $t('detail.title') }}</span>
+                        <th class="{{ $classes['th'] }} dynamic-table-expand-cell" scope="col">
+                            <span class="dynamic-table-visually-hidden">{{ $t('detail.title') }}</span>
                         </th>
                     @endif
 
                     @if ($selectable)
-                        <th class="{{ $classes['th'] }} dt-select-cell" scope="col">
-                            <input type="checkbox" data-dt-select-all aria-label="{{ $t('select_all') }}">
+                        <th class="{{ $classes['th'] }} dynamic-table-select-cell" scope="col">
+                            <input type="checkbox" data-dynamic-table-select-all aria-label="{{ $t('select_all') }}">
                         </th>
                     @endif
 
@@ -212,11 +212,11 @@
                             $width = $sizes[$column['key']] ?? null;
                         @endphp
                         <th
-                            class="{{ $classes['th'] }} @if(!empty($column['sortable']) && ! $headerMenu) {{ $classes['thSortable'] }} @endif dt-align-{{ $column['align'] ?? 'start' }} @if (isset($narrow[$column['key']])) dt-narrow @endif"
+                            class="{{ $classes['th'] }} @if(!empty($column['sortable']) && ! $headerMenu) {{ $classes['thSortable'] }} @endif dynamic-table-align-{{ $column['align'] ?? 'start' }} @if (isset($narrow[$column['key']])) dynamic-table-narrow @endif"
                             scope="col"
-                            data-dt-column="{{ $column['key'] }}"
-                            @if (isset($sticky[$column['key']])) data-dt-sticky @endif
-                            @if (isset($filtered[$column['key']])) data-dt-filtered @endif
+                            data-dynamic-table-column="{{ $column['key'] }}"
+                            @if (isset($sticky[$column['key']])) data-dynamic-table-sticky @endif
+                            @if (isset($filtered[$column['key']])) data-dynamic-table-filtered @endif
                             @if (! empty($width)) style="width: {{ $width }}px" @endif
                             @if (!empty($column['sortable'])) aria-sort="{{ $current ? ($current['direction'] === 'asc' ? 'ascending' : 'descending') : 'none' }}" @endif
                         >
@@ -230,37 +230,37 @@
                                 --}}
                                 <button
                                     type="button"
-                                    class="dt-header-trigger"
-                                    data-dt-header-menu="{{ $column['key'] }}"
+                                    class="dynamic-table-header-trigger"
+                                    data-dynamic-table-header-menu="{{ $column['key'] }}"
                                     aria-haspopup="menu"
                                     aria-expanded="false"
                                     aria-label="{{ $t('header.menu', ['column' => $column['label']]) }}"
                                 >
                                     <span>{{ $column['label'] }}</span>
-                                    <span class="dt-sort-icon" aria-hidden="true">{{ $current ? ($current['direction'] === 'asc' ? '▲' : '▼') : '' }}</span>
+                                    <span class="dynamic-table-sort-icon" aria-hidden="true">{{ $current ? ($current['direction'] === 'asc' ? '▲' : '▼') : '' }}</span>
                                     @if (isset($filtered[$column['key']]))
-                                        <span class="dt-filtered-icon" aria-hidden="true">▼</span>
+                                        <span class="dynamic-table-filtered-icon" aria-hidden="true">▼</span>
                                     @endif
-                                    <span class="dt-header-cog" aria-hidden="true">⚙</span>
+                                    <span class="dynamic-table-header-cog" aria-hidden="true">⚙</span>
                                 </button>
                             @elseif (!empty($column['sortable']))
-                                <button type="button" class="dt-sort" data-dt-sort="{{ $column['key'] }}">
+                                <button type="button" class="dynamic-table-sort" data-dynamic-table-sort="{{ $column['key'] }}">
                                     <span>{{ $column['label'] }}</span>
-                                    <span class="dt-sort-icon" aria-hidden="true">{{ $current ? ($current['direction'] === 'asc' ? '▲' : '▼') : '' }}</span>
+                                    <span class="dynamic-table-sort-icon" aria-hidden="true">{{ $current ? ($current['direction'] === 'asc' ? '▲' : '▼') : '' }}</span>
                                 </button>
                             @else
                                 <span>{{ $column['label'] }}</span>
                             @endif
 
-                            @if ($features['column_resizing'] ?? false)
-                                <span class="{{ $classes['resizer'] }}" data-dt-resizer="{{ $column['key'] }}" role="separator" aria-orientation="vertical"></span>
+                            @if ($features['column_resize'] ?? false)
+                                <span class="{{ $classes['resizer'] }}" data-dynamic-table-resizer="{{ $column['key'] }}" role="separator" aria-orientation="vertical"></span>
                             @endif
                         </th>
                     @endforeach
 
                     @if ($boot['rowActions'] ?? [])
-                        <th class="{{ $classes['th'] }} dt-row-actions-cell" scope="col">
-                            <span class="dt-visually-hidden">{{ $t('actions.title') }}</span>
+                        <th class="{{ $classes['th'] }} dynamic-table-row-actions-cell" scope="col">
+                            <span class="dynamic-table-visually-hidden">{{ $t('actions.title') }}</span>
                         </th>
                     @endif
                 </tr>
@@ -271,16 +271,16 @@
                         buttons included. A search row that skips them is a
                         search row whose inputs sit under the wrong columns.
                     --}}
-                    <tr class="{{ $classes['filterRow'] }}" data-dt-search-row>
-                        @if ($expandable)<th class="{{ $classes['th'] }} dt-expand-cell"></th>@endif
-                        @if ($selectable)<th class="{{ $classes['th'] }} dt-select-cell"></th>@endif
+                    <tr class="{{ $classes['filterRow'] }}" data-dynamic-table-search-row>
+                        @if ($expandable)<th class="{{ $classes['th'] }} dynamic-table-expand-cell"></th>@endif
+                        @if ($selectable)<th class="{{ $classes['th'] }} dynamic-table-select-cell"></th>@endif
                         @foreach ($visible as $column)
-                            <th class="{{ $classes['th'] }} @if (isset($narrow[$column['key']])) dt-narrow @endif" data-dt-search-cell="{{ $column['key'] }}">
+                            <th class="{{ $classes['th'] }} @if (isset($narrow[$column['key']])) dynamic-table-narrow @endif" data-dynamic-table-search-cell="{{ $column['key'] }}">
                                 @if (!empty($column['filterable']))
                                     <input
                                         type="text"
                                         class="{{ $classes['input'] ?? '' }}"
-                                        data-dt-column-search="{{ $column['key'] }}"
+                                        data-dynamic-table-column-search="{{ $column['key'] }}"
                                         value="{{ $boot['state']['columnSearch'][$column['key']] ?? '' }}"
                                         aria-label="{{ $t('search_column', ['column' => $column['label']]) }}"
                                     >
@@ -289,21 +289,64 @@
                         @endforeach
 
                         @if ($boot['rowActions'] ?? [])
-                            <th class="{{ $classes['th'] }} dt-row-actions-cell"></th>
+                            <th class="{{ $classes['th'] }} dynamic-table-row-actions-cell"></th>
                         @endif
                     </tr>
                 @endif
             </thead>
 
-            <tbody class="{{ $classes['tbody'] }}" data-dt-body>
+            <tbody class="{{ $classes['tbody'] }}" data-dynamic-table-body>
+                @php
+                    /*
+                     * Grouping, drawn here as well as in renderRows().
+                     *
+                     * A remembered state, a URL and a saved view can all arrive
+                     * with a group already chosen, so the first paint has to
+                     * show the same headers the next fetch will — otherwise the
+                     * groups appear only once something else causes a refresh.
+                     *
+                     * The query is already ordered by the group column, so a
+                     * change of value is all that starts a new group. The
+                     * sentinel is an object, so a genuinely null first value
+                     * still opens one.
+                     */
+                    $groupKey = ($features['grouping'] ?? false) ? ($boot['state']['group'] ?? null) : null;
+                    $lastGroup = new stdClass;
+                    $span = count($visible) + $leading + (($boot['rowActions'] ?? []) ? 1 : 0);
+
+                    $groupLabel = $groupKey === null
+                        ? null
+                        : (collect($boot['columns'])->firstWhere('key', $groupKey)['label'] ?? $groupKey);
+                @endphp
+
                 @forelse ($data['rows'] as $row)
-                    <tr class="{{ $classes['row'] }}" data-dt-row="{{ $row['id'] }}">
+                    @if ($groupKey)
+                        @php $groupValue = $row['c'][$groupKey] ?? null; @endphp
+
+                        @if ($groupValue !== $lastGroup)
+                            @php $lastGroup = $groupValue; @endphp
+                            <tr class="{{ $classes['group'] ?? '' }} dynamic-table-group-row">
+                                <td colspan="{{ $span }}">
+                                    <span class="dynamic-table-group-label">{{ $groupLabel }}: </span>
+                                    <strong>{{ $groupValue === null || $groupValue === '' ? '—' : $groupValue }}</strong>
+                                </td>
+                            </tr>
+                        @endif
+                    @endif
+
+                    {{-- data-trashed mirrors renderRow(); without it a soft-deleted
+                         row was struck through only after the first repaint. --}}
+                    <tr
+                        class="{{ $classes['row'] }}"
+                        data-dynamic-table-row="{{ $row['id'] }}"
+                        @if (! empty($row['trashed'])) data-trashed @endif
+                    >
                         @if ($expandable)
-                            <td class="{{ $classes['cell'] }} dt-expand-cell">
+                            <td class="{{ $classes['cell'] }} dynamic-table-expand-cell">
                                 <button
                                     type="button"
-                                    class="dt-expand"
-                                    data-dt-detail="{{ $row['id'] }}"
+                                    class="dynamic-table-expand"
+                                    data-dynamic-table-detail="{{ $row['id'] }}"
                                     aria-expanded="false"
                                     aria-label="{{ $t('detail.toggle') }}"
                                 >›</button>
@@ -311,26 +354,26 @@
                         @endif
 
                         @if ($selectable)
-                            <td class="{{ $classes['cell'] }} dt-select-cell">
-                                <input type="checkbox" data-dt-select="{{ $row['id'] }}" aria-label="{{ $t('select_row') }}">
+                            <td class="{{ $classes['cell'] }} dynamic-table-select-cell">
+                                <input type="checkbox" data-dynamic-table-select="{{ $row['id'] }}" aria-label="{{ $t('select_row') }}">
                             </td>
                         @endif
 
                         @foreach ($visible as $column)
                             @php $value = $row['c'][$column['key']] ?? null; @endphp
                             <td
-                                class="{{ $classes['cell'] }} dt-align-{{ $column['align'] ?? 'start' }} @if (isset($narrow[$column['key']])) dt-narrow @endif {{ $column['class'] ?? '' }}"
-                                data-dt-cell="{{ $column['key'] }}"
-                                @if (isset($sticky[$column['key']])) data-dt-sticky @endif
+                                class="{{ $classes['cell'] }} dynamic-table-align-{{ $column['align'] ?? 'start' }} @if (isset($narrow[$column['key']])) dynamic-table-narrow @endif {{ $column['class'] ?? '' }}"
+                                data-dynamic-table-cell="{{ $column['key'] }}"
+                                @if (isset($sticky[$column['key']])) data-dynamic-table-sticky @endif
                                 data-label="{{ $column['label'] }}"
-                                @if (!empty($column['editable']) && ($features['inline_edit'] ?? false)) data-dt-editable @endif
+                                @if (!empty($column['editable']) && ($features['inline_edit'] ?? false)) data-dynamic-table-editable @endif
                             >
                                 @include('dynamic-table::partials.cell', ['column' => $column, 'value' => $value, 'classes' => $classes, 'html' => isset($row['h'][$column['key']])])
                             </td>
                         @endforeach
 
                         @if ($boot['rowActions'] ?? [])
-                            <td class="{{ $classes['cell'] }} dt-row-actions-cell">
+                            <td class="{{ $classes['cell'] }} dynamic-table-row-actions-cell">
                                 @foreach ($boot['rowActions'] as $action)
                                     @php $applies = $row['a'][$action['name']] ?? null; @endphp
 
@@ -340,9 +383,9 @@
 
                                     @php
                                         /* Mirrors the browser's renderRow(): icon, label, or both. */
-                                        $actionClass = trim('dt-row-action '
-                                            .(! empty($action['destructive']) ? 'dt-row-action-danger ' : '')
-                                            .(! empty($action['class']) ? 'dt-row-action-custom '.$action['class'] : ''));
+                                        $actionClass = trim('dynamic-table-row-action '
+                                            .(! empty($action['destructive']) ? 'dynamic-table-row-action-danger ' : '')
+                                            .(! empty($action['class']) ? 'dynamic-table-row-action-custom '.$action['class'] : ''));
                                     @endphp
 
                                     @if (! empty($action['link']))
@@ -356,7 +399,7 @@
                                         <button
                                             type="button"
                                             class="{{ $actionClass }}"
-                                            data-dt-row-action="{{ $action['name'] }}"
+                                            data-dynamic-table-row-action="{{ $action['name'] }}"
                                             title="{{ $action['label'] }}"
                                         >@include('dynamic-table::partials.row-action', ['action' => $action])</button>
                                     @endif
@@ -366,17 +409,17 @@
                     </tr>
                 @empty
                     <tr>
-                        <td class="{{ $classes['empty'] }}" colspan="{{ count($visible) + $leading + (($boot['rowActions'] ?? []) ? 1 : 0) }}">
+                        <td class="{{ $classes['empty'] }}" colspan="{{ $span }}">
                             {{-- Mirrored by the JS renderer; see renderEmpty(). --}}
-                            <div class="dt-empty-state" data-dt-empty>
-                                <p class="dt-empty-title">
+                            <div class="dynamic-table-empty-state" data-dynamic-table-empty>
+                                <p class="dynamic-table-empty-title">
                                     {{ ($data['emptyReason'] ?? 'none') === 'filtered' ? $t('empty_filtered') : $t('empty') }}
                                 </p>
 
                                 @if (($data['emptyReason'] ?? null) === 'filtered')
-                                    <p class="dt-empty-hint">{{ $t('empty_filtered_hint') }}</p>
+                                    <p class="dynamic-table-empty-hint">{{ $t('empty_filtered_hint') }}</p>
 
-                                    <button type="button" class="{{ $classes['button'] ?? '' }}" data-dt-clear-filters>
+                                    <button type="button" class="{{ $classes['button'] ?? '' }}" data-dynamic-table-clear-filters>
                                         {{ $t('clear_filters') }}
                                     </button>
                                 @endif
@@ -393,19 +436,19 @@
                     In <tfoot>, which is where a table's totals belong: screen
                     readers announce it as such, and it prints on every page.
                 --}}
-                <tfoot class="dt-tfoot" data-dt-summary-row>
-                    <tr class="dt-summary-row">
+                <tfoot class="dynamic-table-tfoot" data-dynamic-table-summary-row>
+                    <tr class="dynamic-table-summary-row">
                         @if ($expandable)<td class="{{ $classes['cell'] }}"></td>@endif
                         @if ($selectable)<td class="{{ $classes['cell'] }}"></td>@endif
 
                         @foreach ($visible as $column)
                             <td
-                                class="{{ $classes['cell'] }} dt-align-{{ $column['align'] ?? 'start' }}"
-                                data-dt-summary="{{ $column['key'] }}"
+                                class="{{ $classes['cell'] }} dynamic-table-align-{{ $column['align'] ?? 'start' }}"
+                                data-dynamic-table-summary="{{ $column['key'] }}"
                             >
                                 @if (isset($summaries[$column['key']]))
-                                    <span class="dt-summary-label">{{ $t('summary.'.$column['summary']) }}</span>
-                                    <span class="dt-summary-value">{{ $summaries[$column['key']] }}</span>
+                                    <span class="dynamic-table-summary-label">{{ $t('summary.'.$column['summary']) }}</span>
+                                    <span class="dynamic-table-summary-value">{{ $summaries[$column['key']] }}</span>
                                 @endif
                             </td>
                         @endforeach
@@ -418,18 +461,25 @@
 
         @if (($boot['paginationStyle'] ?? 'pages') === 'infinite')
             {{-- Watched by the core module; crossing it fetches the next page. --}}
-            <div class="dt-sentinel" data-dt-sentinel aria-hidden="true"></div>
+            <div class="dynamic-table-sentinel" data-dynamic-table-sentinel aria-hidden="true"></div>
         @endif
 
-        <div class="{{ $classes['loading'] }}" data-dt-loading hidden>
-            <span class="dt-spinner" aria-hidden="true"></span>
+        <div class="{{ $classes['loading'] }}" data-dynamic-table-loading hidden>
+            <span class="dynamic-table-spinner" aria-hidden="true"></span>
             <span>{{ $t('loading') }}</span>
         </div>
     </div>
 
     @if ($features['pagination'] ?? false)
         <div class="{{ $classes['footer'] }}">
-            <div class="dt-summary" data-dt-summary>
+            {{--
+                "range", not "summary": the summary-row cells below the table
+                carry data-dynamic-table-summary, and an attribute selector
+                matches on the name alone. Sharing it meant querySelector()
+                found the first tfoot cell instead of this line, and the page
+                range was written over a column's total on every refresh.
+            --}}
+            <div class="dynamic-table-summary" data-dynamic-table-range>
                 @php
                     $n = fn ($v) => number_format((int) $v);
                     $range = ['from' => $n($data['from'] ?? 0), 'to' => $n($data['to'] ?? 0)];
@@ -443,22 +493,22 @@
                 @endif
             </div>
 
-            <div class="dt-pagination-controls" @if (($boot['paginationStyle'] ?? 'pages') === 'infinite') data-dt-infinite @endif>
-                <label class="dt-per-page">
-                    <span class="dt-visually-hidden">{{ $t('per_page') }}</span>
-                    <select class="{{ $classes['select'] ?? '' }}" data-dt-per-page>
+            <div class="dynamic-table-pagination-controls" @if (($boot['paginationStyle'] ?? 'pages') === 'infinite') data-dynamic-table-infinite @endif>
+                <label class="dynamic-table-per-page">
+                    <span class="dynamic-table-visually-hidden">{{ $t('per_page') }}</span>
+                    <select class="{{ $classes['select'] ?? '' }}" data-dynamic-table-per-page>
                         @foreach ($boot['perPageOptions'] as $option)
                             <option value="{{ $option }}" @selected($option === ($boot['state']['perPage'] ?? 0))>{{ $option }}</option>
                         @endforeach
                     </select>
                 </label>
 
-                <nav class="{{ $classes['pagination'] }}" data-dt-pagination aria-label="{{ $t('pagination') }}"></nav>
+                <nav class="{{ $classes['pagination'] }}" data-dynamic-table-pagination aria-label="{{ $t('pagination') }}"></nav>
             </div>
         </div>
     @endif
 
     @if ($boot['panel'] ?? false)
-        <div class="{{ $classes['panel'] }}" data-dt-panel></div>
+        <div class="{{ $classes['panel'] }}" data-dynamic-table-panel></div>
     @endif
 </div>

@@ -44,7 +44,7 @@ class UsersTable extends DynamicTable
 | `$responsiveFixed` | first column | Column paths that never collapse. |
 | `$stickyColumns` | `[]` | Column keys frozen from the leading edge. Needs `sticky_columns`. |
 | `$stickyActions` | `false` | Freeze the row action buttons against the opposite edge. |
-| `$facets` | `[]` | Columns whose filter values carry counts. Needs `facets`. |
+| `$filterCounts` | `[]` | Columns whose filter values carry counts. Needs `filter_counts`. |
 | `$relationDepth` | 1 | How deep the filter builder and column picker walk relations. |
 | `$params` | `[]` | External parameters `query()` may read. See [Parameters](#parameters). |
 | `$paramFilters` | `[]` | Parameters bound straight to the query. See [Filters from parameters](#filters-from-parameters). |
@@ -211,23 +211,75 @@ the rows on screen.
 
 ### Wiring your controls
 
-Give any input `data-dt-param` and the table key. Nothing else:
+Two attributes, and nothing else:
+
+| Attribute | On | Says |
+|---|---|---|
+| `data-dynamic-table-param="<name>"` | the control | which parameter it sets |
+| `data-dynamic-table-table="<key>"` | the control | which table it sets it on |
+| `data-dynamic-table-params="<key>"` | a wrapper | the key for every control inside it |
+| `data-dynamic-table-params-reset="<key>"` | a button | clear them all and reload once |
+
+The key is the table's own — `$tableKey` when the class sets one, otherwise the
+one derived from the class name. A table whose filters live outside it is worth
+naming, so the Blade is not coupled to a class name:
+
+```php
+class OrdersTable extends DynamicTable
+{
+    protected ?string $tableKey = 'orders';
+
+    protected array $paramFilters = [
+        'status',                                                  // where('status', $value)
+        'country' => ['column' => 'customer.country'],             // through a relation
+        'min_total' => ['column' => 'total', 'operator' => '>='],
+        'placed_period' => ['column' => 'placed_at', 'operator' => 'period'],
+    ];
+
+    /** Runs first, and owns what the table may show at all. */
+    public function query(Builder $query): Builder
+    {
+        return $query->where('agent_id', Auth::id());
+    }
+}
+```
+
+The markup is your application's, in your application's classes — this is
+Bootstrap, but nothing here is package markup:
 
 ```blade
-<form data-dt-params="orders" class="row g-2">
-    <input type="date" data-dt-param="from_date" data-dt-table="orders">
-    <input type="date" data-dt-param="to_date" data-dt-table="orders">
-
-    <select data-dt-param="status" data-dt-table="orders">
+<div class="row g-2" data-dynamic-table-params="orders">
+    <select class="form-select" data-dynamic-table-param="status">
         <option value="">Any status</option>
         <option value="paid">Paid</option>
     </select>
 
-    <button type="button" data-dt-params-reset="orders">Reset</button>
-</form>
+    {{-- Spelled out in full, so it works outside the wrapper too. --}}
+    <select class="form-select" data-dynamic-table-param="country" data-dynamic-table-table="orders">
+        <option value="">Any country</option>
+        <option value="US">United States</option>
+    </select>
+
+    <input type="number" class="form-control" data-dynamic-table-param="min_total">
+
+    <select class="form-select" data-dynamic-table-param="placed_period">
+        <option value="">Any time</option>
+        <option value="month">Last month</option>
+        <option value="year">Last year</option>
+    </select>
+
+    <button type="button" class="btn btn-outline-secondary" data-dynamic-table-params-reset="orders">Reset</button>
+</div>
 
 @dynamicTable(OrdersTable::class)
 ```
+
+Controls inside a `data-dynamic-table-params` wrapper may drop their own
+`data-dynamic-table-table`; both spellings are shown above, and they mix freely.
+Neither the parameter names nor the column names come from the browser — a
+control naming a parameter the class did not declare is ignored.
+
+The `param-filters` example in `demo/` is this, running.
 
 Selects and dates apply on change, text inputs are debounced, and a form
 submit applies the lot in one request. Every change resets to page 1 — an
@@ -257,11 +309,11 @@ search   filters   sorting   pagination   responsive   header_menu
 Opt-in (each costs a query, a JS module, or extra state):
 
 ```
-views              column_picker      column_reordering   column_resizing
+saved_views        column_picker      column_reorder      column_resize
 column_search      selection          bulk_actions        bulk_edit
 row_actions        toolbar_actions    inline_edit         create
 row_detail         sticky_columns     facets              grouping
-export             import             print               soft_deletes
+export             import             print               relations
 url_state          remember_state
 ```
 
@@ -270,7 +322,7 @@ and which module it loads — in [All features](features.md).
 
 ```php
 protected array $features = [
-    'views',
+    'saved_views',
     'export',
     'bulk-actions',   // hyphens, camelCase and snake_case all work
     '-search',        // switch a default off
@@ -283,9 +335,8 @@ Some features imply others, so you never configure the same idea twice:
 |---|---|
 | `bulk_actions` | `selection` |
 | `bulk_edit` | `selection` |
-| `create` | `inline_edit` |
-| `views` | `column_picker` |
-| `column_reordering` / `column_resizing` | `column_picker` |
+| `inline_create` | `inline_edit` |
+| `saved_views` | `column_picker` |
 
 `'only'` as the first entry starts from nothing:
 

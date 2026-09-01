@@ -25,7 +25,7 @@
     {{-- Applied before first paint so switching schemes never flashes. --}}
     <script>
         (() => {
-            const stored = localStorage.getItem('dt-demo-scheme') || 'auto';
+            const stored = localStorage.getItem('dynamic-table-demo-scheme') || 'auto';
             const resolved = stored === 'auto'
                 ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
                 : stored;

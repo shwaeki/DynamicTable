@@ -22,40 +22,47 @@ return [
     | usable immediately as $theme = 'demo' on a table, or as the global
     | 'theme' above. No service provider, no Blade files, no build.
     |
-    | The dt-* classes stay because they carry behaviour — sticky header,
+    | The dynamic-table-* classes stay because they carry behaviour — sticky header,
     | resize handles, dialog layout, RTL mirroring — rather than looks. Colour
     | is not set here: it comes from the CSS tokens, which is what keeps the
     | theme readable in light and dark. The demo overrides those tokens in its
-    | own stylesheet under .dt-demo.
+    | own stylesheet under .dynamic-table-demo.
     */
     'themes' => [
 
         'demo' => [
-            'root' => 'dt dt-demo',
+            'root' => 'dynamic-table dynamic-table-demo',
             'wrapper' => 'demo-card',
-            'toolbar' => 'dt-toolbar demo-toolbar',
+            'toolbar' => 'dynamic-table-toolbar demo-toolbar',
             'search' => 'demo-input demo-input-search',
             'button' => 'demo-btn',
             'buttonPrimary' => 'demo-btn demo-btn-primary',
             'buttonDanger' => 'demo-btn demo-btn-danger',
             'input' => 'demo-input',
             'select' => 'demo-input demo-select',
-            'scroller' => 'dt-scroller',
-            'table' => 'dt-table demo-table',
-            'thead' => 'dt-thead demo-thead',
-            'th' => 'dt-th demo-th',
-            'row' => 'dt-row demo-row',
-            'rowSelected' => 'dt-row-selected demo-row-selected',
-            'cell' => 'dt-cell demo-cell',
-            'footer' => 'dt-footer demo-footer',
-            'empty' => 'dt-empty demo-empty',
-            'badge' => 'dt-badge demo-badge',
-            'menu' => 'dt-menu demo-menu',
-            'menuItem' => 'dt-menu-item demo-menu-item',
-            'modalBox' => 'dt-modal-box demo-modal',
-            'chip' => 'dt-chip demo-chip',
+            'scroller' => 'dynamic-table-scroller',
+            'table' => 'dynamic-table-table demo-table',
+            'thead' => 'dynamic-table-thead demo-thead',
+            'th' => 'dynamic-table-th demo-th',
+            'row' => 'dynamic-table-row demo-row',
+            'rowSelected' => 'dynamic-table-row-selected demo-row-selected',
+            'cell' => 'dynamic-table-cell demo-cell',
+            'footer' => 'dynamic-table-footer demo-footer',
+            'empty' => 'dynamic-table-empty demo-empty',
+            'badge' => 'dynamic-table-badge demo-badge',
+            'menu' => 'dynamic-table-menu demo-menu',
+            'menuItem' => 'dynamic-table-menu-item demo-menu-item',
+            'modalBox' => 'dynamic-table-modal-box demo-modal',
+            'chip' => 'dynamic-table-chip demo-chip',
         ],
 
     ],
+
+    /*
+    | Where this demo's own source lives, so an example page can link to the
+    | file it is showing. The package never reads it — it is the demo's own
+    | setting, kept here because this is the demo's config file.
+    */
+    'source_url' => 'https://github.com/shwaeki/DynamicTable/blob/main',
 
 ];

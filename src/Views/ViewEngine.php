@@ -102,7 +102,7 @@ class ViewEngine
 
         abort_unless($this->sharingEnabled(), 400, 'View sharing is disabled.');
         abort_if($view->is_system, 422, 'A system view is already visible to everyone.');
-        abort_unless($view->isOwnedBy($this->userId()), 403);
+        abort_unless($view->isOwnedBy($this->userId()), 403, __('dynamic-table::table.errors.forbidden'));
 
         $owner = (string) $this->userId();
 
@@ -252,7 +252,7 @@ class ViewEngine
         $this->assertAvailable($table);
 
         if ($system && ! $this->canManageSystemViews($table)) {
-            abort(403);
+            abort(403, __('dynamic-table::table.errors.forbidden'));
         }
 
         $limit = (int) config('dynamic-table.views.max_per_user', 100);
@@ -325,7 +325,7 @@ class ViewEngine
         $this->assertAvailable($table);
 
         if ($view->is_system) {
-            abort_unless($this->canManageSystemViews($table), 403);
+            abort_unless($this->canManageSystemViews($table), 403, __('dynamic-table::table.errors.forbidden'));
 
             DynamicTableView::query()
                 ->forTable($table->key())
@@ -362,12 +362,12 @@ class ViewEngine
     protected function authorizeWrite(DynamicTable $table, DynamicTableView $view): void
     {
         if ($view->is_system) {
-            abort_unless($this->canManageSystemViews($table), 403);
+            abort_unless($this->canManageSystemViews($table), 403, __('dynamic-table::table.errors.forbidden'));
 
             return;
         }
 
-        abort_unless($view->isOwnedBy($this->userId()), 403);
+        abort_unless($view->isOwnedBy($this->userId()), 403, __('dynamic-table::table.errors.forbidden'));
     }
 
     protected function assertAvailable(DynamicTable $table): void
@@ -377,7 +377,7 @@ class ViewEngine
 
     public function available(DynamicTable $table): bool
     {
-        if (! $table->hasFeature(Feature::VIEWS) || ! config('dynamic-table.views.enabled', true)) {
+        if (! $table->hasFeature(Feature::SAVED_VIEWS) || ! config('dynamic-table.views.enabled', true)) {
             return false;
         }
 

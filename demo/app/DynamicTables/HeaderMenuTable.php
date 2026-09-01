@@ -24,8 +24,8 @@ class HeaderMenuTable extends DynamicTable
     protected array $features = [
         'grouping',
         'column_picker',
-        'column_reordering',
-        'column_resizing',
+        'column_reorder',
+        'column_resize',
     ];
 
     /*

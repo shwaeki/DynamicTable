@@ -45,9 +45,9 @@ class CellRenderers
 
         // The width is the only inline style, because it is data rather than
         // design; the colours come from the tokens.
-        return '<span class="dt-progress" role="img" aria-label="'.e($percent.'%').'">'
-            .'<span class="dt-progress-track"><span class="dt-progress-bar" style="inline-size:'.$percent.'%"></span></span>'
-            .'<span class="dt-progress-value">'.e(self::trim($number).($max === 100.0 ? '%' : ' / '.self::trim($max))).'</span>'
+        return '<span class="dynamic-table-progress" role="img" aria-label="'.e($percent.'%').'">'
+            .'<span class="dynamic-table-progress-track"><span class="dynamic-table-progress-bar" style="inline-size:'.$percent.'%"></span></span>'
+            .'<span class="dynamic-table-progress-value">'.e(self::trim($number).($max === 100.0 ? '%' : ' / '.self::trim($max))).'</span>'
             .'</span>';
     }
 
@@ -60,9 +60,9 @@ class CellRenderers
 
         $stars = str_repeat('★', $filled).str_repeat('☆', max(0, $out - $filled));
 
-        return '<span class="dt-rating" title="'.e(self::trim($score).' / '.$out).'">'
-            .'<span class="dt-rating-stars" aria-hidden="true">'.$stars.'</span>'
-            .'<span class="dt-visually-hidden">'.e(self::trim($score).' / '.$out).'</span>'
+        return '<span class="dynamic-table-rating" title="'.e(self::trim($score).' / '.$out).'">'
+            .'<span class="dynamic-table-rating-stars" aria-hidden="true">'.$stars.'</span>'
+            .'<span class="dynamic-table-visually-hidden">'.e(self::trim($score).' / '.$out).'</span>'
             .'</span>';
     }
 
@@ -95,11 +95,11 @@ class CellRenderers
 
         $last = end($points);
 
-        return '<span class="dt-sparkline">'
+        return '<span class="dynamic-table-sparkline">'
             .'<svg viewBox="0 0 100 20" preserveAspectRatio="none" aria-hidden="true" focusable="false">'
             .'<polyline points="'.e(implode(' ', $coordinates)).'" />'
             .'</svg>'
-            .'<span class="dt-sparkline-value">'.e(self::trim((float) $last)).'</span>'
+            .'<span class="dynamic-table-sparkline-value">'.e(self::trim((float) $last)).'</span>'
             .'</span>';
     }
 
@@ -116,14 +116,14 @@ class CellRenderers
         $shown = array_slice($items, 0, $limit);
         $rest = count($items) - count($shown);
 
-        $html = '<span class="dt-chips">';
+        $html = '<span class="dynamic-table-chips">';
 
         foreach ($shown as $item) {
-            $html .= '<span class="dt-chip">'.e(is_scalar($item) ? (string) $item : json_encode($item)).'</span>';
+            $html .= '<span class="dynamic-table-chip">'.e(is_scalar($item) ? (string) $item : json_encode($item)).'</span>';
         }
 
         if ($rest > 0) {
-            $html .= '<span class="dt-chip dt-chip-more">+'.$rest.'</span>';
+            $html .= '<span class="dynamic-table-chip dynamic-table-chip-more">+'.$rest.'</span>';
         }
 
         return $html.'</span>';
@@ -138,7 +138,7 @@ class CellRenderers
             return null;
         }
 
-        return '<img src="'.e($url).'" alt="'.e((string) $argument).'" class="dt-avatar" loading="lazy" decoding="async">';
+        return '<img src="'.e($url).'" alt="'.e((string) $argument).'" class="dynamic-table-avatar" loading="lazy" decoding="async">';
     }
 
     /** Seconds as "1h 20m", or "45s" when that is all there is. */
@@ -154,7 +154,7 @@ class CellRenderers
             $interval->days || $interval->h ? null : ($interval->s ? $interval->s.'s' : null),
         ]);
 
-        return '<span class="dt-plain">'.e($parts === [] ? '0s' : implode(' ', $parts)).'</span>';
+        return '<span class="dynamic-table-plain">'.e($parts === [] ? '0s' : implode(' ', $parts)).'</span>';
     }
 
     /** @return list<float> */

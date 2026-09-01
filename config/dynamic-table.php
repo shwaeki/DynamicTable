@@ -31,15 +31,19 @@ return [
     |
     | Two rules, and only two:
     |
-    | 1. Keep the structural dt-* classes. They carry behaviour — sticky
-    |    header, resize handles, dialog layout, RTL mirroring — not looks. Add
-    |    your own classes alongside them.
+    | 1. Keep the structural dynamic-table-* classes. They carry behaviour —
+    |    sticky header, resize handles, dialog layout, RTL mirroring — not
+    |    looks. Add your own classes alongside them.
     | 2. Do not put colour here. Surfaces, text and borders come from the CSS
-    |    tokens (--dt-ink, --dt-surface, --dt-border, --dt-accent …), which is
-    |    what keeps every theme legible in light and dark and obedient to
-    |    data-dt-scheme. Override the tokens in your own stylesheet instead:
+    |    tokens (--dynamic-table-ink, --dynamic-table-surface,
+    |    --dynamic-table-border, --dynamic-table-accent …), which is what keeps
+    |    every theme legible in light and dark and obedient to
+    |    data-dynamic-table-scheme. Override the tokens in your own stylesheet:
     |
-    |        .dt-brand { --dt-accent: #7c3aed; --dt-radius: 14px; }
+    |        .dynamic-table-brand {
+    |            --dynamic-table-accent: #7c3aed;
+    |            --dynamic-table-radius: 14px;
+    |        }
     |
     | "extends" starts from a theme that already works and changes only what
     | you name, which is usually all an admin template needs:
@@ -51,34 +55,34 @@ return [
     |
     | {tone} is where a badge's tone goes — success, danger, warning, info,
     | primary, neutral. Leave it out and the tone is appended instead, as
-    | dt-badge-success, which the package stylesheet paints.
+    | dynamic-table-badge-success, which the package stylesheet paints.
     */
     'themes' => [
 
         // 'brand' => [
-        //     'root' => 'dt dt-brand',
+        //     'root' => 'dynamic-table dynamic-table-brand',
         //     'wrapper' => 'rounded-2xl border shadow-sm overflow-hidden',
-        //     'toolbar' => 'dt-toolbar flex items-center gap-2 p-3 border-b',
+        //     'toolbar' => 'dynamic-table-toolbar flex items-center gap-2 p-3 border-b',
         //     'search' => 'input input-sm w-64',
         //     'button' => 'btn btn-sm',
         //     'buttonPrimary' => 'btn btn-sm btn-primary',
         //     'buttonDanger' => 'btn btn-sm btn-error',
         //     'input' => 'input input-sm w-full',
         //     'select' => 'select select-sm',
-        //     'scroller' => 'dt-scroller overflow-x-auto',
-        //     'table' => 'dt-table table w-full',
-        //     'thead' => 'dt-thead',
-        //     'th' => 'dt-th text-xs uppercase tracking-wide',
-        //     'row' => 'dt-row',
-        //     'rowSelected' => 'dt-row-selected',
-        //     'cell' => 'dt-cell px-3 py-2',
-        //     'footer' => 'dt-footer flex items-center justify-between p-3 border-t',
-        //     'empty' => 'dt-empty py-16 text-center',
-        //     'badge' => 'dt-badge badge',
-        //     'menu' => 'dt-menu rounded-lg border p-1 shadow-lg',
-        //     'menuItem' => 'dt-menu-item w-full rounded px-2 py-1.5 text-start',
-        //     'modalBox' => 'dt-modal-box w-full max-w-2xl rounded-xl p-4 shadow-2xl',
-        //     'chip' => 'dt-chip badge',
+        //     'scroller' => 'dynamic-table-scroller overflow-x-auto',
+        //     'table' => 'dynamic-table-table table w-full',
+        //     'thead' => 'dynamic-table-thead',
+        //     'th' => 'dynamic-table-th text-xs uppercase tracking-wide',
+        //     'row' => 'dynamic-table-row',
+        //     'rowSelected' => 'dynamic-table-row-selected',
+        //     'cell' => 'dynamic-table-cell px-3 py-2',
+        //     'footer' => 'dynamic-table-footer flex items-center justify-between p-3 border-t',
+        //     'empty' => 'dynamic-table-empty py-16 text-center',
+        //     'badge' => 'dynamic-table-badge badge',
+        //     'menu' => 'dynamic-table-menu rounded-lg border p-1 shadow-lg',
+        //     'menuItem' => 'dynamic-table-menu-item w-full rounded px-2 py-1.5 text-start',
+        //     'modalBox' => 'dynamic-table-modal-box w-full max-w-2xl rounded-xl p-4 shadow-2xl',
+        //     'chip' => 'dynamic-table-chip badge',
         // ],
 
     ],
@@ -187,7 +191,7 @@ return [
         /*
         | Scroll the top of the table back into view when the page changes —
         | but only when it has actually scrolled out of sight. Style the resting
-        | position with CSS: .dt { scroll-margin-top: 5rem }
+        | position with CSS: .dynamic-table { scroll-margin-top: 5rem }
         */
         'scroll_on_page' => true,
     ],
@@ -268,7 +272,46 @@ return [
     ],
 
     'excel' => [
-        'adapter' => 'auto', // auto | laravel-excel | openspout | csv
+        /*
+        | "auto" offers XLSX whenever the application already has a spreadsheet
+        | library — openspout first, then PhpSpreadsheet, neither of which is a
+        | dependency of this package. "csv" declines XLSX outright, even when
+        | one of them is installed as somebody else's dependency, and the
+        | export dialog then offers CSV alone.
+        */
+        /*
+        | Which library writes and reads XLSX. "auto" prefers openspout, whose
+        | memory is flat whatever the row count, and falls back to
+        | PhpSpreadsheet. Name one to pin it. "csv" declines XLSX outright, even
+        | when a library is installed as somebody else's dependency, and the
+        | dialogs then offer CSV alone.
+        */
+        'adapter' => 'auto', // auto | openspout | phpspreadsheet | csv
+
+        /*
+        | The format the export and import dialogs open on, and the one the
+        | import template is written in. Falls back to CSV wherever XLSX is not
+        | available.
+        */
+        'default_format' => 'xlsx', // xlsx | csv
+
+        /*
+        | How an exported XLSX looks.
+        |
+        |   'TableStyleMedium2'  a real Excel table — the one "Format as Table"
+        |                        makes, with the Table Design ribbon, structured
+        |                        references and a name. Excel's own built-ins:
+        |                        TableStyleLight1-21, TableStyleMedium1-28,
+        |                        TableStyleDark1-11. An unknown name throws
+        |                        rather than being quietly ignored.
+        |   true                 a styled range: dark headings, banded rows.
+        |   false                a bare grid of values — worth it when the file
+        |                        is read by a program rather than by a person.
+        |
+        | The heading stays frozen and the columns stay sized to their content
+        | in every mode; nobody has ever wanted those gone.
+        */
+        'style' => 'TableStyleMedium2',
         'queue_threshold' => 5000,
         'chunk' => 1000,
         'disk' => null,
@@ -348,5 +391,4 @@ return [
         'version' => null,
     ],
 
-    'source_url' => null,
 ];

@@ -30,7 +30,8 @@ never assumes your application has either.
 `minimal` and `bordered` are the ready-to-use answer to "I do not have a CSS
 framework, and I do not want to write a theme". Every class they name is styled
 by the package's own stylesheet, on the same tokens as everything else — so
-they are readable in light and dark, they obey `data-dt-scheme`, and they need
+they are readable in light and dark, they obey `data-dynamic-table-scheme`,
+and they need
 no build step:
 
 ```php
@@ -54,10 +55,10 @@ php artisan vendor:publish --tag=dynamic-table-config
 'themes' => [
     'brand' => [
         'wrapper' => 'rounded-2xl border shadow',
-        'toolbar' => 'dt-toolbar flex items-center gap-2 p-4 border-b',
+        'toolbar' => 'dynamic-table-toolbar flex items-center gap-2 p-4 border-b',
         'button' => 'btn btn-sm',
         'buttonPrimary' => 'btn btn-sm btn-primary',
-        'cell' => 'dt-cell px-3 py-2',
+        'cell' => 'dynamic-table-cell px-3 py-2',
         // …anything you leave out keeps the structural default
     ],
 ],
@@ -74,14 +75,14 @@ be three lines.
 
 Two rules, and only two:
 
-1. **Keep the structural `dt-*` classes.** They carry behaviour — sticky
+1. **Keep the structural `dynamic-table-*` classes.** They carry behaviour — sticky
    header, resize handles, dialog layout, RTL mirroring — not looks.
 2. **Do not put colour in the map.** Surfaces, text and borders come from the
    CSS tokens, which is what keeps every theme legible in light and dark and
-   obedient to `data-dt-scheme`. Set the tokens in your own stylesheet:
+   obedient to `data-dynamic-table-scheme`. Set the tokens in your own stylesheet:
 
    ```css
-   .dt-brand { --dt-accent: #7c3aed; --dt-radius: 14px; }
+   .dynamic-table-brand { --dynamic-table-accent: #7c3aed; --dynamic-table-radius: 14px; }
    ```
 
 ### Building on a theme that already works
@@ -106,7 +107,7 @@ it later.
 `{tone}` is the one placeholder a slot understands, and only `badge` uses it: it
 is where the package writes the tone of a [badge](columns.md#badges) — the
 `success` of `badge badge-light-success`. Leave it out and the tone arrives as
-`dt-badge-success` alongside your class, which the package stylesheet paints.
+`dynamic-table-badge-success` alongside your class, which the package stylesheet paints.
 
 ### Registering one from code
 
@@ -119,26 +120,26 @@ use Shwaeki\DynamicTable\Support\Theme;
 
 Theme::register('brand', [
     'wrapper'       => 'rounded-2xl border border-slate-200 bg-white shadow',
-    'toolbar'       => 'dt-toolbar flex items-center gap-2 p-4 border-b',
+    'toolbar'       => 'dynamic-table-toolbar flex items-center gap-2 p-4 border-b',
     'search'        => 'input input-sm w-64',
     'button'        => 'btn btn-sm',
     'buttonPrimary' => 'btn btn-sm btn-primary',
     'buttonDanger'  => 'btn btn-sm btn-error',
     'input'         => 'input input-sm w-full',
     'select'        => 'select select-sm',
-    'table'         => 'dt-table table w-full',
-    'thead'         => 'dt-thead bg-slate-50',
-    'th'            => 'dt-th text-xs uppercase tracking-wide text-slate-500',
-    'row'           => 'dt-row hover:bg-slate-50',
-    'rowSelected'   => 'dt-row-selected bg-indigo-50',
-    'cell'          => 'dt-cell px-3 py-2',
-    'footer'        => 'dt-footer flex items-center justify-between p-3 border-t',
-    'empty'         => 'dt-empty py-16 text-center text-slate-400',
+    'table'         => 'dynamic-table-table table w-full',
+    'thead'         => 'dynamic-table-thead bg-slate-50',
+    'th'            => 'dynamic-table-th text-xs uppercase tracking-wide text-slate-500',
+    'row'           => 'dynamic-table-row hover:bg-slate-50',
+    'rowSelected'   => 'dynamic-table-row-selected bg-indigo-50',
+    'cell'          => 'dynamic-table-cell px-3 py-2',
+    'footer'        => 'dynamic-table-footer flex items-center justify-between p-3 border-t',
+    'empty'         => 'dynamic-table-empty py-16 text-center text-slate-400',
     'badge'         => 'badge',
-    'menu'          => 'dt-menu absolute z-40 rounded-lg border bg-white p-1 shadow-lg',
-    'menuItem'      => 'dt-menu-item w-full rounded px-2 py-1.5 text-start hover:bg-slate-100',
-    'modalBox'      => 'dt-modal-box w-full max-w-2xl rounded-xl bg-white p-4 shadow-2xl',
-    'chip'          => 'dt-chip badge badge-primary',
+    'menu'          => 'dynamic-table-menu absolute z-40 rounded-lg border bg-white p-1 shadow-lg',
+    'menuItem'      => 'dynamic-table-menu-item w-full rounded px-2 py-1.5 text-start hover:bg-slate-100',
+    'modalBox'      => 'dynamic-table-modal-box w-full max-w-2xl rounded-xl bg-white p-4 shadow-2xl',
+    'chip'          => 'dynamic-table-chip badge badge-primary',
 ]);
 ```
 
@@ -160,16 +161,17 @@ built-ins.
 > breaks — move its contents under the `themes` key when convenient and delete
 > it.
 
-## Keep the `dt-*` classes
+## Keep the `dynamic-table-*` classes
 
-Every slot has a structural default like `dt-table` or `dt-row`. Those classes
+Every slot has a structural default like `dynamic-table-table` or
+`dynamic-table-row`. Those classes
 carry *behaviour* from the package stylesheet — sticky headers, resize handles,
 dialog layout, loading overlay, RTL mirroring — and they
 are what the colour tokens paint. Keep them in your values (as above) and add
 your own alongside.
 
 The package's own rules are written with `:where()`, so they have the
-specificity of `.dt` alone: anything you put in the class map wins without
+specificity of `.dynamic-table` alone: anything you put in the class map wins without
 needing `!important`.
 
 ## Slots
@@ -200,8 +202,9 @@ prefer the class map, which keeps you on the upstream markup and its fixes.
 'theme' => 'custom',
 ```
 
-You get the structural `dt-*` classes and nothing else. Style them yourself; the
-package stylesheet is namespaced under `.dt` and will not touch the rest of your
+You get the structural `dynamic-table-*` classes and nothing else. Style them
+yourself; the package stylesheet is namespaced under `.dynamic-table` and will
+not touch the rest of your
 application.
 
 ## Light and dark
@@ -211,9 +214,13 @@ class map. That is deliberate, and it is why both bundled themes look right in
 both schemes:
 
 ```css
---dt-ink  --dt-muted  --dt-border  --dt-surface  --dt-surface-2
---dt-hover  --dt-selected  --dt-accent  --dt-accent-ink
---dt-danger  --dt-success  --dt-warning
+--dynamic-table-ink        --dynamic-table-muted
+--dynamic-table-border     --dynamic-table-surface
+--dynamic-table-surface-2  --dynamic-table-hover
+--dynamic-table-selected   --dynamic-table-accent
+--dynamic-table-accent-ink --dynamic-table-danger
+--dynamic-table-success    --dynamic-table-warning
+--dynamic-table-info       --dynamic-table-radius
 ```
 
 By default a table follows the viewer's operating system
@@ -227,12 +234,12 @@ protected ?string $scheme = 'dark';    // per table
 'scheme' => 'light',                   // application-wide, config
 ```
 
-`null` means "follow the system". The choice is rendered as `data-dt-scheme` on
-the table, so it can also be flipped at runtime:
+`null` means "follow the system". The choice is rendered as
+`data-dynamic-table-scheme` on the table, so it can also be flipped at runtime:
 
 ```js
 document.querySelectorAll('[data-dynamic-table]')
-    .forEach(el => el.setAttribute('data-dt-scheme', 'dark'));
+    .forEach(el => el.setAttribute('data-dynamic-table-scheme', 'dark'));
 ```
 
 > **Why not Tailwind's `dark:` variants?** Under Tailwind's default *media*
@@ -254,5 +261,5 @@ colours in the class map and ignore all of this.
 ## Responsive
 
 The `responsive` feature (on by default) gives horizontal scrolling with a
-sticky header. Add `dt-responsive-cards` to the wrapper class to switch to a
+sticky header. Add `dynamic-table-responsive-cards` to the wrapper class to switch to a
 card layout under 640px, and filters move into a drawer on small screens.

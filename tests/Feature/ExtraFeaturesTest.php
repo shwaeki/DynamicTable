@@ -245,7 +245,7 @@ it('tells the browser what is sticky, faceted and editable', function (): void {
 
     expect($payload['sticky'])->toBe(['name'])
         ->and($payload['stickyActions'])->toBeTrue()
-        ->and($payload['facets'])->toBe(['status'])
+        ->and($payload['filterCounts'])->toBe(['status'])
         ->and($payload['editableColumns'])->toContain('name')
         ->and($payload['toolbarActions'])->toHaveCount(3)   // the invisible one is absent
         ->and($payload['endpoints'])->toHaveKeys(['create', 'bulkEdit', 'rowDetail', 'toolbarAction']);

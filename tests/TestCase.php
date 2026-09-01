@@ -32,6 +32,7 @@ abstract class TestCase extends Orchestra
             'users' => Fixtures\UsersTable::class,
             'full_users' => Fixtures\FullUsersTable::class,
             'extras_users' => Fixtures\ExtrasUsersTable::class,
+            'no_import_users' => Fixtures\NoImportUsersTable::class,
         ]);
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
     }

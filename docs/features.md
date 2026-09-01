@@ -18,7 +18,7 @@ a smaller program.
 
 ```php
 protected array $features = [
-    'views',
+    'saved_views',
     'export',
     'bulk-actions',   // hyphens, camelCase and snake_case all work
     '-search',        // switch a default off
@@ -53,6 +53,7 @@ switch them off with `-name`.
 | `pagination` | Page size control, page list, and the range summary. | One `COUNT(*)` — see [Performance](performance.md). |
 | `responsive` | Small-screen strategy: collapse, cards or scroll. | One small module, and only in `collapse`/`cards` mode. |
 | `header_menu` | The Dynamics-style column menu: sort, filter, group, width, move, hide. | One module, loaded up front. |
+| `relations` | Lets the filter builder and the column picker reach through the model's relations. | The catalogue costs one introspection pass, cached. |
 
 ## Selecting and acting
 
@@ -104,7 +105,7 @@ Only ticked fields are sent, so a bulk edit of one column cannot blank another.
 | Feature | What it does | Implies | Module |
 |---|---|---|---|
 | `inline_edit` | Double-click a cell, or Enter/F2 on the keyboard. Enter saves and moves down, Tab across, Escape cancels. | — | `inline-edit` |
-| `create` | A blank row at the top of the table, saved as one request. | `inline_edit` | `inline-edit` |
+| `inline_create` | A blank row at the top of the table, saved as one request. | `inline_edit` | `inline-edit` |
 | `import` | CSV/XLSX upload, mapped to columns, chunked and transactional. | — | `transfer` |
 | `export` | Streaming CSV/XLSX of the current view — the filters, not the page. | — | `transfer` |
 | `print` | A printable page for the current view, from an editable Blade template. | — | — |
@@ -123,7 +124,7 @@ public function rules(): array
 }
 ```
 
-`create` also uses `newRecordDefaults()` for the columns the blank row does not
+`inline_create` also uses `newRecordDefaults()` for the columns the blank row does not
 ask for, so the model is never saved half-built:
 
 ```php
@@ -140,11 +141,10 @@ public function newRecordDefaults(): array
 | `row_detail` | A chevron per row that opens a panel underneath it, fetched on demand from `rowDetail()`. | — | `detail` |
 | `grouping` | Group rows by a column, with a heading row per value. | — | — |
 | `column_picker` | *Which* columns are shown: the panel, and adding any field the metadata reaches. | — | `columns` |
-| `column_reordering` | *What order* they are in: drag handles in that panel, and Move left/right in the header menu. | `column_picker` | `columns` |
-| `column_resizing` | Drag the edge of a header, Excel style. | `column_picker` | `columns` |
+| `column_reorder` | *What order* they are in: drag handles in the panel, and Move left/right in the header menu. | — | `columns` |
+| `column_resize` | Drag the edge of a header, Excel style. No panel involved. | — | `columns` |
 | `column_search` | A search input under each column header. | — | — |
-| `views` | Saved views: named, versioned, shareable, with a default per user. | `column_picker` | `views` |
-| `soft_deletes` | A trashed filter, restore and force-delete. | — | — |
+| `saved_views` | Named, versioned, shareable snapshots of table state, with a default per user. | `column_picker` | `views` |
 | `url_state` | Mirrors search, page, sort and filters into the query string. | — | — |
 | `remember_state` | Reopens the table the way this viewer last left it, with nothing to save or name. | — | — |
 
@@ -162,12 +162,122 @@ the `view` ability, so a detail can never be read for a row the table would not
 have shown. The panel is fetched the first time it is opened and cached until
 the rows change.
 
+## The three column features
+
+`column_picker`, `column_reorder` and `column_resize` are one panel and one
+JavaScript module, so they look like one feature and are often mistaken for it.
+They are three because they hand the reader three different powers, and plenty
+of tables want the first without the others:
+
+| Enabled | The reader can |
+|---|---|
+| *(none)* | nothing — the columns are exactly what the table declares |
+| `column_picker` | choose **which** columns are shown, and add any field the metadata reaches |
+| `+ column_reorder` | also choose **what order** they are in — drag handles in the panel, Move left/right in the header menu |
+| `+ column_resize` | also choose **how wide** each one is, by dragging the header edge |
+
+None of them implies another. Ask for exactly what you want:
+
+```php
+protected array $features = ['column_reorder'];   // reorder, and nothing else
+```
+
+That table opens the panel with the columns listed and draggable, and with no
+Add column link and no remove buttons — because it was not asked for them. A
+table with only `column_resize` gets no panel at all: its handles live in the
+header.
+
+There is no download to save by leaving them off — all three live in the same
+`columns` module. The reason to leave one off is that you do not want the
+reader changing that particular thing.
+
+## Soft deletes
+
+**There is no feature for this**, because Eloquent already says all three
+things and the package would only be wrapping a builder method in a flag:
+
+```php
+use Illuminate\Database\Eloquent\Builder;
+
+public function query(Builder $query): Builder
+{
+    return $query->withTrashed();     // or ->onlyTrashed()
+}
+```
+
+Leave `query()` alone and the model's own global scope hides trashed rows,
+which is the default anyone would expect.
+
+What the package does contribute is recognising a trashed row and striking it
+through — automatically, whenever the model uses `SoftDeletes`, whether or not
+you reached those rows deliberately.
+
+Restore and force-delete are ordinary row actions:
+
+```php
+public function rowActions(): array
+{
+    return [
+        RowAction::make('restore')
+            ->icon('↺')
+            ->visible(fn (Product $product): bool => $product->trashed())
+            ->handle(fn (Product $product) => $product->restore()),
+    ];
+}
+```
+
+To let the *reader* choose between live and trashed, make it a declared
+parameter — that is what parameters are for:
+
+```php
+protected array $params = ['show' => 'live'];
+
+public function query(Builder $query): Builder
+{
+    return $this->param('show') === 'trashed' ? $query->onlyTrashed() : $query;
+}
+```
+
+## Reaching through relations
+
+On by default: the filter builder and the column picker offer the fields of the
+model's singular relations alongside its own, so a reader can add `Department`
+to an employee table, or filter orders by `customer.country`, without anyone
+having declared those columns.
+
+Some tables should not offer that — a screen for one narrow job, a model whose
+relations lead somewhere the reader has no business browsing. Switch it off:
+
+```php
+protected array $features = ['-relations'];
+```
+
+With it off, three things answer "no depth" at once: the field catalogue behind
+both panels, a column the picker would otherwise add on demand, and a filter
+condition on a relation path.
+
+**A relation column the table itself declares is unaffected.** This governs
+what the *reader* may reach for, not what you may show them:
+
+```php
+protected array $features = ['-relations'];
+
+protected function columns(): array
+{
+    // Still shown, still sorted, still exported.
+    return ['reference', 'customer.name' => 'Customer', 'total'];
+}
+```
+
+`$relationDepth` remains the way to allow relations but limit how far they go;
+this is the switch for allowing none at all.
+
 ## Presentation and scale
 
 | Feature | What it does | Module |
 |---|---|---|
 | `sticky_columns` | Freeze leading columns — and optionally the row actions — while the table scrolls sideways. | `sticky` |
-| `facets` | Counts beside filter values: "Shipped (1,204)". | — |
+| `filter_counts` | Counts beside filter values: "Shipped (1,204)". | — |
 
 ```php
 protected array $features = [Feature::STICKY_COLUMNS];
@@ -185,9 +295,9 @@ same declaration freezes the correct edge in RTL.
 Facets are opt-in per column, because each one is a grouped query:
 
 ```php
-protected array $features = [Feature::FACETS];
+protected array $features = [Feature::FILTER_COUNTS];
 
-protected array $facets = ['status'];
+protected array $filterCounts = ['status'];
 ```
 
 The counts honour the current search and filters **except** any condition
@@ -206,19 +316,19 @@ Pages are appended instead of replaced, an `IntersectionObserver` on a sentinel
 below the last row asks for the next one, and no `COUNT(*)` runs — the footer
 reports the range rather than an invented total.
 
-### `column_picker` vs `column_reordering`
+### `column_picker` vs `column_reorder`
 
-They are the two halves of the same panel, and they are separate because plenty
-of tables want one without the other:
+They share a panel, which is why they are easily mistaken for one feature. They
+are not: each contributes its own controls to that panel and nothing else.
 
-| | `column_picker` | `column_reordering` |
+| | `column_picker` | `column_reorder` |
 |---|---|---|
 | Answers | *Which* columns? | *In what order?* |
-| Gives you | The panel, Add column, Remove, Reset | Drag handles, `Alt`+arrows, Move left/right in the header menu |
-| Without it | No panel at all — the columns are what `columns()` said | The panel still opens; the list just cannot be dragged |
+| Contributes | Add column, the remove buttons, the title "Choose columns" | Drag handles, `Alt`+arrows, Move left/right in the header menu, the title "Arrange columns" |
+| Alone | The panel lists the columns and lets you add and remove them; the list cannot be dragged | The panel lists the columns and lets you drag them; there is nothing to add or remove |
+| Neither | No panel at all — the columns are what `columns()` said |
 
-`column_reordering` implies `column_picker`, because the place you reorder
-columns *is* that panel. Turning on the picker alone is the common case: let
+Neither implies the other. Turning on the picker alone is the common case: let
 people choose the columns they need, but keep the order the designer chose.
 
 ## Printing
@@ -298,9 +408,8 @@ is never configured twice:
 |---|---|
 | `bulk_actions` | `selection` |
 | `bulk_edit` | `selection` |
-| `create` | `inline_edit` |
-| `views` | `column_picker` |
-| `column_reordering` / `column_resizing` | `column_picker` |
+| `inline_create` | `inline_edit` |
+| `saved_views` | `column_picker` |
 
 ## What each feature loads
 
@@ -311,10 +420,10 @@ that never opens a filter never downloads the filter builder.
 | Module | Loaded by |
 |---|---|
 | `actions` | `selection`, `bulk_actions`, `bulk_edit`, `row_actions`, `toolbar_actions` |
-| `inline-edit` | `inline_edit`, `create` |
+| `inline-edit` | `inline_edit`, `inline_create` |
 | `filters` | `filters` |
-| `columns` | `column_picker`, `column_reordering`, `column_resizing` |
-| `views` | `views` |
+| `columns` | `column_picker`, `column_reorder`, `column_resize` |
+| `views` | `saved_views` |
 | `transfer` | `export`, `import` |
 | `detail` | `row_detail` |
 | `sticky` | `sticky_columns` |
@@ -332,14 +441,14 @@ re-deriving everything else server-side:
 | `dynamic-table.fields` | `filters` | Hidden and allowed column paths. |
 | `dynamic-table.options` | `filters` | Same, plus the facet opt-in. |
 | `dynamic-table.edit` | `inline_edit` | `update`, per record. |
-| `dynamic-table.create` | `create` | `create`. |
+| `dynamic-table.create` | `inline_create` | Creating a row. |
 | `dynamic-table.bulk-edit` | `bulk_edit` | `update`, re-checked per record. |
 | `dynamic-table.action` | `bulk_actions` | The action's own ability. |
 | `dynamic-table.row-action` | `row_actions` | The action's ability, against that record. |
 | `dynamic-table.toolbar-action` | `toolbar_actions` | The action's ability. |
 | `dynamic-table.row-detail` | `row_detail` | `view`, and the table's base query. |
 | `dynamic-table.export` / `import` | `export` / `import` | `export` / `import`. |
-| `dynamic-table.views.*` | `views` | Ownership, and sharing. |
+| `dynamic-table.views.*` | `saved_views` | Ownership, and sharing. |
 
 ## See also
 

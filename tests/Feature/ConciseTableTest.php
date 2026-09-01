@@ -31,24 +31,24 @@ it('draws a mapped value as a badge, label and all', function (): void {
 
     // The theme owns the badge class; the tone is the package's own modifier.
     expect($cells['status'])
-        ->toContain('dt-badge-success')
+        ->toContain('dynamic-table-badge-success')
         ->toContain('>Active</span>')
         ->and($this->table->column('status')->raw)->toBeTrue();
 });
 
 it('badges a boolean with the words the map gives it', function (): void {
     expect(cellsFor($this->table, User::where('name', 'User 03')->first())['is_active'])
-        ->toContain('dt-badge-danger')
+        ->toContain('dynamic-table-badge-danger')
         ->toContain('>Off</span>')
         ->and(cellsFor($this->table, User::where('name', 'User 01')->first())['is_active'])
-        ->toContain('dt-badge-success')
+        ->toContain('dynamic-table-badge-success')
         ->toContain('>On</span>');
 });
 
 it('leaves a row alone when the badge closure returns nothing', function (): void {
     // level is ($index % 5) + 1, so User 03 is 4 and User 01 is 2.
     expect(cellsFor($this->table, User::where('name', 'User 03')->first())['level'])
-        ->toContain('dt-badge-warning')
+        ->toContain('dynamic-table-badge-warning')
         ->toContain('>High</span>')
         ->and(cellsFor($this->table, User::where('name', 'User 01')->first())['level'])
         ->toBe('2');
@@ -62,7 +62,7 @@ it('says what a blank cell means when the column was given the words', function 
 
 it('escapes a label, so a badge can never carry markup out of the model', function (): void {
     expect(Badge::html('<b>x</b>', 'success'))
-        ->toBe('<span class="dt-badge dt-badge-success">&lt;b&gt;x&lt;/b&gt;</span>')
+        ->toBe('<span class="dynamic-table-badge dynamic-table-badge-success">&lt;b&gt;x&lt;/b&gt;</span>')
         // A theme decides where its own tone goes.
         ->and(Badge::classes('badge badge-light-{tone}', 'danger'))->toBe('badge badge-light-danger')
         ->and(Badge::classes('badge badge-light-{tone}', null))->toBe('badge badge-light-neutral');

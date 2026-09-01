@@ -26,10 +26,10 @@ trait ResolvesTable
         try {
             $table = app(TableRegistry::class)->resolve($key);
         } catch (DynamicTableException) {
-            abort(404, 'Unknown table.');
+            abort(404, __('dynamic-table::table.errors.unknown_table'));
         }
 
-        abort_unless($table->can('view'), 403);
+        abort_unless($table->can('view'), 403, __('dynamic-table::table.errors.forbidden'));
 
         return $table;
     }

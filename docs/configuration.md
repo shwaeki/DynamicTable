@@ -18,6 +18,19 @@ return [
     // null = follow the viewer's OS; 'light' or 'dark' forces one
     'scheme' => null,
 
+    // how tall a table's scroll area may grow — what makes the header stick;
+    // null or 'none' lets the page own the scrolling instead
+    'table' => [
+        'max_height' => '70vh',
+    ],
+
+    // application-wide date patterns; null keeps each locale's own
+    'formats' => [
+        'date' => null,
+        'time' => null,
+        'datetime' => null,
+    ],
+
     'panels' => [
         'mode' => 'modal',      // or 'offcanvas'
         'side' => 'end',        // 'end' | 'start' | 'left' | 'right'
@@ -68,12 +81,21 @@ return [
     'views' => [
         'enabled' => true,
         'table' => 'dynamic_table_views',
+        'shares_table' => 'dynamic_table_view_shares',
         'system_ability' => 'manage-dynamic-table-system-views',
         'max_per_user' => 100,
+
+        'sharing' => [
+            'enabled' => true,
+            'model' => null,          // defaults to your auth provider's model
+            'name_column' => 'name',
+            'search_columns' => ['name', 'email'],
+            'max_results' => 20,
+        ],
     ],
 
     'excel' => [
-        'adapter' => 'auto',
+        'adapter' => 'auto',        // 'csv' declines XLSX even where it is possible
         'queue_threshold' => 5000,  // 0 disables queueing
         'chunk' => 1000,
         'disk' => null,
@@ -99,8 +121,6 @@ return [
         'inject' => true,
         'version' => null,
     ],
-
-    'source_url' => null,
 ];
 ```
 
@@ -136,12 +156,20 @@ regardless of this value.
 **`assets.inject`** — set to `false` and place `@dynamicTableStyles` /
 `@dynamicTableScripts` yourself when you have a strict CSP or your own bundler.
 
+**`table.max_height`** — the sticky header needs a box that scrolls, so this is
+what makes it stick. `null` or `'none'` gives the table page-flow height, and
+the header then scrolls away with the page.
+
+**`excel.adapter`** — `'auto'` offers XLSX whenever openspout or PhpSpreadsheet
+is installed; `'csv'` declines it even then, and the export dialog offers CSV
+alone.
+
 **`themes`** — not present by default, but recognised. Add a class map here and
 reference it by name from `theme`:
 
 ```php
 'themes' => [
-    'brand' => ['table' => 'dt-table my-table', /* … */],
+    'brand' => ['table' => 'dynamic-table-table my-table', /* … */],
 ],
 ```
 

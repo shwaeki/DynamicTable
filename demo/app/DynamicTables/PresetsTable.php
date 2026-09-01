@@ -13,7 +13,7 @@ class PresetsTable extends DynamicTable
 {
     protected string $model = Order::class;
 
-    protected array $features = ['views'];
+    protected array $features = ['saved_views'];
 
     protected function columns(): array
     {

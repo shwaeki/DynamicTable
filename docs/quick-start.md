@@ -48,7 +48,7 @@ class UsersTable extends DynamicTable
     protected string $model = User::class;
 
     protected array $features = [
-        'views',
+        'saved_views',
         'export',
         'bulk-actions',
         'inline_edit',

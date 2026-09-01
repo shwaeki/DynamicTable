@@ -61,7 +61,7 @@ export default function install(table) {
         const value = control.value;
 
         editing = null;
-        cell.classList.remove(table.classes.cellEditing, 'dt-cell-editing');
+        cell.classList.remove(table.classes.cellEditing, 'dynamic-table-cell-editing');
 
         if (!commit || String(value) === String(original ?? '')) {
             repaint(cell, column, rowId);
@@ -78,7 +78,10 @@ export default function install(table) {
     }
 
     async function save(cell, column, rowId, value) {
-        cell.classList.add('dt-cell-saving');
+        // The saving and saved states are a colour change; a title says the same
+        // thing to a reader who cannot see it.
+        cell.classList.add('dynamic-table-cell-saving');
+        cell.setAttribute('title', table.t('inline.saving'));
 
         try {
             const response = await table.post(table.endpoints.edit, {
@@ -92,7 +95,7 @@ export default function install(table) {
             }
 
             repaint(cell, column, rowId);
-            cell.classList.remove('dt-cell-invalid');
+            cell.classList.remove('dynamic-table-cell-invalid');
             cell.removeAttribute('title');
             flash(cell);
             table.emit('row-saved', { id: rowId, field: column.key });
@@ -101,27 +104,34 @@ export default function install(table) {
                 || error.payload?.errors?.[rowId]?._
                 || [error.message];
 
-            cell.classList.add('dt-cell-invalid', table.classes.cellInvalid);
+            cell.classList.add('dynamic-table-cell-invalid', table.classes.cellInvalid);
             cell.setAttribute('title', messages.join(' '));
             repaint(cell, column, rowId);
-            cell.append(el('span', { class: 'dt-cell-error', text: messages[0] }));
+            cell.append(el('span', { class: 'dynamic-table-cell-error', text: messages[0] }));
             table.alert(messages[0], 'error');
         } finally {
-            cell.classList.remove('dt-cell-saving');
+            cell.classList.remove('dynamic-table-cell-saving');
+
+            if (cell.getAttribute('title') === table.t('inline.saving')) cell.removeAttribute('title');
         }
     }
 
     function flash(cell) {
-        cell.classList.add('dt-cell-saved');
-        setTimeout(() => cell.classList.remove('dt-cell-saved'), 900);
+        cell.classList.add('dynamic-table-cell-saved');
+        cell.setAttribute('title', table.t('inline.saved'));
+
+        setTimeout(() => {
+            cell.classList.remove('dynamic-table-cell-saved');
+            cell.removeAttribute('title');
+        }, 900);
     }
 
     function begin(cell) {
         if (editing) stop(true);
 
-        const key = cell.getAttribute('data-dt-cell');
+        const key = cell.getAttribute('data-dynamic-table-cell');
         const column = columns.get(key);
-        const rowId = cell.closest('[data-dt-row]')?.getAttribute('data-dt-row');
+        const rowId = cell.closest('[data-dynamic-table-row]')?.getAttribute('data-dynamic-table-row');
 
         if (!column?.editable || !rowId) return;
 
@@ -147,7 +157,7 @@ export default function install(table) {
         control.addEventListener('blur', () => stop(true));
 
         cell.replaceChildren(control);
-        cell.classList.add('dt-cell-editing', table.classes.cellEditing);
+        cell.classList.add('dynamic-table-cell-editing', table.classes.cellEditing);
         control.focus();
         control.select?.();
 
@@ -156,7 +166,7 @@ export default function install(table) {
 
     /** Move the edit cursor to the next editable cell, spreadsheet style. */
     function focusNext(cell, delta, horizontal = false) {
-        const cells = [...table.root.querySelectorAll('[data-dt-editable]')];
+        const cells = [...table.root.querySelectorAll('[data-dynamic-table-editable]')];
         const index = cells.indexOf(cell);
 
         if (index === -1) return;
@@ -166,7 +176,7 @@ export default function install(table) {
         if (horizontal) {
             target = cells[index + delta];
         } else {
-            const perRow = [...cell.closest('tr').querySelectorAll('[data-dt-editable]')].length || 1;
+            const perRow = [...cell.closest('tr').querySelectorAll('[data-dynamic-table-editable]')].length || 1;
             target = cells[index + delta * perRow];
         }
 
@@ -181,21 +191,21 @@ export default function install(table) {
      * a half-typed record should never reach the database.
      */
     function createRow() {
-        table.root.querySelector('[data-dt-new-row]')?.remove();
+        table.root.querySelector('[data-dynamic-table-new-row]')?.remove();
 
-        const body = table.root.querySelector('[data-dt-body]');
+        const body = table.root.querySelector('[data-dynamic-table-body]');
 
         if (! body) return;
 
         const visible = table.visibleColumns();
         const controls = new Map();
-        const tr = el('tr', { class: 'dt-new-row', 'data-dt-new-row': '' });
+        const tr = el('tr', { class: 'dynamic-table-new-row', 'data-dynamic-table-new-row': '' });
 
         if (table.features.row_detail) tr.append(el('td', { class: table.classes.cell }));
         if (table.features.selection) tr.append(el('td', { class: table.classes.cell }));
 
         for (const column of visible) {
-            const cell = el('td', { class: [table.classes.cell, `dt-align-${column.align || 'start'}`] });
+            const cell = el('td', { class: [table.classes.cell, `dynamic-table-align-${column.align || 'start'}`] });
 
             if (column.editable) {
                 const control = controlFor(column, null);
@@ -224,7 +234,7 @@ export default function install(table) {
 
                 for (const [key, control] of controls) {
                     const message = errors[key]?.[0];
-                    control.closest('td')?.classList.toggle('dt-cell-invalid', !! message);
+                    control.closest('td')?.classList.toggle('dynamic-table-cell-invalid', !! message);
                     control.title = message || '';
                 }
 
@@ -232,7 +242,7 @@ export default function install(table) {
             }
         };
 
-        const buttons = el('td', { class: `${table.classes.cell} dt-row-actions-cell` }, [
+        const buttons = el('td', { class: `${table.classes.cell} dynamic-table-row-actions-cell` }, [
             el('button', { type: 'button', class: table.classes.buttonPrimary, text: table.t('save'), onclick: save }),
             el('button', { type: 'button', class: table.classes.button, text: table.t('cancel'), onclick: () => tr.remove() }),
         ]);
@@ -253,7 +263,7 @@ export default function install(table) {
     }
 
     table.root.addEventListener('click', (event) => {
-        const button = event.target.closest('[data-dt-create]');
+        const button = event.target.closest('[data-dynamic-table-create]');
 
         if (button && table.root.contains(button)) {
             event.preventDefault();
@@ -262,19 +272,19 @@ export default function install(table) {
     });
 
     table.root.addEventListener('dblclick', (event) => {
-        const cell = event.target.closest('[data-dt-editable]');
+        const cell = event.target.closest('[data-dynamic-table-editable]');
         if (cell && table.root.contains(cell)) begin(cell);
     });
 
     table.root.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' && event.key !== 'F2') return;
 
-        const cell = event.target.closest?.('[data-dt-editable]');
+        const cell = event.target.closest?.('[data-dynamic-table-editable]');
         if (cell && !editing) begin(cell);
     });
 
     table.on('rows-rendered', () => {
-        table.root.querySelectorAll('[data-dt-editable]').forEach((cell) => {
+        table.root.querySelectorAll('[data-dynamic-table-editable]').forEach((cell) => {
             cell.tabIndex = 0;
             cell.setAttribute('role', 'gridcell');
         });

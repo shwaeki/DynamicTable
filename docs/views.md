@@ -1,14 +1,14 @@
 # Saved views
 
 A view is a named snapshot of table state: visible columns, their order and
-widths, filters, sort, search, grouping, page size and trashed mode. It is
+widths, filters, sort, search, grouping and page size. It is
 stored as declarative JSON — never as generated SQL — so it survives schema
 changes and can be migrated forward.
 
 Enable it per table:
 
 ```php
-protected array $features = ['views'];
+protected array $features = ['saved_views'];
 ```
 
 and run `php artisan migrate` once.

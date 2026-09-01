@@ -14,13 +14,13 @@ export default function install(table) {
     let frame = null;
 
     function cells() {
-        return table.root.querySelectorAll('[data-dt-sticky]');
+        return table.root.querySelectorAll('[data-dynamic-table-sticky]');
     }
 
     function measure() {
         frame = null;
 
-        const head = table.root.querySelector('[data-dt-table] thead tr');
+        const head = table.root.querySelector('[data-dynamic-table-table] thead tr');
 
         if (! head) return;
 
@@ -30,77 +30,77 @@ export default function install(table) {
         let offset = 0;
 
         for (const th of head.children) {
-            const key = th.getAttribute('data-dt-column');
-            const structural = th.classList.contains('dt-select-cell') || th.classList.contains('dt-expand-cell');
+            const key = th.getAttribute('data-dynamic-table-column');
+            const structural = th.classList.contains('dynamic-table-select-cell') || th.classList.contains('dynamic-table-expand-cell');
 
-            if (! structural && ! th.hasAttribute('data-dt-sticky')) break;
+            if (! structural && ! th.hasAttribute('data-dynamic-table-sticky')) break;
 
             if (key) offsets.set(key, offset);
             th.style.insetInlineStart = `${offset}px`;
-            th.classList.add('dt-sticky-cell');
-            th.toggleAttribute('data-dt-sticky-last', false);
+            th.classList.add('dynamic-table-sticky-cell');
+            th.toggleAttribute('data-dynamic-table-sticky-last', false);
 
             offset += th.getBoundingClientRect().width;
         }
 
         // The last frozen header carries the divider, so the shadow sits at the
         // boundary rather than between every frozen column.
-        const frozen = [...head.children].filter((th) => th.classList.contains('dt-sticky-cell'));
-        frozen.at(-1)?.toggleAttribute('data-dt-sticky-last', true);
+        const frozen = [...head.children].filter((th) => th.classList.contains('dynamic-table-sticky-cell'));
+        frozen.at(-1)?.toggleAttribute('data-dynamic-table-sticky-last', true);
 
         // The column-search row is part of the header, cell for cell, so it
         // freezes with it — a search box that slides out from under its own
         // column is the same bug as a header that scrolls away.
-        const searchRow = table.root.querySelector('[data-dt-table] [data-dt-search-row]');
+        const searchRow = table.root.querySelector('[data-dynamic-table-table] [data-dynamic-table-search-row]');
 
         if (searchRow) {
             [...searchRow.children].forEach((th, index) => {
                 const source = head.children[index];
 
                 if (index >= frozen.length || ! source) {
-                    th.classList.remove('dt-sticky-cell');
-                    th.toggleAttribute('data-dt-sticky-last', false);
+                    th.classList.remove('dynamic-table-sticky-cell');
+                    th.toggleAttribute('data-dynamic-table-sticky-last', false);
                     th.style.insetInlineStart = '';
 
                     return;
                 }
 
                 th.style.insetInlineStart = source.style.insetInlineStart;
-                th.classList.add('dt-sticky-cell');
-                th.toggleAttribute('data-dt-sticky-last', index === frozen.length - 1);
+                th.classList.add('dynamic-table-sticky-cell');
+                th.toggleAttribute('data-dynamic-table-sticky-last', index === frozen.length - 1);
             });
         }
 
-        for (const row of table.root.querySelectorAll('[data-dt-body] > tr')) {
+        for (const row of table.root.querySelectorAll('[data-dynamic-table-body] > tr')) {
             let position = 0;
 
             for (const td of row.children) {
-                const key = td.getAttribute('data-dt-cell');
-                const structural = td.classList.contains('dt-select-cell') || td.classList.contains('dt-expand-cell');
+                const key = td.getAttribute('data-dynamic-table-cell');
+                const structural = td.classList.contains('dynamic-table-select-cell') || td.classList.contains('dynamic-table-expand-cell');
 
-                if (! structural && ! td.hasAttribute('data-dt-sticky')) break;
+                if (! structural && ! td.hasAttribute('data-dynamic-table-sticky')) break;
 
                 td.style.insetInlineStart = `${key !== null ? (offsets.get(key) ?? position) : position}px`;
-                td.classList.add('dt-sticky-cell');
-                td.toggleAttribute('data-dt-sticky-last', false);
+                td.classList.add('dynamic-table-sticky-cell');
+                td.toggleAttribute('data-dynamic-table-sticky-last', false);
 
                 position += td.getBoundingClientRect().width;
             }
 
-            [...row.children].filter((td) => td.classList.contains('dt-sticky-cell'))
-                .at(-1)?.toggleAttribute('data-dt-sticky-last', true);
+            [...row.children].filter((td) => td.classList.contains('dynamic-table-sticky-cell'))
+                .at(-1)?.toggleAttribute('data-dynamic-table-sticky-last', true);
         }
 
         // Row actions freeze against the opposite edge, so the buttons stay
         // reachable however far the table is scrolled.
         if (table.boot.stickyActions) {
-            for (const cell of table.root.querySelectorAll('.dt-row-actions-cell')) {
+            for (const cell of table.root.querySelectorAll('.dynamic-table-row-actions-cell')) {
                 cell.style.insetInlineEnd = '0px';
-                cell.classList.add('dt-sticky-cell', 'dt-sticky-end');
+                cell.classList.add('dynamic-table-sticky-cell', 'dynamic-table-sticky-end');
             }
         }
 
-        table.root.classList.toggle('dt-has-sticky', cells().length > 0);
+        table.root.classList.toggle('dynamic-table-has-sticky', cells().length > 0);
     }
 
     function schedule() {
@@ -118,7 +118,7 @@ export default function install(table) {
 
     if (typeof ResizeObserver !== 'undefined') {
         const observer = new ResizeObserver(schedule);
-        const scroller = table.root.querySelector('[data-dt-scroller]');
+        const scroller = table.root.querySelector('[data-dynamic-table-scroller]');
 
         if (scroller) observer.observe(scroller);
     }

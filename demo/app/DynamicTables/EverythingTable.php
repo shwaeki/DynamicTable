@@ -16,16 +16,15 @@ class EverythingTable extends DynamicTable
     protected string $model = Order::class;
 
     protected array $features = [
-        'views',
+        'saved_views',
         'export',
         'import',
         'bulk-actions',
         'inline_edit',
         'column_picker',
-        'column_reordering',
-        'column_resizing',
+        'column_reorder',
+        'column_resize',
         'column_search',
-        'soft_deletes',
         'url_state',
     ];
 

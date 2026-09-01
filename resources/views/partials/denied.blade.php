@@ -1,3 +1,3 @@
-<div class="dt dt-denied" role="alert">
+<div class="dynamic-table dynamic-table-denied" role="alert">
     {{ __('dynamic-table::table.errors.forbidden') }}
 </div>

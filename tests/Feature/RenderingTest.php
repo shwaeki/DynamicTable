@@ -23,23 +23,23 @@ it('renders a full table from a single class reference', function (): void {
         ->toContain('data-dynamic-table')
         ->toContain('data-table="users"')
         ->toContain('User 01')
-        ->toContain('data-dt-boot');
+        ->toContain('data-dynamic-table-boot');
 });
 
 it('renders the first page of data server side so there is no boot request', function (): void {
     $html = app(TableRenderer::class)->render(UsersTable::class)->toHtml();
 
-    expect(substr_count($html, 'data-dt-row='))->toBe(12);
+    expect(substr_count($html, 'data-dynamic-table-row='))->toBe(12);
 });
 
 it('emits a boot payload the browser can consume', function (): void {
     $html = app(TableRenderer::class)->render(FullUsersTable::class)->toHtml();
 
-    preg_match('/<script type="application\/json" data-dt-boot>(.*?)<\/script>/s', $html, $matches);
+    preg_match('/<script type="application\/json" data-dynamic-table-boot>(.*?)<\/script>/s', $html, $matches);
     $boot = json_decode(html_entity_decode($matches[1]), true);
 
     expect($boot['key'])->toBe('full_users')
-        ->and($boot['features'])->toHaveKey('views')
+        ->and($boot['features'])->toHaveKey('saved_views')
         ->and($boot['columns'])->not->toBeEmpty()
         ->and($boot['data']['total'])->toBe(12)
         ->and($boot['endpoints'])->toHaveKeys(['data', 'fields', 'edit', 'action'])
@@ -61,23 +61,23 @@ it('only renders UI for enabled features', function (): void {
     $plain = app(TableRenderer::class)->render(UsersTable::class)->toHtml();
 
     expect($plain)
-        ->toContain('data-dt-search')
-        ->not->toContain('data-dt-open="views"')
-        ->not->toContain('data-dt-open="export"')
-        ->not->toContain('data-dt-select-all');
+        ->toContain('data-dynamic-table-search')
+        ->not->toContain('data-dynamic-table-open="views"')
+        ->not->toContain('data-dynamic-table-open="export"')
+        ->not->toContain('data-dynamic-table-select-all');
 });
 
 it('renders every enabled control for a fully featured table', function (): void {
     $html = app(TableRenderer::class)->render(FullUsersTable::class)->toHtml();
 
     expect($html)
-        ->toContain('data-dt-open="views"')
-        ->toContain('data-dt-open="columns"')
-        ->toContain('data-dt-open="export"')
-        ->toContain('data-dt-open="import"')
-        ->toContain('data-dt-select-all')
-        ->toContain('data-dt-column-search')
-        ->toContain('data-dt-resizer');
+        ->toContain('data-dynamic-table-open="views"')
+        ->toContain('data-dynamic-table-open="columns"')
+        ->toContain('data-dynamic-table-open="export"')
+        ->toContain('data-dynamic-table-open="import"')
+        ->toContain('data-dynamic-table-select-all')
+        ->toContain('data-dynamic-table-column-search')
+        ->toContain('data-dynamic-table-resizer');
 });
 
 it('switches direction with the application locale', function (): void {
@@ -99,13 +99,13 @@ it('translates the interface', function (): void {
 it('follows the viewer’s colour scheme unless one is forced', function (): void {
     $html = app(TableRenderer::class)->render(UsersTable::class)->toHtml();
 
-    expect($html)->not->toContain('data-dt-scheme');
+    expect($html)->not->toContain('data-dynamic-table-scheme');
 
     config()->set('dynamic-table.scheme', 'dark');
     app()->forgetInstance(TableRenderer::class);
 
     expect(app(TableRenderer::class)->render(UsersTable::class)->toHtml())
-        ->toContain('data-dt-scheme="dark"');
+        ->toContain('data-dynamic-table-scheme="dark"');
 });
 
 /**
@@ -267,7 +267,61 @@ it('honours a width declared on a column, not only one the reader dragged', func
 
     // Without fixed layout the width is a suggestion the header's own label overrules.
     expect($html)
-        ->toContain('dt-sized')
+        ->toContain('dynamic-table-sized')
         ->toContain('style="width: 25px"')
-        ->toContain('dt-narrow');
+        ->toContain('dynamic-table-narrow');
+});
+
+it('draws group headers on the first paint, not only after a refresh', function (): void {
+    // A remembered state, a URL or a saved view can all arrive with a group
+    // already chosen, so the server-rendered rows have to carry the same
+    // headers renderRows() would draw.
+    request()->merge(['group' => 'status']);
+
+    $html = app(TableRenderer::class)->render(FullUsersTable::class)->toHtml();
+
+    expect(substr_count($html, 'dynamic-table-group-row'))->toBe(2)
+        ->and($html)->toContain('dynamic-table-group-label');
+});
+
+it('opens a group even when the first group value is null', function (): void {
+    // The sentinel for "no group yet" has to be something no cell can hold, or
+    // a first group of null is silently skipped and its rows lose their header.
+    User::query()->update(['salary' => null]);
+    request()->merge(['group' => 'salary']);
+
+    $html = app(TableRenderer::class)->render(FullUsersTable::class)->toHtml();
+
+    expect(substr_count($html, 'dynamic-table-group-row'))->toBe(1);
+});
+
+it('gives the footer range and the summary cells different DOM hooks', function (): void {
+    // They shared data-dt-summary, and an attribute selector matches on the
+    // name alone — so querySelector() found the first tfoot cell and the
+    // browser wrote the page range over a column's total on every refresh.
+    $table = new class extends DynamicTable
+    {
+        protected string $model = User::class;
+
+        protected function columns(): array
+        {
+            return ['name', 'salary' => ['summary' => 'sum']];
+        }
+    };
+
+    $html = app(TableRenderer::class)->render($table)->toHtml();
+
+    expect($html)
+        ->toContain('data-dynamic-table-summary="salary"')
+        ->toContain('data-dynamic-table-range');
+
+    // Exactly one element answers the footer's selector, and it is the footer.
+    preg_match_all('/data-dynamic-table-range(?![-a-z])/', $html, $ranges);
+
+    expect($ranges[0])->toHaveCount(1);
+
+    // ...and nothing before it answers it, which is what made the collision
+    // bite: the tfoot is rendered above the footer.
+    expect(strpos($html, 'data-dynamic-table-range'))
+        ->toBeGreaterThan(strpos($html, 'data-dynamic-table-summary="salary"'));
 });

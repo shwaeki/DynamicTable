@@ -65,7 +65,7 @@ it('applies a saved view when the table boots', function (): void {
 
     $html = app(TableRenderer::class)->render(FullUsersTable::class)->toHtml();
 
-    expect(substr_count($html, 'data-dt-row='))->toBe(4);
+    expect(substr_count($html, 'data-dynamic-table-row='))->toBe(4);
 });
 
 it('ignores fields a saved view references that no longer exist', function (): void {
@@ -86,8 +86,8 @@ it('ignores fields a saved view references that no longer exist', function (): v
 
     $html = app(TableRenderer::class)->render(FullUsersTable::class)->toHtml();
 
-    expect($html)->toContain('data-dt-row=')
-        ->and(substr_count($html, 'data-dt-row='))->toBe(12);
+    expect($html)->toContain('data-dynamic-table-row=')
+        ->and(substr_count($html, 'data-dynamic-table-row='))->toBe(12);
 });
 
 it('will not let a user touch someone else’s view', function (): void {

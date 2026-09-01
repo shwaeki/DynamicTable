@@ -109,7 +109,7 @@ final class RowAction
      * A row action is a quiet icon by default, because a column of loud
      * buttons is a wall. When you want the loud version, this is where your
      * framework's classes go — they sit alongside the structural
-     * `dt-row-action`, which carries the layout and the click handling:
+     * `dynamic-table-row-action`, which carries the layout and the click handling:
      *
      *     ->class('btn btn-sm btn-light')->withLabel()
      */

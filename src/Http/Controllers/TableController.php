@@ -53,7 +53,15 @@ class TableController extends Controller
     public function fields(Request $request): JsonResponse
     {
         $table = $this->table($request);
-        $table->requireFeature(Feature::FILTERS);
+
+        // Both the filter builder and the column picker read this catalogue, so
+        // either feature is reason enough to serve it. Requiring filters alone
+        // left a table with a column picker and '-filters' unable to add one.
+        abort_unless(
+            $table->features()->any(Feature::FILTERS, Feature::COLUMN_PICKER),
+            403,
+            'Neither filters nor the column picker is enabled for this table.',
+        );
 
         $depth = $table->relationDepth();
         $tree = $this->metadata->tree($table->modelClass(), $depth, $table->hiddenColumnPaths());
@@ -94,10 +102,10 @@ class TableController extends Controller
         $field = $this->metadata->resolve($table->modelClass(), $path);
 
         abort_if($field === null, 404, 'Unknown field.');
-        abort_if(in_array($path, $table->hiddenColumnPaths(), true), 403);
+        abort_if(in_array($path, $table->hiddenColumnPaths(), true), 403, __('dynamic-table::table.errors.forbidden'));
 
         $allowed = $table->allowedColumnPaths();
-        abort_if($allowed !== [] && ! in_array($path, $allowed, true), 403);
+        abort_if($allowed !== [] && ! in_array($path, $allowed, true), 403, __('dynamic-table::table.errors.forbidden'));
 
         $facets = $this->facetCounts($table, $request, $path);
 
@@ -176,7 +184,7 @@ class TableController extends Controller
     {
         $key = str_replace('.', '__', $path);
 
-        if (! in_array($key, $table->facetKeys(), true)) {
+        if (! in_array($key, $table->filterCountKeys(), true)) {
             return [];
         }
 

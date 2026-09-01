@@ -58,7 +58,7 @@ export default function install(table) {
     async function decorateWithCounts(node, field) {
         const key = String(field.path).replace(/\./g, '__');
 
-        if (! (table.boot.facets || []).includes(key)) return;
+        if (! (table.boot.filterCounts || []).includes(key)) return;
 
         try {
             const response = await table.post(table.endpoints.options, {
@@ -89,7 +89,11 @@ export default function install(table) {
     function valueInput(field, condition, onChange) {
         const count = arity(condition.operator);
 
-        if (count === 0) return el('span', { class: 'dt-filter-novalue', text: '—' });
+        // The field and operator selects are labelled; without this the value
+        // control is the one part of a condition a screen reader cannot name.
+        const named = { 'aria-label': table.t('filter.value') };
+
+        if (count === 0) return el('span', { class: 'dynamic-table-filter-novalue', text: '—' });
 
         if (field?.options?.length) {
             const node = select(
@@ -97,6 +101,7 @@ export default function install(table) {
                 [{ value: '', label: '—' }, ...field.options.map((option) => ({ value: option.value, label: option.label }))],
                 condition.value,
                 (value) => onChange(value),
+                named,
             );
 
             decorateWithCounts(node, field);
@@ -110,13 +115,14 @@ export default function install(table) {
             return select(table, [
                 { value: '1', label: table.t('yes') },
                 { value: '0', label: table.t('no') },
-            ], condition.value ?? '1', (value) => onChange(value));
+            ], condition.value ?? '1', (value) => onChange(value), named);
         }
 
         if (count === 2) {
             const pair = Array.isArray(condition.value) ? condition.value : ['', ''];
 
             const first = el('input', {
+                ...named,
                 type: inputType,
                 class: table.classes.input,
                 value: pair[0] ?? '',
@@ -124,17 +130,19 @@ export default function install(table) {
             });
 
             const second = el('input', {
+                ...named,
                 type: inputType,
                 class: table.classes.input,
                 value: pair[1] ?? '',
                 oninput: () => onChange([first.value, second.value]),
             });
 
-            return el('span', { class: 'dt-filter-range' }, [first, el('span', { text: '–' }), second]);
+            return el('span', { class: 'dynamic-table-filter-range' }, [first, el('span', { text: '–' }), second]);
         }
 
         if (count === -1) {
             return el('input', {
+                ...named,
                 type: 'text',
                 class: table.classes.input,
                 value: Array.isArray(condition.value) ? condition.value.join(', ') : (condition.value ?? ''),
@@ -144,6 +152,7 @@ export default function install(table) {
         }
 
         return el('input', {
+            ...named,
             type: inputType,
             class: table.classes.input,
             value: condition.value ?? '',
@@ -165,7 +174,7 @@ export default function install(table) {
             }
         }
 
-        return el('div', { class: 'dt-condition' }, [
+        return el('div', { class: 'dynamic-table-condition' }, [
             select(table, fieldOptions, condition.field, (value) => {
                 condition.field = value;
                 condition.operator = findField(value)?.operators?.[0] || 'equals';
@@ -185,7 +194,7 @@ export default function install(table) {
 
             el('button', {
                 type: 'button',
-                class: 'dt-condition-remove',
+                class: 'dynamic-table-condition-remove',
                 'aria-label': table.t('filter.remove'),
                 text: '×',
                 onclick: () => {
@@ -197,18 +206,48 @@ export default function install(table) {
     }
 
     function renderGroup(group, repaint, depth = 0) {
-        const node = el('div', { class: `dt-filter-group dt-filter-depth-${depth}` });
+        const node = el('div', { class: `dynamic-table-filter-group dynamic-table-filter-depth-${depth}` });
 
-        const logic = el('div', { class: 'dt-filter-logic' }, [
+        /*
+         * The group's header: how its rows are joined, and — for a nested
+         * group — the control that removes the whole branch.
+         *
+         * That control used to trail the Add buttons at the foot of the group,
+         * where it read as "undo the last thing I added" rather than "remove
+         * this group". At the head, beside the And/Or it belongs to, it says
+         * what it does.
+         */
+        const logic = el('div', { class: 'dynamic-table-filter-logic' }, [
             select(table, [
                 { value: 'and', label: table.t('filter.and') },
                 { value: 'or', label: table.t('filter.or') },
             ], group.logic || 'and', (value) => {
                 group.logic = value;
             }, { 'aria-label': table.t('filter.operator') }),
+
+            depth > 0
+                ? el('button', {
+                    type: 'button',
+                    class: 'dynamic-table-condition-remove dynamic-table-filter-group-remove',
+                    'aria-label': table.t('filter.remove_group'),
+                    title: table.t('filter.remove_group'),
+                    text: '×',
+                    onclick: () => {
+                        group.conditions = [];
+                        group._removed = true;
+                        repaint();
+                    },
+                })
+                : null,
         ]);
 
         node.append(logic);
+
+        // Any empty group is otherwise two buttons and nothing else, which
+        // reads as a broken panel rather than as "there is nothing here yet".
+        if (! (group.conditions || []).length) {
+            node.append(el('p', { class: 'dynamic-table-hint', text: table.t('filter.empty') }));
+        }
 
         (group.conditions || []).forEach((child, index) => {
             node.append(child.conditions
@@ -216,7 +255,7 @@ export default function install(table) {
                 : renderCondition(child, group, index, repaint));
         });
 
-        node.append(el('div', { class: 'dt-filter-group-actions' }, [
+        node.append(el('div', { class: 'dynamic-table-filter-group-actions' }, [
             el('button', {
                 type: 'button',
                 class: table.classes.button,
@@ -239,17 +278,6 @@ export default function install(table) {
                 onclick: () => {
                     group.conditions = group.conditions || [];
                     group.conditions.push({ logic: 'or', conditions: [] });
-                    repaint();
-                },
-            }) : null,
-            depth > 0 ? el('button', {
-                type: 'button',
-                class: 'dt-condition-remove',
-                'aria-label': table.t('filter.remove'),
-                text: '×',
-                onclick: () => {
-                    group.conditions = [];
-                    group._removed = true;
                     repaint();
                 },
             }) : null,
@@ -329,7 +357,7 @@ export default function install(table) {
             value: existing ? existing.value : '',
         };
 
-        const control = el('div', { class: 'dt-quick-value' });
+        const control = el('div', { class: 'dynamic-table-quick-value' });
 
         const paintValue = () => {
             control.replaceChildren(valueInput(field, condition, (value) => { condition.value = value; }));
@@ -352,7 +380,7 @@ export default function install(table) {
 
         const instance = popover(table, trigger, {
             title: table.t('header.filter_by'),
-            body: el('div', { class: 'dt-form dt-quick-filter' }, [
+            body: el('div', { class: 'dynamic-table-form dynamic-table-quick-filter' }, [
                 select(table, operatorsFor(field), condition.operator, (value) => {
                     condition.operator = value;
                     condition.value = '';
@@ -360,7 +388,7 @@ export default function install(table) {
                 }, { 'aria-label': table.t('filter.operator') }),
                 control,
             ]),
-            footer: el('div', { class: 'dt-popover-actions' }, [
+            footer: el('div', { class: 'dynamic-table-popover-actions' }, [
                 el('button', {
                     type: 'button',
                     class: table.classes.button,
@@ -381,13 +409,16 @@ export default function install(table) {
     }
 
     function updateBadge() {
-        const badge = table.root.querySelector('[data-dt-filter-count]');
+        const badge = table.root.querySelector('[data-dynamic-table-filter-count]');
         if (!badge) return;
 
         const count = countConditions(table.state.filters);
 
         badge.textContent = String(count);
-        badge.classList.toggle('dt-hidden', count === 0);
+        // A bare number beside "Filters" is unreadable to a screen reader.
+        badge.title = table.t('filter.active', { count });
+        badge.setAttribute('aria-label', badge.title);
+        badge.classList.toggle('dynamic-table-hidden', count === 0);
     }
 
     table.on('updated', updateBadge);
@@ -418,7 +449,7 @@ export default function install(table) {
                     });
                 }
             }
-            const container = el('div', { class: 'dt-filter-builder' });
+            const container = el('div', { class: 'dynamic-table-filter-builder' });
 
             const repaint = () => {
                 container.replaceChildren(renderGroup(working, repaint));
@@ -430,7 +461,7 @@ export default function install(table) {
                 title: table.t('filters'),
                 width: '46rem',
                 body: container,
-                footer: el('div', { class: 'dt-modal-actions' }, [
+                footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                     el('button', {
                         type: 'button',
                         class: table.classes.button,
