@@ -499,9 +499,14 @@ class MetadataEngine
 
         $dbType = strtolower((string) ($column['type_name'] ?? $column['type'] ?? ''));
 
+        // MySQL reports "tinyint" as the type name and keeps the display width
+        // in the full type, so the boolean convention only shows up there.
+        $fullType = strtolower((string) ($column['type'] ?? $dbType));
+
         $fromDb = match (true) {
             $dbType === '' => null,
-            str_contains($dbType, 'bool') || $dbType === 'bit' || $dbType === 'tinyint(1)' => FieldType::Boolean,
+            str_contains($dbType, 'bool') || $dbType === 'bit'
+                || str_starts_with($fullType, 'tinyint(1)') || str_starts_with($fullType, 'bit(1)') => FieldType::Boolean,
             str_contains($dbType, 'datetime') || str_contains($dbType, 'timestamp') => FieldType::DateTime,
             $dbType === 'date' => FieldType::Date,
             str_contains($dbType, 'time') => FieldType::Time,
@@ -537,8 +542,13 @@ class MetadataEngine
             }
         }
 
-        // tinyint(1) style booleans that Laravel did not cast.
-        if ($type === FieldType::Integer && (str_starts_with($name, 'is_') || str_starts_with($name, 'has_'))) {
+        // Flag columns Laravel did not cast and the schema did not narrow —
+        // a plain int used as a yes/no, spelled the way flags usually are.
+        if ($type === FieldType::Integer && (
+            str_starts_with($name, 'is_')
+            || str_starts_with($name, 'has_')
+            || in_array($name, ['active', 'enabled', 'disabled', 'published', 'visible', 'archived', 'blocked', 'verified', 'confirmed', 'featured', 'default'], true)
+        )) {
             return FieldType::Boolean;
         }
 

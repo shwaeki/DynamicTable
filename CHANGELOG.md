@@ -6,6 +6,33 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-09-01
+
+### Changed
+
+- **Table properties are no longer typed in the base class.** PHP requires a
+  redeclared property to repeat its parent's type exactly, so a declaration in
+  `DynamicTable` forced one spelling on every table in every application.
+  Nothing is declared there any more, and both spellings work:
+
+  ```php
+  protected $model = User::class;
+  protected string $model = User::class;
+  ```
+
+  A property you never mention keeps its default, and the documented defaults
+  now live in one block at the top of the class alongside `@property` tags for
+  static analysis and IDE completion.
+
+### Fixed
+
+- **`tinyint(1)` columns are detected as booleans again.** MySQL reports
+  `tinyint` as the type name and keeps the width in the full type, so the
+  boolean convention never matched and a column like `active` was typed as an
+  integer — numeric alignment, numeric filters. The full type is read as well
+  now, and an uncast integer named like a flag (`active`, `enabled`,
+  `published`, …) is treated as one.
+
 ## [2.0.0] — 2026-09-01
 
 ### Changed — breaking
@@ -570,7 +597,8 @@ First public release.
 - PHPStan (larastan) level 5, Laravel Pint
 - Query-count and memory budgets asserted by the performance suite
 
-[Unreleased]: https://github.com/shwaeki/DynamicTable/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/shwaeki/DynamicTable/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.1.0
 [2.0.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.0.0
 [1.3.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v1.3.0
 [1.2.1]: https://github.com/shwaeki/DynamicTable/releases/tag/v1.2.1

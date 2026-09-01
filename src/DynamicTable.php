@@ -24,186 +24,216 @@ use Shwaeki\DynamicTable\Support\TableEstimator;
  *
  *     class UsersTable extends DynamicTable
  *     {
- *         protected string $model = User::class;
+ *         protected $model = User::class;
  *     }
  *
- * Everything below is either a sensible default or an optional override.
+ * Everything else is either a sensible default or an optional override.
+ *
+ * The overridable properties are deliberately not declared in this class. PHP
+ * requires a redeclared property to repeat its parent's type exactly, so a
+ * declaration here would force every table in every application to spell them
+ * the same way. With nothing declared, both spellings are yours to pick:
+ *
+ *     protected $model = User::class;
+ *     protected string $model = User::class;
+ *
+ * and a property you never mention keeps the default documented below. The
+ * package only reads them, always through the accessors further down.
+ *
+ * @property class-string<Model>|null $model
+ * @property string|null $tableKey
+ * @property string|null $title
+ * @property list<string> $features
+ * @property array<int|string, mixed> $columns
+ * @property list<string> $searchable
+ * @property list<string> $hiddenColumns
+ * @property list<string> $allowedColumns
+ * @property array<string, string> $labels
+ * @property array<string, string> $defaultSort
+ * @property list<string> $scopes
+ * @property array<int|string, mixed> $params
+ * @property array<int|string, mixed> $paramFilters
+ * @property list<string> $with
+ * @property string $pagination
+ * @property int|null $perPage
+ * @property list<int> $perPageOptions
+ * @property string|null $maxHeight
+ * @property string|null $printView
+ * @property list<string> $printStylesheets
+ * @property string|null $theme
+ * @property string|null $direction
+ * @property string|null $scheme
+ * @property string|null $panels
+ * @property string|null $responsive
+ * @property list<string> $responsiveFixed
+ * @property list<string> $stickyColumns
+ * @property bool $stickyActions
+ * @property list<string> $filterCounts
+ * @property int $relationDepth
+ * @property string|null $policy
  */
 abstract class DynamicTable
 {
-    /* ------------------------------------------------------------------ */
-    /* Public API — override these in your table class */
-    /* ------------------------------------------------------------------ */
-
-    /** @var class-string<Model> */
-    protected string $model;
-
-    /** Stable identifier used by saved views and the data endpoint. */
-    protected ?string $tableKey = null;
-
-    /** Human title shown above the table. Defaults to the model's plural name. */
-    protected ?string $title = null;
-
-    /** @var list<string> Opt-in features. Prefix with "-" to switch a default off. */
-    protected array $features = [];
-
-    /** @var array<int|string, mixed> Explicit column list. Empty means "discover them". */
-    protected array $columns = [];
-
-    /** @var list<string> Fields the global search box looks at. Empty means "pick safe ones". */
-    protected array $searchable = [];
-
-    /** @var list<string> Paths that must never appear anywhere. */
-    protected array $hiddenColumns = [];
-
-    /** @var list<string> When set, an exhaustive allowlist of exposed paths. */
-    protected array $allowedColumns = [];
-
-    /** @var array<string, string> Extra label overrides keyed by path. */
-    protected array $labels = [];
-
-    /** @var array<string, string> Default sort, e.g. ['created_at' => 'desc'] */
-    protected array $defaultSort = [];
-
-    /** @var list<string> Eloquent scopes always applied to the base query. */
-    protected array $scopes = [];
-
-    /**
-     * External parameters this table accepts — the values behind your own
-     * controls: a date range, a branch picker, a report id.
+    /*
+     * ------------------------------------------------------------------
+     * Public API — the properties you declare in your own table class
+     * ------------------------------------------------------------------
      *
-     * Declare them as a list of names, or as a map of name => default:
+     * $model (required)
+     *     The Eloquent model this table lists.
      *
-     *     protected array $params = ['from_date', 'to_date', 'status' => 'open'];
+     * $tableKey = null
+     *     Stable identifier used by saved views and the data endpoint.
+     *     Defaults to the class name without its "Table" suffix, snake_cased.
      *
-     * Only declared names are accepted, from the page request on first paint
-     * and from the browser on every refresh afterwards. Read them inside
-     * query() with $this->param('from_date').
+     * $title = null
+     *     Human title shown above the table. Defaults to the model's plural
+     *     name.
      *
-     * @var array<int|string, mixed>
-     */
-    protected array $params = [];
-
-    /**
-     * Parameters bound straight to the query, instead of by hand in query().
+     * $features = []
+     *     Opt-in features. Prefix with "-" to switch a default off.
      *
-     *     protected array $paramFilters = [
-     *         'status',                                                 // where('status', $value)
-     *         'category' => 'company_category_id',                      // parameter name is not the column
-     *         'q' => ['column' => 'name', 'operator' => 'contains'],
-     *         'area' => ['column' => 'companyArea.slug'],               // through a relation
-     *         'created_period' => ['column' => 'created_at', 'operator' => 'period'],
-     *     ];
+     * $columns = []
+     *     Explicit column list. Empty means "discover them". The columns()
+     *     method says the same thing when the list needs code to build it.
      *
-     * A filter is applied only when its parameter arrived with a value, and
-     * every name here is a declared parameter, so $params need not repeat them.
-     * See Filters\ParamFilters for the operators and the period vocabulary.
+     * $searchable = []
+     *     Fields the global search box looks at. Empty means "pick safe ones".
      *
-     * PHP does not allow a closure in a property default, so a filter that
-     * needs one — anything the operators cannot say — comes from the method
-     * instead:
+     * $hiddenColumns = []
+     *     Paths that must never appear anywhere.
      *
-     *     public function paramFilters(): array
-     *     {
-     *         return [
-     *             ...parent::paramFilters(),
-     *             'agent' => fn (Builder $q, $value) => $q->whereHas('agent', ...),
+     * $allowedColumns = []
+     *     When set, an exhaustive allowlist of exposed paths.
+     *
+     * $labels = []
+     *     Extra label overrides keyed by path.
+     *
+     * $defaultSort = []
+     *     Default sort, e.g. ['created_at' => 'desc'].
+     *
+     * $scopes = []
+     *     Eloquent scopes always applied to the base query.
+     *
+     * $params = []
+     *     External parameters this table accepts — the values behind your own
+     *     controls: a date range, a branch picker, a report id. Declare them as
+     *     a list of names, or as a map of name => default:
+     *
+     *         protected $params = ['from_date', 'to_date', 'status' => 'open'];
+     *
+     *     Only declared names are accepted, from the page request on first
+     *     paint and from the browser on every refresh afterwards. Read them
+     *     inside query() with $this->param('from_date').
+     *
+     * $paramFilters = []
+     *     Parameters bound straight to the query, instead of by hand in
+     *     query():
+     *
+     *         protected $paramFilters = [
+     *             'status',                                     // where('status', $value)
+     *             'category' => 'company_category_id',           // parameter name is not the column
+     *             'q' => ['column' => 'name', 'operator' => 'contains'],
+     *             'area' => ['column' => 'companyArea.slug'],    // through a relation
+     *             'created_period' => ['column' => 'created_at', 'operator' => 'period'],
      *         ];
-     *     }
      *
-     * @var array<int|string, mixed>
+     *     A filter is applied only when its parameter arrived with a value, and
+     *     every name here is a declared parameter, so $params need not repeat
+     *     them. See Filters\ParamFilters for the operators and the period
+     *     vocabulary.
+     *
+     *     PHP does not allow a closure in a property default, so a filter that
+     *     needs one — anything the operators cannot say — comes from the method
+     *     instead:
+     *
+     *         public function paramFilters(): array
+     *         {
+     *             return [
+     *                 ...parent::paramFilters(),
+     *                 'agent' => fn (Builder $q, $value) => $q->whereHas('agent', ...),
+     *             ];
+     *         }
+     *
+     * $with = []
+     *     Relations to always eager load in addition to the detected ones.
+     *
+     * $pagination = 'auto'
+     *     "length_aware" counts the whole result set so the UI can show a total
+     *     and numbered pages. "simple" fetches one extra row instead, giving
+     *     previous and next only — the right trade at tens of millions of rows,
+     *     where the COUNT(*) costs more than the page itself. "auto" picks
+     *     length-aware until the table grows past
+     *     config('dynamic-table.pagination.count_threshold'). "infinite"
+     *     appends pages and never counts.
+     *
+     * $perPage = null
+     *     Rows per page. Null follows
+     *     config('dynamic-table.pagination.default').
+     *
+     * $perPageOptions = []
+     *     The choices offered in the page-size menu.
+     *
+     * $maxHeight = null
+     *     How tall the table's scroll area may grow — any CSS length, e.g.
+     *     "70vh". This is what makes the sticky header stick: a header can only
+     *     stay put inside a box that scrolls, so the table needs a height of
+     *     its own. 'none' restores page-flow height, and the header then
+     *     scrolls away with the rest of the page.
+     *
+     * $printView = null
+     *     A print template for this table only. Null follows the config.
+     *
+     * $printStylesheets = []
+     *     Stylesheets the print page should load, before its own.
+     *
+     * $theme = null
+     *     Null follows config('dynamic-table.theme').
+     *
+     * $direction = null
+     *     "ltr", "rtl", or null to follow the application locale.
+     *
+     * $scheme = null
+     *     "light", "dark", or null to follow the viewer's operating system.
+     *
+     * $panels = null
+     *     How panels are presented: "modal", "offcanvas", or null to follow
+     *     config('dynamic-table.panels.mode').
+     *
+     * $responsive = null
+     *     Small-screen behaviour, or null to follow
+     *     config('dynamic-table.responsive.mode'). "collapse" hides the columns
+     *     that do not fit and reveals them in an expandable child row, the way
+     *     DataTables Responsive and PowerGrid do. "scroll" keeps every column
+     *     and scrolls horizontally. "cards" stacks each row into a labelled
+     *     card. "none" switches the handling off for this table.
+     *
+     * $responsiveFixed = []
+     *     Column paths that must never collapse. Defaults to the first column.
+     *
+     * $stickyColumns = []
+     *     Column paths pinned in place while the table scrolls sideways. Needs
+     *     the sticky_columns feature.
+     *
+     * $stickyActions = false
+     *     Pin the row-actions column to the trailing edge as well.
+     *
+     * $filterCounts = []
+     *     Root column paths that report counts in their filter options. Needs
+     *     the filter_counts feature, and costs one grouped query per opened
+     *     dropdown.
+     *
+     * $relationDepth = 1
+     *     How deep the filter builder and column picker may walk relationships.
+     *     Switch the "relations" feature off to stop them walking any, without
+     *     touching this number.
+     *
+     * $policy = null
+     *     Optional policy/gate ability prefix, e.g. "users" => "viewAny users".
      */
-    protected array $paramFilters = [];
 
     /** @var array<string, mixed> The validated values for this request. */
     private array $resolvedParams = [];
-
-    /** @var list<string> Relations to always eager load in addition to the detected ones. */
-    protected array $with = [];
-
-    /**
-     * "length_aware" counts the whole result set so the UI can show a total and
-     * numbered pages. "simple" fetches one extra row instead, giving previous
-     * and next only — the right trade at tens of millions of rows, where the
-     * COUNT(*) costs more than the page itself. "auto" picks length-aware until
-     * the table grows past config('dynamic-table.pagination.count_threshold').
-     */
-    protected string $pagination = 'auto';
-
-    protected ?int $perPage = null;
-
-    /** @var list<int> */
-    protected array $perPageOptions = [];
-
-    /**
-     * How tall the table's scroll area may grow — any CSS length, e.g. "70vh".
-     *
-     * This is what makes the sticky header stick: a header can only stay put
-     * inside a box that scrolls, so the table needs a height of its own.
-     * `'none'` restores page-flow height, and the header then scrolls away with
-     * the rest of the page.
-     */
-    protected ?string $maxHeight = null;
-
-    /** A print template for this table only. Null follows the config. */
-    protected ?string $printView = null;
-
-    /** @var list<string> Stylesheets the print page should load, before its own. */
-    protected array $printStylesheets = [];
-
-    protected ?string $theme = null;
-
-    /** "ltr", "rtl", or null to follow the application locale. */
-    protected ?string $direction = null;
-
-    /** "light", "dark", or null to follow the viewer's operating system. */
-    protected ?string $scheme = null;
-
-    /**
-     * How panels are presented: "modal", "offcanvas", or null to follow
-     * config('dynamic-table.panels.mode').
-     */
-    protected ?string $panels = null;
-
-    /**
-     * Small-screen behaviour, or null to follow config('dynamic-table.responsive.mode').
-     *
-     * "collapse" hides the columns that do not fit and reveals them in an
-     * expandable child row, the way DataTables Responsive and PowerGrid do.
-     * "scroll" keeps every column and scrolls horizontally. "cards" stacks each
-     * row into a labelled card. "none" switches the handling off for this table.
-     */
-    protected ?string $responsive = null;
-
-    /** @var list<string> Column paths that must never collapse. Defaults to the first column. */
-    protected array $responsiveFixed = [];
-
-    /**
-     * @var list<string> Column paths pinned in place while the table scrolls
-     *                   sideways. Needs the sticky_columns feature.
-     */
-    protected array $stickyColumns = [];
-
-    /** Pin the row-actions column to the trailing edge as well. */
-    protected bool $stickyActions = false;
-
-    /**
-     * @var list<string> Root column paths that report counts in their filter
-     *                   options. Needs the filter_counts feature, and costs
-     *                   one grouped query per opened dropdown.
-     */
-    protected array $filterCounts = [];
-
-    /**
-     * How deep the filter builder and column picker may walk relationships.
-     *
-     * Switch the "relations" feature off to stop them walking any, without
-     * touching this number.
-     */
-    protected int $relationDepth = 1;
-
-    /** Optional policy/gate ability prefix, e.g. "users" => "viewAny users". */
-    protected ?string $policy = null;
 
     /**
      * Customise the base query.
@@ -333,8 +363,8 @@ abstract class DynamicTable
 
     public function key(): string
     {
-        if ($this->tableKey !== null) {
-            return $this->tableKey;
+        if (($this->tableKey ?? null) !== null) {
+            return (string) $this->tableKey;
         }
 
         $base = class_basename(static::class);
@@ -345,8 +375,8 @@ abstract class DynamicTable
 
     public function title(): string
     {
-        if ($this->title !== null) {
-            return $this->title;
+        if (($this->title ?? null) !== null) {
+            return (string) $this->title;
         }
 
         return Str::headline(Str::plural($this->key()));
@@ -355,11 +385,13 @@ abstract class DynamicTable
     /** @return class-string<Model> */
     public function modelClass(): string
     {
-        if (! isset($this->model)) {
+        $model = $this->model ?? null;
+
+        if (! is_string($model) || $model === '') {
             throw DynamicTableException::missingModel(static::class);
         }
 
-        return $this->model;
+        return $model;
     }
 
     public function newModel(): Model
@@ -376,7 +408,7 @@ abstract class DynamicTable
 
     public function features(): FeatureSet
     {
-        return $this->featureSet ??= new FeatureSet($this->features, static::class);
+        return $this->featureSet ??= new FeatureSet($this->features ?? [], static::class);
     }
 
     public function hasFeature(string $feature): bool
@@ -398,7 +430,9 @@ abstract class DynamicTable
     /** @return array<int|string, mixed> */
     public function columnDefinitions(): array
     {
-        return $this->columns !== [] ? $this->columns : $this->columns();
+        $columns = $this->columns ?? [];
+
+        return $columns !== [] ? $columns : $this->columns();
     }
 
     /** @return array<string, ColumnDefinition> */
@@ -475,19 +509,19 @@ abstract class DynamicTable
     /** @return list<string> */
     public function allowedColumnPaths(): array
     {
-        return $this->allowedColumns;
+        return $this->allowedColumns ?? [];
     }
 
     /** @return list<string> */
     public function hiddenColumnPaths(): array
     {
-        return $this->hiddenColumns;
+        return $this->hiddenColumns ?? [];
     }
 
     public function labelFor(string $path): ?string
     {
         if (isset($this->labels[$path])) {
-            return $this->labels[$path];
+            return (string) $this->labels[$path];
         }
 
         $translation = 'dynamic-table::fields.'.$this->key().'.'.$path;
@@ -510,9 +544,11 @@ abstract class DynamicTable
      */
     public function searchablePaths(): array
     {
-        if ($this->searchable !== []) {
+        $searchable = $this->searchable ?? [];
+
+        if ($searchable !== []) {
             return array_values(array_filter(
-                $this->searchable,
+                $searchable,
                 fn (string $path): bool => app(MetadataEngine::class)->resolve($this->modelClass(), $path)?->isSearchable() === true,
             ));
         }
@@ -538,8 +574,10 @@ abstract class DynamicTable
     /** @return array<string, string> */
     public function defaultSort(): array
     {
-        if ($this->defaultSort !== []) {
-            return $this->defaultSort;
+        $sort = $this->defaultSort ?? [];
+
+        if ($sort !== []) {
+            return $sort;
         }
 
         $meta = $this->metadata();
@@ -561,8 +599,10 @@ abstract class DynamicTable
      */
     public function countsRows(): bool
     {
-        $mode = in_array($this->pagination, ['length_aware', 'simple', 'auto', 'infinite'], true)
-            ? $this->pagination
+        $pagination = $this->pagination ?? 'auto';
+
+        $mode = in_array($pagination, ['length_aware', 'simple', 'auto', 'infinite'], true)
+            ? $pagination
             : 'auto';
 
         // Infinite scrolling appends pages, so a total would only ever be shown
@@ -589,13 +629,13 @@ abstract class DynamicTable
      */
     public function printView(): string
     {
-        return $this->printView ?? (string) config('dynamic-table.print.view', 'dynamic-table::print');
+        return (string) ($this->printView ?? config('dynamic-table.print.view', 'dynamic-table::print'));
     }
 
     /** @return list<string> */
     public function printStylesheets(): array
     {
-        return $this->printStylesheets;
+        return $this->printStylesheets ?? [];
     }
 
     /** The scroll area's height, or null to let the page own the scrolling. */
@@ -618,18 +658,18 @@ abstract class DynamicTable
      */
     public function paginationStyle(): string
     {
-        return $this->pagination === 'infinite' ? 'infinite' : 'pages';
+        return ($this->pagination ?? 'auto') === 'infinite' ? 'infinite' : 'pages';
     }
 
     public function perPage(): int
     {
-        return $this->perPage ?? (int) config('dynamic-table.pagination.default', 25);
+        return (int) ($this->perPage ?? config('dynamic-table.pagination.default', 25));
     }
 
     /** @return list<int> */
     public function perPageOptions(): array
     {
-        $options = $this->perPageOptions !== []
+        $options = ($this->perPageOptions ?? []) !== []
             ? $this->perPageOptions
             : (array) config('dynamic-table.pagination.options', [10, 25, 50, 100]);
 
@@ -641,13 +681,13 @@ abstract class DynamicTable
 
     public function theme(): string
     {
-        return $this->theme ?? (string) config('dynamic-table.theme', 'tailwind');
+        return (string) ($this->theme ?? config('dynamic-table.theme', 'tailwind'));
     }
 
     public function direction(): string
     {
-        if ($this->direction !== null) {
-            return $this->direction;
+        if (($this->direction ?? null) !== null) {
+            return (string) $this->direction;
         }
 
         $configured = config('dynamic-table.direction');
@@ -699,7 +739,7 @@ abstract class DynamicTable
         $resolver = app(ColumnResolver::class);
         $fixed = array_map(
             static fn (string $path): string => $resolver->keyFor($path),
-            $this->responsiveFixed,
+            $this->responsiveFixed ?? [],
         );
 
         // With nothing declared, the first visible column anchors the row —
@@ -764,19 +804,19 @@ abstract class DynamicTable
             return 0;
         }
 
-        return max(0, min($this->relationDepth, (int) config('dynamic-table.security.max_relation_depth', 3)));
+        return max(0, min((int) ($this->relationDepth ?? 1), (int) config('dynamic-table.security.max_relation_depth', 3)));
     }
 
     /** @return list<string> */
     public function eagerLoad(): array
     {
-        return $this->with;
+        return $this->with ?? [];
     }
 
     /** @return list<string> */
     public function scopes(): array
     {
-        return $this->scopes;
+        return $this->scopes ?? [];
     }
 
     /**
@@ -786,7 +826,7 @@ abstract class DynamicTable
      */
     public function paramFilters(): array
     {
-        return $this->paramFilters;
+        return $this->paramFilters ?? [];
     }
 
     /**
@@ -805,7 +845,7 @@ abstract class DynamicTable
             $declared[$name] = null;
         }
 
-        foreach ($this->params as $name => $default) {
+        foreach (($this->params ?? []) as $name => $default) {
             if (is_int($name)) {
                 $declared[(string) $default] = null;
             } else {
@@ -873,7 +913,7 @@ abstract class DynamicTable
             return Gate::allows($this->policyAbility($ability), $subject);
         }
 
-        if ($this->policy !== null) {
+        if (($this->policy ?? null) !== null) {
             return Gate::allows($this->policy.'.'.$ability, $subject);
         }
 
@@ -977,14 +1017,14 @@ abstract class DynamicTable
         $resolved = $this->resolvedColumns();
 
         return array_values(array_filter(
-            array_map(static fn (string $path): string => $resolver->keyFor($path), $this->stickyColumns),
+            array_map(static fn (string $path): string => $resolver->keyFor($path), $this->stickyColumns ?? []),
             static fn (string $key): bool => isset($resolved[$key]),
         ));
     }
 
     public function hasStickyActions(): bool
     {
-        return $this->stickyActions && $this->hasFeature(Feature::STICKY_COLUMNS);
+        return ($this->stickyActions ?? false) && $this->hasFeature(Feature::STICKY_COLUMNS);
     }
 
     /**
@@ -1002,7 +1042,7 @@ abstract class DynamicTable
         $resolved = $this->resolvedColumns();
 
         return array_values(array_filter(
-            array_map(static fn (string $path): string => $resolver->keyFor($path), $this->filterCounts),
+            array_map(static fn (string $path): string => $resolver->keyFor($path), $this->filterCounts ?? []),
             static fn (string $key): bool => isset($resolved[$key]) && ! $resolved[$key]->isRelational(),
         ));
     }
