@@ -14,8 +14,56 @@ Anything under `Metadata`, `Query`, `Filters`, `Columns`, `Support` or
 `Http\Controllers`, and the JSON endpoint shape, is **internal** and may change
 in a minor release. See [docs/extending.md](docs/extending.md).
 
-## Unreleased: five features renamed
+## 2.0.0: `data-dt-*` attributes are now `data-dynamic-table-*`
 
+The prefix rename covers the DOM hooks, which this guide names as public API.
+Any Blade of your own that wires filter controls to a table stops working until
+it is updated — the controls are simply not found, so the bar goes quiet rather
+than erroring:
+
+| Was | Now |
+| --- | --- |
+| `data-dt-param="status"` | `data-dynamic-table-param="status"` |
+| `data-dt-table="orders"` | `data-dynamic-table-table="orders"` |
+| `data-dt-params="orders"` | `data-dynamic-table-params="orders"` |
+| `data-dt-params-reset="orders"` | `data-dynamic-table-params-reset="orders"` |
+
+One pass over your views covers it:
+
+```bash
+grep -rl -- "data-dt-" resources/views/ \
+  | xargs sed -i "s/data-dt-/data-dynamic-table-/g"
+```
+
+The same applies to any CSS of your own that overrode `.dt-*` classes or read
+`--dt-*` custom properties, and to any JavaScript selecting on those hooks.
+See [docs/tables.md](docs/tables.md#wiring-your-controls) for the current
+markup, and the `param-filters` example in `demo/` for it running.
+
+## 2.0.0: exports now default to XLSX
+
+Where a spreadsheet library is installed, the export dialog, the import
+template and the format each offers first are XLSX rather than CSV, and an
+exported XLSX is a real Excel table.
+
+Nothing breaks — CSV output is byte-for-byte what it was, and a file exported
+either way still imports back. But an application that hands the download to
+another program, or whose users expect a `.csv`, should say so:
+
+```php
+// config/dynamic-table.php
+'excel' => [
+    'default_format' => 'csv',   // the dialogs open on CSV again
+    'style' => false,            // and an XLSX is a bare grid, not a table
+],
+```
+
+`style` also takes an Excel built-in style name — `'TableStyleMedium2'` is the
+default, and `TableStyleLight1`–`21`, `TableStyleMedium1`–`28` and
+`TableStyleDark1`–`11` are the rest. **An unrecognised name throws**, so a typo
+fails on the next export rather than quietly producing an unstyled file.
+
+## 2.0.0: five features renamed
 No aliases — and an unknown feature name now throws instead of being ignored,
 so a name you miss fails loudly on the next render rather than quietly turning
 something off.
@@ -56,7 +104,7 @@ array are features. If you miss one, the exception will tell you which table.
 Nothing else moved: the JavaScript module names, the `dynamic-table.views.*`
 routes, the `create` ability and the `dynamic-table::table.views.*` translation
 keys are unchanged.
-## Unreleased: `soft_deletes` is gone
+## 2.0.0: `soft_deletes` is gone
 
 The feature is removed. If a table declared it, drop it from `$features` — an
 unknown name is ignored, so nothing breaks either way, but the behaviour it
@@ -92,7 +140,7 @@ public function query(Builder $query): Builder
     return $this->param('show') === 'trashed' ? $query->onlyTrashed() : $query;
 }
 ```
-## Unreleased: the CSS prefix is now `dynamic-table`
+## 2.0.0: the CSS prefix is now `dynamic-table`
 
 `dt-` was too common a name to claim. Every class, custom property and data
 attribute the package emits has been renamed; nothing else has.

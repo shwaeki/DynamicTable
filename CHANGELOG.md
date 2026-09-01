@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-09-01
+
 ### Changed — breaking
 
 - **The CSS prefix is now `dynamic-table`, not `dt`.** `dt-` is one of the most
@@ -73,6 +75,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   data dependency — a view stores a column selection, so something has to be
   allowed to restore it.
 
+- **Exports and the import template default to XLSX**, not CSV, wherever a
+  spreadsheet library is installed. A spreadsheet is what people do with an
+  export, and the file now arrives filterable and readable rather than as raw
+  commas. `config('dynamic-table.excel.default_format')` set to `'csv'` puts CSV
+  back in front; with no library installed CSV is the only option either way.
+
 ### Changed
 
 - **The filter builder and column picker were redesigned.** Nesting in the
@@ -104,6 +112,63 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   three controls rather than squeezing them into 30rem.
 
 ### Added
+
+- **An exported XLSX is a real Excel table.** Not a grid with a bold first row
+  — the thing "Format as Table" makes, with the Table Design ribbon, structured
+  references (`=SUM(Export[Total])`) and a name.
+  `config('dynamic-table.excel.style')` takes three kinds of value:
+
+  | Value | Result |
+  | --- | --- |
+  | `'TableStyleMedium2'` (default) | a real Excel table in that style |
+  | `true` | a styled range: dark headings, banded rows, a filter across every column |
+  | `false` | a bare grid of values |
+
+  Names are Excel's own built-ins — `TableStyleLight1`–`21`,
+  `TableStyleMedium1`–`28`, `TableStyleDark1`–`11`. An unrecognised one
+  **throws**, on the same reasoning as an unknown feature name: a style Excel
+  drops on the floor is a style the author thinks is applied.
+
+  Both drivers produce the same file. openspout has no notion of a table, so
+  the four OOXML parts one needs are added to the finished archive; the
+  relationship is merged into whatever the writer already put in the sheet's
+  rels rather than replacing it. PhpSpreadsheet builds one natively.
+
+- **An XLSX carries the table's reading direction.** An Arabic or Hebrew table
+  exports right-to-left, an LTR one left-to-right — Excel cannot work that out
+  from the content. Whatever the style mode, the file also freezes its heading
+  row, sizes columns to their content (one integer per column as the rows
+  stream, so a million-row export measures itself for the price of the
+  headings) and names the sheet tab after the table rather than `Sheet1`.
+
+- **`config('dynamic-table.excel.adapter')` names the driver** — `auto`,
+  `openspout`, `phpspreadsheet` or `csv` — for an application that would rather
+  keep a single spreadsheet library, usually because Laravel Excel already
+  brought PhpSpreadsheet in.
+
+- **The import panel is the three steps it actually is**: choose a file, match
+  the columns, check and import. All three show from the start, with the ones
+  not yet available held back rather than hidden, so the panel says up front
+  what it will ask for. The rail's line is the one the filter panel draws down
+  its nested groups, on purpose.
+
+- **Required columns are enforced before anything is written.** A column that
+  is `NOT NULL` in the schema has to be mapped: the panel marks the rows that
+  fill one, names any still missing, and keeps **Start import** disabled until
+  there are none. The server checks the same thing, so a code-driven import
+  cannot skip it. The primary key is exempt, and so is update mode, which only
+  writes the columns it is given.
+
+- **The export panel says what the file will contain** before you click: the
+  row count or range, the format, and the columns — restated from the two
+  selects rather than left to be worked out. It only claims a number where
+  there is an honest one, so "every record" with filters on says so in words
+  rather than showing the filtered total.
+
+- A **`param-filters` example** in the demo: a filter bar in the host
+  application's own markup driving the table with `data-dynamic-table-param`
+  and `data-dynamic-table-table`, covering all four `$paramFilters` shapes and
+  the `query()` scope they narrow.
 
 - **`RowAction::class()` and `->withLabel()`** (and `ToolbarAction::class()`):
   a row action can wear the application's own button classes and show its label
@@ -152,6 +217,63 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   you may show.
 
 ### Fixed
+
+- **An export could not be imported back.** The file holds what the reader saw
+  — `,812.43`, `13 Feb 2026 09:32`, `Yes` — and the importer read it as if it
+  were raw column values, so a re-import of an untouched export failed on every
+  money column with "The total must be a number". Numbers now shed a currency
+  symbol, a `%` and thousands separators; booleans accept the translated
+  Yes/No; and the CSV-safety apostrophe is removed again, so a phone number
+  does not come back as `'+44 20 2120`. Matching an enum by its label already
+  worked this way — the rest now agrees with it. A `bytes` column deliberately
+  does not reverse, and a comma is only dropped where `number_format` would
+  have written one, so `1,5` from a European spreadsheet is rejected rather
+  than imported as fifteen.
+
+- **A `dd/mm/yyyy` column imported with the day and month swapped.** Dates fell
+  through to `Carbon::parse()`, which reads `03/02/2026` as the third of
+  February and knows nothing of `13 فبراير 2026`. They are now parsed with the
+  column's own `format` pattern in the current locale, with the leading `!`
+  that zeroes what the pattern does not mention — a date-only column was
+  otherwise picking up the clock time of the import.
+
+- **"Create and update" reported every row as a duplicate.** The match-by
+  select started empty, so it displayed a field it was not sending; the server
+  fell back to the primary key, which the file does not carry, found nothing
+  every time and inserted a duplicate of every row. The panel now defaults to a
+  field the file supplies, and both it and the server refuse a match column the
+  mapping does not fill.
+
+- **A duplicate key reported the whole failed statement** — every binding and
+  the absolute path to the database file — into the failed-rows list and the
+  downloadable error report. It now reads "A record with this Reference already
+  exists. Choose 'Create and update' to update it instead", against the column
+  that actually clashed. Every other database failure reports the driver's own
+  message without the statement.
+
+- **"The request could not be completed."** was every refusal in the transfer
+  routes, because a message-less `abort()` renders as JSON with an empty
+  `message` and the client falls back to a generic string. All 24 aborts across
+  the transfer, table, view, action and asset controllers and `ViewEngine` now
+  carry a translated reason — the upload has already been used, a column is
+  unmapped, the format cannot be written, the viewer may not import. The
+  analyze step also threw the server's message away and substituted the generic
+  one.
+
+- **Column search kept its inputs under columns the responsive collapse had
+  hidden.** A column is three cells, not two, and the search cell was not in
+  the set being hidden — so the row was one cell wider than the header it lines
+  up with, and every cell still claimed the width of an input, which meant the
+  table could never shrink and the collapse went on hiding columns that were
+  already hidden. A column with a live search is now pinned for as long as the
+  search lasts, rather than collapsing and taking away the only box that can
+  clear it.
+
+- **"Showing 1–10 of 10tal".** `:to` matched the front of `:total`, and the
+  browser's own translator replaced tokens in the order they were given.
+  Laravel's `make_replacements` sorts by length for this reason, which is why
+  the server-rendered first page was always right and every page after it was
+  wrong.
 
 - Operator names in the filter builder and the column header menu were drawn
   from the raw enum value — "not contains" — in every language: the boot payload
@@ -448,7 +570,8 @@ First public release.
 - PHPStan (larastan) level 5, Laravel Pint
 - Query-count and memory budgets asserted by the performance suite
 
-[Unreleased]: https://github.com/shwaeki/DynamicTable/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/shwaeki/DynamicTable/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.0.0
 [1.3.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v1.3.0
 [1.2.1]: https://github.com/shwaeki/DynamicTable/releases/tag/v1.2.1
 [1.2.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v1.2.0
