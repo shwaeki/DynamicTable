@@ -6,6 +6,22 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-09-01
+
+### Changed
+
+- **The methods you override no longer declare return types either.** PHP will
+  not let a child method drop a type its parent declared, so `DynamicTable`
+  declares none — both spellings are yours to pick:
+
+  ```php
+  protected function columns() {}
+  protected function columns(): array {}
+  ```
+
+  Every signature carries an `@return` tag instead, so static analysis and IDE
+  completion are unaffected. Same reasoning as the untyped properties in 2.1.0.
+
 ## [2.1.0] — 2026-09-01
 
 ### Changed
@@ -597,7 +613,8 @@ First public release.
 - PHPStan (larastan) level 5, Laravel Pint
 - Query-count and memory budgets asserted by the performance suite
 
-[Unreleased]: https://github.com/shwaeki/DynamicTable/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/shwaeki/DynamicTable/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.2.0
 [2.1.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.1.0
 [2.0.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.0.0
 [1.3.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v1.3.0

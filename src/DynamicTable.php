@@ -40,6 +40,17 @@ use Shwaeki\DynamicTable\Support\TableEstimator;
  * and a property you never mention keeps the default documented below. The
  * package only reads them, always through the accessors further down.
  *
+ * The methods you override are declared the same way — no return types — for
+ * the same reason: PHP will not let a child method drop a type its parent
+ * declared, so declaring one here would decide the question for you. Write
+ * whichever you prefer:
+ *
+ *     protected function columns() {}
+ *     protected function columns(): array {}
+ *
+ * Every signature is documented with @return, so static analysis and IDE
+ * completion are unaffected.
+ *
  * @property class-string<Model>|null $model
  * @property string|null $tableKey
  * @property string|null $title
@@ -147,7 +158,7 @@ abstract class DynamicTable
      *     needs one — anything the operators cannot say — comes from the method
      *     instead:
      *
-     *         public function paramFilters(): array
+     *         public function paramFilters()
      *         {
      *             return [
      *                 ...parent::paramFilters(),
@@ -241,7 +252,7 @@ abstract class DynamicTable
      * @param  Builder<Model>  $query
      * @return Builder<Model>
      */
-    public function query(Builder $query): Builder
+    public function query(Builder $query)
     {
         return $query;
     }
@@ -251,7 +262,7 @@ abstract class DynamicTable
      *
      * @return array<int|string, mixed>
      */
-    protected function columns(): array
+    protected function columns()
     {
         return [];
     }
@@ -261,7 +272,7 @@ abstract class DynamicTable
      *
      * @return list<BulkAction>
      */
-    public function actions(): array
+    public function actions()
     {
         return [];
     }
@@ -271,7 +282,7 @@ abstract class DynamicTable
      *
      * @return list<RowAction>
      */
-    public function rowActions(): array
+    public function rowActions()
     {
         return [];
     }
@@ -281,7 +292,7 @@ abstract class DynamicTable
      *
      * @return list<ToolbarAction>
      */
-    public function toolbar(): array
+    public function toolbar()
     {
         return [];
     }
@@ -291,8 +302,10 @@ abstract class DynamicTable
      *
      * Return a string, an Htmlable, or a Blade view. Fetched on demand when the
      * row is expanded, so a page of fifty rows never renders fifty details.
+     *
+     * @return mixed
      */
-    public function rowDetail(Model $record): mixed
+    public function rowDetail(Model $record)
     {
         return null;
     }
@@ -302,7 +315,7 @@ abstract class DynamicTable
      *
      * @return array<string, mixed>
      */
-    public function newRecordDefaults(): array
+    public function newRecordDefaults()
     {
         return [];
     }
@@ -312,13 +325,13 @@ abstract class DynamicTable
      *
      * @return array<string, mixed>
      */
-    public function rules(): array
+    public function rules()
     {
         return [];
     }
 
     /** @return array<string, string> */
-    public function validationMessages(): array
+    public function validationMessages()
     {
         return [];
     }
@@ -328,7 +341,7 @@ abstract class DynamicTable
      *
      * @return array<string, array<string, mixed>>
      */
-    public function presets(): array
+    public function presets()
     {
         return [];
     }
@@ -336,8 +349,10 @@ abstract class DynamicTable
     /**
      * Authorisation hook. Return null to fall back to the model policy when
      * one exists, or to "allowed" when it does not.
+     *
+     * @return bool|null
      */
-    public function authorize(string $ability, ?Model $record = null): ?bool
+    public function authorize(string $ability, ?Model $record = null)
     {
         return null;
     }
@@ -361,7 +376,8 @@ abstract class DynamicTable
 
     private ?ModelMetadata $metadataCache = null;
 
-    public function key(): string
+    /** @return string */
+    public function key()
     {
         if (($this->tableKey ?? null) !== null) {
             return (string) $this->tableKey;
@@ -373,7 +389,8 @@ abstract class DynamicTable
         return Str::snake($base === '' ? class_basename(static::class) : $base);
     }
 
-    public function title(): string
+    /** @return string */
+    public function title()
     {
         if (($this->title ?? null) !== null) {
             return (string) $this->title;
@@ -383,7 +400,7 @@ abstract class DynamicTable
     }
 
     /** @return class-string<Model> */
-    public function modelClass(): string
+    public function modelClass()
     {
         $model = $this->model ?? null;
 
@@ -394,29 +411,33 @@ abstract class DynamicTable
         return $model;
     }
 
-    public function newModel(): Model
+    /** @return Model */
+    public function newModel()
     {
         $class = $this->modelClass();
 
         return new $class;
     }
 
-    public function metadata(): ModelMetadata
+    /** @return ModelMetadata */
+    public function metadata()
     {
         return $this->metadataCache ??= app(MetadataEngine::class)->for($this->modelClass());
     }
 
-    public function features(): FeatureSet
+    /** @return FeatureSet */
+    public function features()
     {
         return $this->featureSet ??= new FeatureSet($this->features ?? [], static::class);
     }
 
-    public function hasFeature(string $feature): bool
+    /** @return bool */
+    public function hasFeature(string $feature)
     {
         return $this->features()->has($feature);
     }
 
-    public function requireFeature(string $feature): void
+    public function requireFeature(string $feature)
     {
         if (! $this->hasFeature($feature)) {
             // Forbidden, not a server error: the endpoint exists and the
@@ -428,7 +449,7 @@ abstract class DynamicTable
     }
 
     /** @return array<int|string, mixed> */
-    public function columnDefinitions(): array
+    public function columnDefinitions()
     {
         $columns = $this->columns ?? [];
 
@@ -436,12 +457,13 @@ abstract class DynamicTable
     }
 
     /** @return array<string, ColumnDefinition> */
-    public function resolvedColumns(): array
+    public function resolvedColumns()
     {
         return $this->resolvedColumns ??= app(ColumnResolver::class)->resolve($this);
     }
 
-    public function column(string $key): ?ColumnDefinition
+    /** @return ColumnDefinition|null */
+    public function column(string $key)
     {
         return $this->resolvedColumns()[$key] ?? null;
     }
@@ -461,8 +483,10 @@ abstract class DynamicTable
      * depth), it must not be in $hiddenColumns, and it must pass
      * $allowedColumns when that list is set. A crafted key gets nothing that a
      * filter or a sort could not already have reached.
+     *
+     * @return ColumnDefinition|null
      */
-    public function columnFor(string $key): ?ColumnDefinition
+    public function columnFor(string $key)
     {
         $declared = $this->resolvedColumns()[$key] ?? null;
 
@@ -477,7 +501,8 @@ abstract class DynamicTable
         return $this->adHocColumns[$key] ??= $this->buildAdHocColumn($key);
     }
 
-    protected function buildAdHocColumn(string $key): ?ColumnDefinition
+    /** @return ColumnDefinition|null */
+    protected function buildAdHocColumn(string $key)
     {
         $path = str_replace('__', '.', $key);
 
@@ -507,18 +532,19 @@ abstract class DynamicTable
     }
 
     /** @return list<string> */
-    public function allowedColumnPaths(): array
+    public function allowedColumnPaths()
     {
         return $this->allowedColumns ?? [];
     }
 
     /** @return list<string> */
-    public function hiddenColumnPaths(): array
+    public function hiddenColumnPaths()
     {
         return $this->hiddenColumns ?? [];
     }
 
-    public function labelFor(string $path): ?string
+    /** @return string|null */
+    public function labelFor(string $path)
     {
         if (isset($this->labels[$path])) {
             return (string) $this->labels[$path];
@@ -542,7 +568,7 @@ abstract class DynamicTable
      *
      * @return list<string>
      */
-    public function searchablePaths(): array
+    public function searchablePaths()
     {
         $searchable = $this->searchable ?? [];
 
@@ -572,7 +598,7 @@ abstract class DynamicTable
     }
 
     /** @return array<string, string> */
-    public function defaultSort(): array
+    public function defaultSort()
     {
         $sort = $this->defaultSort ?? [];
 
@@ -596,8 +622,10 @@ abstract class DynamicTable
      *
      * "auto" asks the database for its own row estimate — which is free, unlike
      * COUNT(*) — and drops to simple pagination past the threshold.
+     *
+     * @return bool
      */
-    public function countsRows(): bool
+    public function countsRows()
     {
         $pagination = $this->pagination ?? 'auto';
 
@@ -626,20 +654,26 @@ abstract class DynamicTable
      * Publishing the views puts an editable copy at
      * resources/views/vendor/dynamic-table/print.blade.php; override this to
      * give one table a template of its own.
+     *
+     * @return string
      */
-    public function printView(): string
+    public function printView()
     {
         return (string) ($this->printView ?? config('dynamic-table.print.view', 'dynamic-table::print'));
     }
 
     /** @return list<string> */
-    public function printStylesheets(): array
+    public function printStylesheets()
     {
         return $this->printStylesheets ?? [];
     }
 
-    /** The scroll area's height, or null to let the page own the scrolling. */
-    public function maxHeight(): ?string
+    /**
+     * The scroll area's height, or null to let the page own the scrolling.
+     *
+     * @return string|null
+     */
+    public function maxHeight()
     {
         $value = $this->maxHeight ?? config('dynamic-table.table.max_height');
 
@@ -655,19 +689,22 @@ abstract class DynamicTable
      *
      * Infinite scrolling is a presentation choice on top of the same
      * server-side paging — there is no separate "load everything" path.
+     *
+     * @return string
      */
-    public function paginationStyle(): string
+    public function paginationStyle()
     {
         return ($this->pagination ?? 'auto') === 'infinite' ? 'infinite' : 'pages';
     }
 
-    public function perPage(): int
+    /** @return int */
+    public function perPage()
     {
         return (int) ($this->perPage ?? config('dynamic-table.pagination.default', 25));
     }
 
     /** @return list<int> */
-    public function perPageOptions(): array
+    public function perPageOptions()
     {
         $options = ($this->perPageOptions ?? []) !== []
             ? $this->perPageOptions
@@ -679,12 +716,14 @@ abstract class DynamicTable
         return $options;
     }
 
-    public function theme(): string
+    /** @return string */
+    public function theme()
     {
         return (string) ($this->theme ?? config('dynamic-table.theme', 'tailwind'));
     }
 
-    public function direction(): string
+    /** @return string */
+    public function direction()
     {
         if (($this->direction ?? null) !== null) {
             return (string) $this->direction;
@@ -705,8 +744,10 @@ abstract class DynamicTable
      * Themes contribute no colour of their own, so this one value controls the
      * table's appearance identically under Bootstrap, Tailwind and custom
      * themes.
+     *
+     * @return string|null
      */
-    public function scheme(): ?string
+    public function scheme()
     {
         $scheme = $this->scheme ?? config('dynamic-table.scheme');
 
@@ -718,7 +759,7 @@ abstract class DynamicTable
      *
      * @return array{mode: string, fixed: list<string>, breakpoint: int}|null
      */
-    public function responsive(): ?array
+    public function responsive()
     {
         // Three independent off switches, in order of scope: the application
         // config, this table's feature list, and this table's own mode.
@@ -769,7 +810,7 @@ abstract class DynamicTable
      *
      * @return array{mode: string, side: string, width: string}
      */
-    public function panels(): array
+    public function panels()
     {
         $mode = $this->panels ?? config('dynamic-table.panels.mode', 'modal');
         $mode = in_array($mode, ['modal', 'offcanvas'], true) ? $mode : 'modal';
@@ -797,8 +838,10 @@ abstract class DynamicTable
      * and a filter condition on a relation path. Switching the relations
      * feature off answers 0 to all three at once, which is what makes it a
      * single switch rather than three.
+     *
+     * @return int
      */
-    public function relationDepth(): int
+    public function relationDepth()
     {
         if (! $this->hasFeature(Feature::RELATIONS)) {
             return 0;
@@ -808,13 +851,13 @@ abstract class DynamicTable
     }
 
     /** @return list<string> */
-    public function eagerLoad(): array
+    public function eagerLoad()
     {
         return $this->with ?? [];
     }
 
     /** @return list<string> */
-    public function scopes(): array
+    public function scopes()
     {
         return $this->scopes ?? [];
     }
@@ -824,7 +867,7 @@ abstract class DynamicTable
      *
      * @return array<int|string, mixed>
      */
-    public function paramFilters(): array
+    public function paramFilters()
     {
         return $this->paramFilters ?? [];
     }
@@ -837,7 +880,7 @@ abstract class DynamicTable
      *
      * @return array<string, mixed>
      */
-    public function declaredParams(): array
+    public function declaredParams()
     {
         $declared = [];
 
@@ -864,8 +907,9 @@ abstract class DynamicTable
      * table itself rather than from the request.
      *
      * @param  array<string, mixed>  $params
+     * @return static
      */
-    public function useParams(array $params): static
+    public function useParams(array $params)
     {
         $this->resolvedParams = $params;
 
@@ -873,21 +917,29 @@ abstract class DynamicTable
     }
 
     /** @return array<string, mixed> */
-    public function params(): array
+    public function params()
     {
         return $this->resolvedParams + $this->declaredParams();
     }
 
-    /** One parameter, falling back to its declared default. */
-    public function param(string $name, mixed $default = null): mixed
+    /**
+     * One parameter, falling back to its declared default.
+     *
+     * @return mixed
+     */
+    public function param(string $name, mixed $default = null)
     {
         $value = $this->params()[$name] ?? null;
 
         return $value === null || $value === '' || $value === [] ? $default : $value;
     }
 
-    /** Whether a parameter arrived with a usable value. */
-    public function hasParam(string $name): bool
+    /**
+     * Whether a parameter arrived with a usable value.
+     *
+     * @return bool
+     */
+    public function hasParam(string $name)
     {
         return $this->param($name) !== null;
     }
@@ -898,8 +950,10 @@ abstract class DynamicTable
      * Order: the table's own authorize() hook, then a model policy if one is
      * registered, then allow. Anything that mutates data (update/delete/import)
      * defaults to denied when no policy exists and no hook answers.
+     *
+     * @return bool
      */
-    public function can(string $ability, ?Model $record = null): bool
+    public function can(string $ability, ?Model $record = null)
     {
         $answer = $this->authorize($ability, $record);
 
@@ -920,7 +974,8 @@ abstract class DynamicTable
         return true;
     }
 
-    protected function policyAbility(string $ability): string
+    /** @return string */
+    protected function policyAbility(string $ability)
     {
         return match ($ability) {
             'view' => 'viewAny',
@@ -935,7 +990,7 @@ abstract class DynamicTable
     /**
      * @return list<BulkAction>
      */
-    public function availableActions(): array
+    public function availableActions()
     {
         if (! $this->hasFeature(Feature::BULK_ACTIONS)) {
             return [];
@@ -947,7 +1002,8 @@ abstract class DynamicTable
         ));
     }
 
-    public function findAction(string $name): ?BulkAction
+    /** @return BulkAction|null */
+    public function findAction(string $name)
     {
         foreach ($this->availableActions() as $action) {
             if ($action->name === $name) {
@@ -966,7 +1022,7 @@ abstract class DynamicTable
      *
      * @return list<RowAction>
      */
-    public function availableRowActions(): array
+    public function availableRowActions()
     {
         if (! $this->hasFeature(Feature::ROW_ACTIONS)) {
             return [];
@@ -979,7 +1035,7 @@ abstract class DynamicTable
     }
 
     /** @return list<ToolbarAction> */
-    public function availableToolbarActions(): array
+    public function availableToolbarActions()
     {
         if (! $this->hasFeature(Feature::TOOLBAR_ACTIONS)) {
             return [];
@@ -991,7 +1047,8 @@ abstract class DynamicTable
         ));
     }
 
-    public function findToolbarAction(string $name): ?ToolbarAction
+    /** @return ToolbarAction|null */
+    public function findToolbarAction(string $name)
     {
         foreach ($this->availableToolbarActions() as $action) {
             if ($action->name === $name) {
@@ -1007,7 +1064,7 @@ abstract class DynamicTable
      *
      * @return list<string>
      */
-    public function stickyColumnKeys(): array
+    public function stickyColumnKeys()
     {
         if (! $this->hasFeature(Feature::STICKY_COLUMNS)) {
             return [];
@@ -1022,7 +1079,8 @@ abstract class DynamicTable
         ));
     }
 
-    public function hasStickyActions(): bool
+    /** @return bool */
+    public function hasStickyActions()
     {
         return ($this->stickyActions ?? false) && $this->hasFeature(Feature::STICKY_COLUMNS);
     }
@@ -1032,7 +1090,7 @@ abstract class DynamicTable
      *
      * @return list<string>
      */
-    public function filterCountKeys(): array
+    public function filterCountKeys()
     {
         if (! $this->hasFeature(Feature::FILTER_COUNTS)) {
             return [];
@@ -1047,8 +1105,12 @@ abstract class DynamicTable
         ));
     }
 
-    /** Columns a user may fill in when creating or bulk-editing. */
-    public function editableColumns(): array
+    /**
+     * Columns a user may fill in when creating or bulk-editing.
+     *
+     * @return array
+     */
+    public function editableColumns()
     {
         return array_filter(
             $this->resolvedColumns(),
@@ -1056,7 +1118,8 @@ abstract class DynamicTable
         );
     }
 
-    public function findRowAction(string $name): ?RowAction
+    /** @return RowAction|null */
+    public function findRowAction(string $name)
     {
         foreach ($this->availableRowActions() as $action) {
             if ($action->name === $name) {
