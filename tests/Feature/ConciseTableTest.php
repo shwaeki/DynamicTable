@@ -129,25 +129,29 @@ it('points a row action at a named route without a closure', function (): void {
         ->toMatch('#href="http://localhost/users/\d+/edit"#');
 });
 
-it('starts a theme from one that already works, and puts the tone where it says', function (): void {
-    config()->set('dynamic-table.themes.metronic', [
-        'extends' => 'bootstrap',
+it('changes one slot of a built-in theme, and puts the tone where it says', function (): void {
+    config()->set('dynamic-table.themes.bootstrap', [
         'badge' => 'badge badge-light-{tone}',
     ]);
 
-    $classes = Theme::classes('metronic');
+    $classes = Theme::classes('bootstrap');
 
-    expect($classes['search'])->toBe('form-control form-control-sm')     // inherited
+    expect($classes['search'])->toBe('form-control form-control-sm')     // still Bootstrap's
         ->and($classes['badge'])->toBe('badge badge-light-{tone}')       // overridden
         ->and(Badge::html('Paid', 'success', $classes['badge']))
         ->toBe('<span class="badge badge-light-success">Paid</span>');
 });
 
-it('does not chase an extends cycle round for ever', function (): void {
-    config()->set('dynamic-table.themes.a', ['extends' => 'b', 'badge' => 'from-a']);
-    config()->set('dynamic-table.themes.b', ['extends' => 'a', 'search' => 'from-b']);
+it('starts a theme of its own from custom, so it is only the slots it names', function (): void {
+    config()->set('dynamic-table.themes.brand', ['badge' => 'brand-badge']);
 
-    expect(Theme::classes('a'))
-        ->toHaveKey('badge', 'from-a')
-        ->toHaveKey('search', 'from-b');
+    expect(Theme::classes('brand'))
+        ->toHaveKey('badge', 'brand-badge')
+        ->toHaveKey('button', 'dynamic-table-button')        // custom's
+        ->toHaveKey('row', 'dynamic-table-row');             // structural
+});
+
+it('resolves a name it does not know to the theme that needs no framework', function (): void {
+    expect(Theme::classes('minimal'))->toBe(Theme::classes('custom'))
+        ->and(Theme::names())->toBe(['custom', 'bootstrap', 'tailwind']);
 });

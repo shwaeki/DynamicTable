@@ -6,18 +6,17 @@ use App\Models\Customer;
 use Shwaeki\DynamicTable\DynamicTable;
 
 /**
- * The "minimal" theme: ready to use with no CSS framework at all.
+ * The "tailwind" theme: the same table, rendered with Tailwind utilities.
  *
- * Every class it names is styled by the package's own stylesheet, on the same
- * tokens as everything else — so it is readable in light and dark, follows
- * data-dynamic-table-scheme, and needs neither Bootstrap nor Tailwind on the
- * page.
+ * A Tailwind application is never served Bootstrap classes, and vice versa —
+ * the theme is only a class map, read by the same Blade template and the same
+ * JavaScript renderer as every other table on this site.
  */
-class MinimalThemeTable extends DynamicTable
+class TailwindTable extends DynamicTable
 {
     protected string $model = Customer::class;
 
-    protected ?string $theme = 'minimal';
+    protected ?string $theme = 'tailwind';
 
     protected array $features = ['column_picker'];
 

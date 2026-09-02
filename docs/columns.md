@@ -193,7 +193,7 @@ once, in the theme:
 ```php
 // config/dynamic-table.php
 'themes' => [
-    'metronic' => ['extends' => 'bootstrap', 'badge' => 'badge badge-light-{tone}'],
+    'bootstrap' => ['badge' => 'badge badge-light-{tone}'],
 ],
 ```
 

@@ -6,6 +6,43 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Three themes, and only three: `custom`, `bootstrap`, `tailwind`.** The list
+  was six names deep and an author had to work out which of them their
+  application wanted; the answer was always "the framework I already load, or
+  none". `minimal`, `bordered`, `none` and the `bootstrap5` alias are gone, and
+  any name the package does not recognise now resolves to `custom` rather than
+  to Tailwind — so an application that named one of the removed themes keeps a
+  finished-looking table instead of an unstyled one.
+
+- **`custom` is a finished theme, not an empty slate.** It used to hand back
+  the structural classes and nothing else. It is now the package's own look —
+  card, quiet uppercase headers, comfortable rows, accent buttons, focus rings,
+  rounded menus — painted from the same tokens as everything else, so it needs
+  no Bootstrap, no Tailwind and no build step, and reads correctly in light and
+  dark. Its shape is tunable from CSS: `--dynamic-table-custom-card-radius` and
+  `--dynamic-table-custom-gutter` on `.dynamic-table-custom`.
+
+- **A theme in config starts from the built-in of the same name.** Changing one
+  slot of Bootstrap is now `'themes' => ['bootstrap' => ['badge' => '…']]`, and
+  a name of your own starts from `custom`. This replaces `extends`, which is no
+  longer read (the key is ignored if a config still carries it).
+
+- **Tables are light by default.** `config('dynamic-table.scheme')` ships as
+  `'light'` instead of `null`, so the same page no longer renders light or dark
+  depending on whose operating system opened it. Set it back to `null` to
+  follow `prefers-color-scheme`, or to `'dark'` for dark everywhere; `$scheme`
+  still overrides per table.
+
+- **The default theme is `bootstrap`** (it was `tailwind`).
+
+### Removed
+
+- **`Theme::register()`.** A theme is the `themes` key of
+  `config/dynamic-table.php` — one file, no service provider. A theme that
+  genuinely has to be computed can still set the config value at runtime.
+
 ## [2.2.0] — 2026-09-01
 
 ### Changed

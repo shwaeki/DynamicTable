@@ -31,7 +31,7 @@ class UsersTable extends DynamicTable
 
 ## Presentation
 
-- [Themes](themes.md) — Bootstrap, Tailwind, minimal, bordered, custom
+- [Themes](themes.md) — custom, Bootstrap, Tailwind
 - [Responsive](responsive.md) — collapsing columns, cards, scroll
 - [Localization and RTL](localization.md) — ar, he, en, ru
 

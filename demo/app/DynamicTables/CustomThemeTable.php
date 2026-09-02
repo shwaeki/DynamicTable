@@ -6,9 +6,12 @@ use App\Models\Product;
 use Shwaeki\DynamicTable\DynamicTable;
 
 /**
- * A complete custom theme is one array, under the "themes" key of
+ * A theme of your own is one array, under the "themes" key of
  * config/dynamic-table.php — see this demo's copy of it. No service provider,
  * no Blade files, no CSS build.
+ *
+ * A name of its own starts from the built-in "custom" theme, so the array is
+ * only the slots this one actually changes.
  *
  * Keep the structural dynamic-table-* classes in your values: they carry
  * behaviour (sticky header, resize handles, dialog layout, RTL mirroring),

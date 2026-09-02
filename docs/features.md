@@ -454,6 +454,6 @@ re-deriving everything else server-side:
 
 - [The table class](tables.md) — every property and hook in one page.
 - [Editing and actions](editing.md) — inline editing, bulk actions, validation.
-- [Themes](themes.md) — including the framework-free `minimal` and `bordered`.
+- [Themes](themes.md) — `custom`, `bootstrap` and `tailwind`.
 - [Performance](performance.md) — counting, estimates and large tables.
 - [Security](security.md) — the allowlist model these endpoints rely on.

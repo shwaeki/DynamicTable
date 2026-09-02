@@ -2050,130 +2050,249 @@
 }
 
 /* ---------------------------------------------------------------- */
-/* Framework-free themes: minimal and bordered                      */
+/* The "custom" theme                                               */
 /* ---------------------------------------------------------------- */
 
-/* These two need no Bootstrap and no Tailwind: every class they name is
-   defined here, on the same tokens as everything else, so they are readable in
-   light and dark and follow data-dynamic-table-scheme like the rest. */
+/* The theme that needs no framework on the page: every class its map names is
+   defined here, on the same tokens as everything else, so it is readable in
+   light and dark and follows data-dynamic-table-scheme like the rest.
 
-.dynamic-table-minimal {
-    background: var(--dynamic-table-surface);
-    border-radius: var(--dynamic-table-radius);
+   It commits to a look — a card, a quiet header band, comfortable rows —
+   rather than leaving a neutral skeleton behind. A theme the author still has
+   to finish is no better than no theme, which is what "custom" used to be. */
+
+.dynamic-table-custom {
+    /* Controls sit inside the card, so they are rounded a little less than it
+       is: matching the two turns a small button into a pill. */
+    --dynamic-table-radius: 7px;
+    --dynamic-table-custom-card-radius: 12px;
+    --dynamic-table-custom-gutter: 0.85rem;
+
+    border: 1px solid var(--dynamic-table-border);
+    border-radius: var(--dynamic-table-custom-card-radius);
+
+    /* Mixed from the ink token rather than hard-coded black, so it reads as a
+       lift in light mode and fades out in dark instead of ringing the card
+       with a grey halo. */
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--dynamic-table-ink) 8%, transparent);
 }
 
-.dynamic-table-minimal .dynamic-table-toolbar {
-    padding: 0.65rem 0.75rem;
+/* The card is deliberately not overflow:hidden — that clips the sticky header
+   and anything anchored inside the scroller — so whatever lands at the top of
+   the card rounds its own corners. With a toolbar above it this matches
+   nothing and costs nothing. */
+.dynamic-table-custom > :first-child .dynamic-table-th:first-child {
+    border-start-start-radius: calc(var(--dynamic-table-custom-card-radius) - 1px);
+}
+
+.dynamic-table-custom > :first-child .dynamic-table-th:last-child {
+    border-start-end-radius: calc(var(--dynamic-table-custom-card-radius) - 1px);
+}
+
+.dynamic-table-custom .dynamic-table-toolbar {
+    padding: 0.7rem var(--dynamic-table-custom-gutter);
     gap: 0.5rem;
     border-bottom: 1px solid var(--dynamic-table-border);
 }
 
-.dynamic-table-minimal .dynamic-table-button {
+/* Buttons ---------------------------------------------------------- */
+
+.dynamic-table-custom .dynamic-table-button {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.7rem;
+    gap: 0.4rem;
+    padding: 0.4rem 0.7rem;
     font: inherit;
-    font-size: 0.9em;
+    font-size: 0.875em;
+    font-weight: 500;
+    line-height: 1.45;
     color: var(--dynamic-table-ink);
     background: var(--dynamic-table-surface);
     border: 1px solid var(--dynamic-table-border);
     border-radius: var(--dynamic-table-radius);
     cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
-.dynamic-table-minimal .dynamic-table-button:hover:not(:disabled) {
+.dynamic-table-custom .dynamic-table-button:hover:not(:disabled) {
     background: var(--dynamic-table-hover);
+    border-color: color-mix(in srgb, var(--dynamic-table-border) 65%, var(--dynamic-table-ink));
 }
 
-.dynamic-table-minimal .dynamic-table-button:disabled {
+.dynamic-table-custom .dynamic-table-button:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--dynamic-table-accent) 55%, transparent);
+    outline-offset: 1px;
+}
+
+.dynamic-table-custom .dynamic-table-button:disabled {
     opacity: 0.5;
     cursor: default;
 }
 
-.dynamic-table-minimal .dynamic-table-button-primary {
+.dynamic-table-custom .dynamic-table-button-primary {
     background: var(--dynamic-table-accent);
     border-color: var(--dynamic-table-accent);
     color: var(--dynamic-table-accent-ink);
 }
 
-.dynamic-table-minimal .dynamic-table-button-danger {
+.dynamic-table-custom .dynamic-table-button-danger {
     background: var(--dynamic-table-danger);
     border-color: var(--dynamic-table-danger);
     color: var(--dynamic-table-accent-ink);
 }
 
-.dynamic-table-minimal .dynamic-table-input,
-.dynamic-table-minimal .dynamic-table-select {
+/* Mixing the hover state with the ink token darkens it in light mode and
+   lightens it in dark, because ink moves with the scheme — one rule where a
+   fixed colour would have needed two. */
+.dynamic-table-custom .dynamic-table-button-primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--dynamic-table-accent) 86%, var(--dynamic-table-ink));
+    border-color: color-mix(in srgb, var(--dynamic-table-accent) 86%, var(--dynamic-table-ink));
+}
+
+.dynamic-table-custom .dynamic-table-button-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--dynamic-table-danger) 86%, var(--dynamic-table-ink));
+    border-color: color-mix(in srgb, var(--dynamic-table-danger) 86%, var(--dynamic-table-ink));
+}
+
+/* Fields ----------------------------------------------------------- */
+
+.dynamic-table-custom .dynamic-table-input,
+.dynamic-table-custom .dynamic-table-select {
     font: inherit;
-    font-size: 0.9em;
+    font-size: 0.875em;
+    line-height: 1.45;
     color: var(--dynamic-table-ink);
     background: var(--dynamic-table-surface);
     border: 1px solid var(--dynamic-table-border);
     border-radius: var(--dynamic-table-radius);
-    padding: 0.35rem 0.5rem;
+    padding: 0.4rem 0.6rem;
 }
 
-.dynamic-table-minimal .dynamic-table-search {
-    min-width: 14rem;
+.dynamic-table-custom .dynamic-table-search {
+    min-width: 15rem;
 }
 
-.dynamic-table-minimal .dynamic-table-input:focus,
-.dynamic-table-minimal .dynamic-table-select:focus {
-    outline: 2px solid color-mix(in srgb, var(--dynamic-table-accent) 45%, transparent);
-    outline-offset: 1px;
+/* A ring rather than an outline: it follows the field's own radius, so a
+   focused input reads as one shape instead of a rectangle around a rounded
+   box. */
+.dynamic-table-custom :where(.dynamic-table-input, .dynamic-table-select):focus {
+    outline: none;
+    border-color: var(--dynamic-table-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--dynamic-table-accent) 18%, transparent);
 }
 
-.dynamic-table-minimal .dynamic-table-th {
-    padding: 0.6rem 0.75rem;
-    font-size: 0.78em;
-    letter-spacing: 0.04em;
+/* Table ------------------------------------------------------------ */
+
+.dynamic-table-custom .dynamic-table-thead {
+    background: var(--dynamic-table-surface-2);
+}
+
+.dynamic-table-custom .dynamic-table-th {
+    padding: 0.55rem var(--dynamic-table-custom-gutter);
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--dynamic-table-muted);
     white-space: nowrap;
+    border-bottom: 1px solid var(--dynamic-table-border);
 }
 
-.dynamic-table-minimal .dynamic-table-cell {
-    padding: 0.65rem 0.75rem;
+.dynamic-table-custom .dynamic-table-cell {
+    padding: 0.65rem var(--dynamic-table-custom-gutter);
 }
 
-.dynamic-table-minimal .dynamic-table-footer {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    border-top: 1px solid var(--dynamic-table-border);
-    font-size: 0.9em;
+/* The filter row sits under the header band, so its controls are the compact
+   version of the same fields. */
+.dynamic-table-custom .dynamic-table-filter-row .dynamic-table-th {
+    padding-block: 0.35rem;
+    background: var(--dynamic-table-surface);
 }
 
-.dynamic-table-minimal .dynamic-table-empty {
-    padding: 3rem 0.75rem;
-    text-align: center;
+.dynamic-table-custom .dynamic-table-empty {
+    padding: 3.25rem var(--dynamic-table-custom-gutter);
     color: var(--dynamic-table-muted);
 }
 
-/* Bordered: the same theme ruled like a spreadsheet, for wide numeric grids. */
-.dynamic-table-bordered .dynamic-table-table {
+/* Footer and pagination -------------------------------------------- */
+
+.dynamic-table-custom .dynamic-table-footer {
+    padding: 0.6rem var(--dynamic-table-custom-gutter);
+    border-top: 1px solid var(--dynamic-table-border);
+    font-size: 0.875em;
+    color: var(--dynamic-table-muted);
+}
+
+/* The current page is a tinted chip, not bold text: at this size weight alone
+   is easy to lose in a row of numbers. */
+.dynamic-table-custom .dynamic-table-page-current {
+    background: var(--dynamic-table-selected);
+    border-color: transparent;
+    color: var(--dynamic-table-accent);
+}
+
+/* Badges and chips -------------------------------------------------- */
+
+.dynamic-table-custom .dynamic-table-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.78em;
+    font-weight: 500;
+    line-height: 1.5;
+    white-space: nowrap;
+}
+
+.dynamic-table-custom .dynamic-table-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+/* Menus ------------------------------------------------------------- */
+
+/* Keyed on the menu's own class, not on .dynamic-table-custom: an open menu is
+   portalled to <body> inside a bare .dynamic-table layer, where the theme's
+   root class is no longer an ancestor. */
+.dynamic-table-custom-menu {
+    padding: 0.25rem;
     border: 1px solid var(--dynamic-table-border);
-    border-inline-end: 0;
-    border-block-end: 0;
+    border-radius: 10px;
+    box-shadow: 0 12px 32px color-mix(in srgb, var(--dynamic-table-ink) 18%, transparent);
 }
 
-/* Borders on two edges only: with separate borders, four would draw every
-   internal line twice. */
-.dynamic-table-bordered .dynamic-table-th,
-.dynamic-table-bordered .dynamic-table-cell {
-    border-inline-end: 1px solid var(--dynamic-table-border);
-    border-block-end: 1px solid var(--dynamic-table-border);
-    padding: 0.4rem 0.55rem;
-}
-
-.dynamic-table-bordered .dynamic-table-th {
-    text-transform: none;
-    font-size: 0.85em;
-    letter-spacing: 0;
+.dynamic-table-custom-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    font: inherit;
+    font-size: 0.875em;
     color: var(--dynamic-table-ink);
-    background: var(--dynamic-table-surface-2);
+    text-align: start;
+    background: none;
+    border: 0;
+    border-radius: calc(var(--dynamic-table-radius) - 2px);
+}
+
+/* Two classes, because the rule above clears the UA button background at the
+   same specificity as the shared hover rule and would otherwise win it. */
+.dynamic-table-custom-menu .dynamic-table-custom-menu-item:hover,
+.dynamic-table-custom-menu .dynamic-table-custom-menu-item:focus-visible {
+    background: var(--dynamic-table-hover);
+}
+
+/* Dialogs ----------------------------------------------------------- */
+
+.dynamic-table-custom .dynamic-table-modal-box {
+    border: 1px solid var(--dynamic-table-border);
+    border-radius: 14px;
+    box-shadow: 0 24px 60px color-mix(in srgb, var(--dynamic-table-ink) 28%, transparent);
 }

@@ -6,7 +6,7 @@
     $enabled = array_flip($options['features']);
 
     $choices = [
-        'theme' => ['demo', 'tailwind', 'bootstrap', 'minimal', 'bordered'],
+        'theme' => ['demo', 'custom', 'bootstrap', 'tailwind'],
         'panels' => ['modal', 'offcanvas'],
         'responsive' => ['collapse', 'cards', 'scroll', 'none'],
         'pagination' => ['auto', 'length_aware', 'simple', 'infinite'],

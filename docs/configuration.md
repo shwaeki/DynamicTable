@@ -9,14 +9,14 @@ php artisan dynamic-table:install --config
 
 ```php
 return [
-    // 'tailwind' | 'bootstrap' | your own registered theme | 'custom'
-    'theme' => 'tailwind',
+    // 'custom' (needs no CSS framework) | 'bootstrap' | 'tailwind'
+    'theme' => 'bootstrap',
 
     // null = detect from the application locale (ar/he/fa/ur => rtl)
     'direction' => null,
 
-    // null = follow the viewer's OS; 'light' or 'dark' forces one
-    'scheme' => null,
+    // 'light' | 'dark'; null follows the viewer's OS
+    'scheme' => 'light',
 
     // how tall a table's scroll area may grow — what makes the header stick;
     // null or 'none' lets the page own the scrolling instead
@@ -164,11 +164,13 @@ the header then scrolls away with the page.
 is installed; `'csv'` declines it even then, and the export dialog offers CSV
 alone.
 
-**`themes`** — not present by default, but recognised. Add a class map here and
-reference it by name from `theme`:
+**`themes`** — your own class maps. A name matching a built-in overrides that
+theme's slots; a name of your own starts from `custom`, so list only what you
+change. See [Themes](themes.md).
 
 ```php
 'themes' => [
+    'bootstrap' => ['badge' => 'badge badge-light-{tone}'],
     'brand' => ['table' => 'dynamic-table-table my-table', /* … */],
 ],
 ```

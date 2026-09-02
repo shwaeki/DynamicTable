@@ -80,7 +80,7 @@ class BuilderOptions
 
         $options = [
             'features' => $features,
-            'theme' => self::pick($input['theme'] ?? null, ['demo', 'tailwind', 'bootstrap', 'minimal', 'bordered'], 'demo'),
+            'theme' => self::pick($input['theme'] ?? null, ['demo', 'custom', 'bootstrap', 'tailwind'], 'demo'),
             'panels' => self::pick($input['panels'] ?? null, ['modal', 'offcanvas'], 'modal'),
             'responsive' => self::pick($input['responsive'] ?? null, ['collapse', 'cards', 'scroll', 'none'], 'collapse'),
             'pagination' => self::pick($input['pagination'] ?? null, ['auto', 'length_aware', 'simple', 'infinite'], 'auto'),

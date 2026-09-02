@@ -18,6 +18,7 @@ use Shwaeki\DynamicTable\Metadata\ModelMetadata;
 use Shwaeki\DynamicTable\Support\Feature;
 use Shwaeki\DynamicTable\Support\FeatureSet;
 use Shwaeki\DynamicTable\Support\TableEstimator;
+use Shwaeki\DynamicTable\Support\Theme;
 
 /**
  * The one class a developer extends.
@@ -199,13 +200,15 @@ abstract class DynamicTable
      *     Stylesheets the print page should load, before its own.
      *
      * $theme = null
-     *     Null follows config('dynamic-table.theme').
+     *     "custom", "bootstrap" or "tailwind". Null follows
+     *     config('dynamic-table.theme').
      *
      * $direction = null
      *     "ltr", "rtl", or null to follow the application locale.
      *
      * $scheme = null
-     *     "light", "dark", or null to follow the viewer's operating system.
+     *     "light" or "dark". Null follows config('dynamic-table.scheme'),
+     *     which is "light" until an application says otherwise.
      *
      * $panels = null
      *     How panels are presented: "modal", "offcanvas", or null to follow
@@ -719,7 +722,7 @@ abstract class DynamicTable
     /** @return string */
     public function theme()
     {
-        return (string) ($this->theme ?? config('dynamic-table.theme', 'tailwind'));
+        return (string) ($this->theme ?? config('dynamic-table.theme', Theme::FALLBACK));
     }
 
     /** @return string */

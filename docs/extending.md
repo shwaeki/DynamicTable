@@ -99,8 +99,9 @@ can rebuild the UI. Prefer the PHP API where both exist.
 
 ## Custom themes
 
-See [Themes](themes.md). A theme is one array; `Theme::register()` is the
-extension point.
+See [Themes](themes.md). A theme is one array of CSS classes, and the "themes"
+key of the config file is the extension point: an entry there starts from the
+built-in theme of the same name, and a name of its own starts from `custom`.
 
 ## Excel adapters
 
@@ -138,6 +139,6 @@ Every automatic decision has an explicit override:
 | Base query | `query()`, `$scopes` |
 | Eager loading | `$with` |
 | Authorisation | `authorize()` |
-| Theme | `$theme`, `Theme::register()` |
+| Theme | `$theme`, config `themes` |
 | Direction | `$direction` |
 | Table key | `$tableKey` |

@@ -96,16 +96,23 @@ it('translates the interface', function (): void {
     expect($html)->toContain('بحث');
 });
 
-it('follows the viewer’s colour scheme unless one is forced', function (): void {
-    $html = app(TableRenderer::class)->render(UsersTable::class)->toHtml();
-
-    expect($html)->not->toContain('data-dynamic-table-scheme');
+it('renders light by default, and follows the viewer only when asked to', function (): void {
+    expect(app(TableRenderer::class)->render(UsersTable::class)->toHtml())
+        ->toContain('data-dynamic-table-scheme="light"');
 
     config()->set('dynamic-table.scheme', 'dark');
     app()->forgetInstance(TableRenderer::class);
 
     expect(app(TableRenderer::class)->render(UsersTable::class)->toHtml())
         ->toContain('data-dynamic-table-scheme="dark"');
+
+    // Null is the opt-in: no attribute, so the stylesheet's
+    // prefers-color-scheme block decides.
+    config()->set('dynamic-table.scheme', null);
+    app()->forgetInstance(TableRenderer::class);
+
+    expect(app(TableRenderer::class)->render(UsersTable::class)->toHtml())
+        ->not->toContain('data-dynamic-table-scheme');
 });
 
 /**
@@ -121,7 +128,7 @@ it('keeps colour out of the bundled theme class maps', function (string $theme):
         ->not->toContain('bg-white')
         ->not->toContain('text-gray-')
         ->not->toContain('table-light');
-})->with(['tailwind', 'bootstrap']);
+})->with(['custom', 'tailwind', 'bootstrap']);
 
 it('collapses overflowing columns into a child row by default', function (): void {
     $table = app(FullUsersTable::class);

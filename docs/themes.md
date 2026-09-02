@@ -6,60 +6,92 @@ visual theme does not require touching a folder of partials.
 
 ```php
 // config/dynamic-table.php
-'theme' => 'tailwind',   // 'tailwind' | 'bootstrap' | 'minimal' | 'bordered' | your own
+'theme' => 'bootstrap',   // 'custom' | 'bootstrap' | 'tailwind'
 ```
 
 Per table:
 
 ```php
-protected ?string $theme = 'bootstrap';
+protected ?string $theme = 'custom';
 ```
 
 Bootstrap users are never served Tailwind classes, and vice versa. The package
 never assumes your application has either.
 
-## The four themes that ship
+## The three themes that ship
 
 | Theme | Needs | Looks like |
 |---|---|---|
-| `tailwind` | Tailwind on the page | The default: airy, rounded, focus rings. |
+| `custom` | **nothing** | The package's own: a card, a quiet header band, comfortable rows. |
 | `bootstrap` | Bootstrap 5 on the page | Bootstrap's own components — `btn`, `form-control`, `card`, `table`. |
-| `minimal` | **nothing** | Quiet and airy, no outer border, rules only between rows. |
-| `bordered` | **nothing** | The same base, ruled like a spreadsheet: dense rows, a border on every cell. |
+| `tailwind` | Tailwind on the page | Tailwind utilities: airy, rounded, focus rings. |
 
-`minimal` and `bordered` are the ready-to-use answer to "I do not have a CSS
-framework, and I do not want to write a theme". Every class they name is styled
-by the package's own stylesheet, on the same tokens as everything else — so
-they are readable in light and dark, they obey `data-dynamic-table-scheme`,
-and they need
-no build step:
+Three, and only three. A name the package does not recognise resolves to
+`custom` — the one theme that cannot look half-finished for want of a
+framework.
+
+### `custom`
+
+The answer to "I do not have a CSS framework, and I do not want to write a
+theme":
 
 ```php
-protected ?string $theme = 'minimal';   // or 'bordered'
+protected ?string $theme = 'custom';
 ```
 
-`bordered` is `minimal` plus one class, which is a fair description of what a
-theme is at all.
+Every class it names is painted by the package's own stylesheet, from the same
+tokens as everything else — so it is readable in light and dark, it obeys
+`data-dynamic-table-scheme`, and it needs no build step. It is a finished look,
+not a skeleton to fill in: card, border, one soft shadow, uppercase muted
+headers, an accent on the primary buttons, focus rings on the fields, a tinted
+chip for the current page.
 
-## Writing a theme
+Its own knobs are CSS custom properties, so a project that wants the same
+theme in its own colours changes tokens rather than classes:
 
-Publish the config once, and every theme you write lives under its `themes`
+```css
+.dynamic-table-custom {
+    --dynamic-table-accent: #7c3aed;
+    --dynamic-table-custom-card-radius: 4px;   /* squarer card */
+    --dynamic-table-custom-gutter: 0.6rem;     /* denser rows */
+}
+```
+
+## Changing a theme
+
+Publish the config once, and everything you change lives under its `themes`
 key:
 
 ```bash
 php artisan vendor:publish --tag=dynamic-table-config
 ```
 
+An entry there **starts from the built-in theme of the same name**, so changing
+one slot means naming one slot:
+
 ```php
 // config/dynamic-table.php
 'themes' => [
+    'bootstrap' => [
+        'badge' => 'badge badge-light-{tone}',
+        'button' => 'btn btn-sm btn-light',
+    ],
+],
+```
+
+Everything else stays Bootstrap's, including whatever the package changes about
+it later. That is usually all an admin template needs.
+
+A name of your own **starts from `custom`**, which is already a complete theme,
+so your own theme is as long as the list of slots you actually want to change:
+
+```php
+'themes' => [
     'brand' => [
-        'wrapper' => 'rounded-2xl border shadow',
-        'toolbar' => 'dynamic-table-toolbar flex items-center gap-2 p-4 border-b',
+        'root' => 'dynamic-table dynamic-table-brand',
         'button' => 'btn btn-sm',
         'buttonPrimary' => 'btn btn-sm btn-primary',
-        'cell' => 'dynamic-table-cell px-3 py-2',
-        // …anything you leave out keeps the structural default
+        'badge' => 'badge badge-{tone}',
     ],
 ],
 ```
@@ -70,109 +102,38 @@ protected ?string $theme = 'brand';
 
 That is the whole workflow: one file — the same one that holds `'theme'`, so
 the name you select and the theme you wrote sit a few lines apart — no service
-provider, no Blade files, no build step. Every slot is optional, so a theme can
-be three lines.
+provider, no Blade files, no build step.
 
 Two rules, and only two:
 
-1. **Keep the structural `dynamic-table-*` classes.** They carry behaviour — sticky
-   header, resize handles, dialog layout, RTL mirroring — not looks.
+1. **Keep the structural `dynamic-table-*` classes.** They carry behaviour —
+   sticky header, resize handles, dialog layout, RTL mirroring — not looks.
 2. **Do not put colour in the map.** Surfaces, text and borders come from the
    CSS tokens, which is what keeps every theme legible in light and dark and
-   obedient to `data-dynamic-table-scheme`. Set the tokens in your own stylesheet:
+   obedient to `data-dynamic-table-scheme`. Set the tokens in your own
+   stylesheet:
 
    ```css
    .dynamic-table-brand { --dynamic-table-accent: #7c3aed; --dynamic-table-radius: 14px; }
    ```
 
-### Building on a theme that already works
-
-An admin template usually needs one or two slots changed, not thirty. Name the
-theme you are starting from:
-
-```php
-// config/dynamic-table.php
-'themes' => [
-    'metronic' => [
-        'extends' => 'bootstrap',
-        'badge' => 'badge badge-light-{tone}',
-        'button' => 'btn btn-sm btn-light',
-    ],
-],
-```
-
-Everything else stays Bootstrap's, including whatever the package changes about
-it later.
-
 `{tone}` is the one placeholder a slot understands, and only `badge` uses it: it
 is where the package writes the tone of a [badge](columns.md#badges) — the
 `success` of `badge badge-light-success`. Leave it out and the tone arrives as
-`dynamic-table-badge-success` alongside your class, which the package stylesheet paints.
-
-### Registering one from code
-
-Still supported, for a theme that has to be computed — from a tenant's brand
-settings, say. For anything static, prefer the file above.
-
-```php
-// AppServiceProvider::boot()
-use Shwaeki\DynamicTable\Support\Theme;
-
-Theme::register('brand', [
-    'wrapper'       => 'rounded-2xl border border-slate-200 bg-white shadow',
-    'toolbar'       => 'dynamic-table-toolbar flex items-center gap-2 p-4 border-b',
-    'search'        => 'input input-sm w-64',
-    'button'        => 'btn btn-sm',
-    'buttonPrimary' => 'btn btn-sm btn-primary',
-    'buttonDanger'  => 'btn btn-sm btn-error',
-    'input'         => 'input input-sm w-full',
-    'select'        => 'select select-sm',
-    'table'         => 'dynamic-table-table table w-full',
-    'thead'         => 'dynamic-table-thead bg-slate-50',
-    'th'            => 'dynamic-table-th text-xs uppercase tracking-wide text-slate-500',
-    'row'           => 'dynamic-table-row hover:bg-slate-50',
-    'rowSelected'   => 'dynamic-table-row-selected bg-indigo-50',
-    'cell'          => 'dynamic-table-cell px-3 py-2',
-    'footer'        => 'dynamic-table-footer flex items-center justify-between p-3 border-t',
-    'empty'         => 'dynamic-table-empty py-16 text-center text-slate-400',
-    'badge'         => 'badge',
-    'menu'          => 'dynamic-table-menu absolute z-40 rounded-lg border bg-white p-1 shadow-lg',
-    'menuItem'      => 'dynamic-table-menu-item w-full rounded px-2 py-1.5 text-start hover:bg-slate-100',
-    'modalBox'      => 'dynamic-table-modal-box w-full max-w-2xl rounded-xl bg-white p-4 shadow-2xl',
-    'chip'          => 'dynamic-table-chip badge badge-primary',
-]);
-```
-
-```php
-'theme' => 'brand',
-```
-
-Note the colours in that older example: `bg-white`, `text-slate-500`. They work,
-but they are the reason a theme can look wrong in dark mode — prefer the tokens.
-
-Resolution order, if a name is defined in more than one place: a theme
-registered in code wins, then `config('dynamic-table.themes')`, then a
-`config/dynamic-table-themes.php` left over from an older version, then the
-built-ins.
-
-> **Upgrading?** Themes used to live in a second file,
-> `config/dynamic-table-themes.php`. They are part of `config/dynamic-table.php`
-> now, under `themes`. A file you published earlier is still read, so nothing
-> breaks — move its contents under the `themes` key when convenient and delete
-> it.
+`dynamic-table-badge-success` alongside your class, which the package
+stylesheet paints.
 
 ## Keep the `dynamic-table-*` classes
 
 Every slot has a structural default like `dynamic-table-table` or
-`dynamic-table-row`. Those classes
-carry *behaviour* from the package stylesheet — sticky headers, resize handles,
-dialog layout, loading overlay, RTL mirroring — and they
-are what the colour tokens paint. Keep them in your values (as above) and add
-your own alongside.
+`dynamic-table-row`. Those classes carry *behaviour* from the package
+stylesheet — sticky headers, resize handles, dialog layout, loading overlay,
+RTL mirroring — and they are what the colour tokens paint. Keep them in your
+values (as above) and add your own alongside.
 
 The package's own rules are written with `:where()`, so they have the
-specificity of `.dynamic-table` alone: anything you put in the class map wins without
-needing `!important`.
+specificity of `.dynamic-table` alone: anything you put in the class map wins
+without needing `!important`.
 
 ## Slots
 
@@ -196,21 +157,24 @@ and put your version at
 preferred automatically over the shared template. This is rarely necessary —
 prefer the class map, which keeps you on the upstream markup and its fixes.
 
-## Custom CSS only
-
-```php
-'theme' => 'custom',
-```
-
-You get the structural `dynamic-table-*` classes and nothing else. Style them
-yourself; the package stylesheet is namespaced under `.dynamic-table` and will
-not touch the rest of your
-application.
-
 ## Light and dark
 
+**Tables are light by default.** A table is part of an application's chrome,
+and following the viewer's operating system meant the same page rendered light
+or dark depending on whose laptop it was opened on.
+
+```php
+'scheme' => 'light',   // config: the default
+'scheme' => 'dark',    // dark for every theme alike
+'scheme' => null,      // follow the viewer's OS (prefers-color-scheme)
+```
+
+```php
+protected ?string $scheme = 'dark';    // per table
+```
+
 Colour comes from the package's own CSS custom properties, not from the theme's
-class map. That is deliberate, and it is why both bundled themes look right in
+class map. That is deliberate, and it is why all three themes look right in
 both schemes:
 
 ```css
@@ -223,19 +187,8 @@ both schemes:
 --dynamic-table-info       --dynamic-table-radius
 ```
 
-By default a table follows the viewer's operating system
-(`prefers-color-scheme`). Force one instead:
-
-```php
-protected ?string $scheme = 'dark';    // per table
-```
-
-```php
-'scheme' => 'light',                   // application-wide, config
-```
-
-`null` means "follow the system". The choice is rendered as
-`data-dynamic-table-scheme` on the table, so it can also be flipped at runtime:
+The choice is rendered as `data-dynamic-table-scheme` on the table, so it can
+also be flipped at runtime:
 
 ```js
 document.querySelectorAll('[data-dynamic-table]')
@@ -261,5 +214,6 @@ colours in the class map and ignore all of this.
 ## Responsive
 
 The `responsive` feature (on by default) gives horizontal scrolling with a
-sticky header. Add `dynamic-table-responsive-cards` to the wrapper class to switch to a
-card layout under 640px, and filters move into a drawer on small screens.
+sticky header. Add `dynamic-table-responsive-cards` to the wrapper class to
+switch to a card layout under 640px, and filters move into a drawer on small
+screens.

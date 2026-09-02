@@ -143,7 +143,7 @@ Those names are declared parameters, the period picker understands
 | **Editing** | Inline editing with validation · inline create · bulk edit over a selection · bulk actions · row actions · toolbar actions |
 | **Output** | Print view from an editable Blade template · summary row (sum, avg, min, max, count) over the filtered set |
 | **Data** | CSV and XLSX export (current page / view / all / selected) · import with mapping, preview, per-row errors and a downloadable error report · queued transfers with progress |
-| **UI** | Bootstrap 5 · Tailwind · two framework-free themes (minimal, bordered) · custom themes in one array · sticky columns · row detail panels · infinite scroll · faceted filter counts · RTL and LTR · Arabic, Hebrew, English, Russian · responsive · keyboard accessible · ARIA |
+| **UI** | Three themes — the package's own (no framework needed), Bootstrap 5 and Tailwind — each one array of classes · sticky columns · row detail panels · infinite scroll · faceted filter counts · RTL and LTR · Arabic, Hebrew, English, Russian · responsive · keyboard accessible · ARIA |
 | **Engineering** | No N+1 · constant query count · streaming exports · metadata caching · strict server-side validation of every client input · 120 tests · PHPStan level 5 |
 
 ## Performance, stated as budgets

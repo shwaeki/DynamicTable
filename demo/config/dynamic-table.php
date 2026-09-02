@@ -18,9 +18,18 @@
 return [
 
     /*
+    | Every example that does not say otherwise renders with the package's own
+    | theme, so this site shows what a Laravel application gets with no CSS
+    | framework and no configuration at all. The package's default is
+    | "bootstrap"; the Bootstrap and Tailwind examples name theirs per table.
+    */
+    'theme' => 'custom',
+
+    /*
     | A theme is one array: slot => CSS classes. Anything defined here is
     | usable immediately as $theme = 'demo' on a table, or as the global
-    | 'theme' above. No service provider, no Blade files, no build.
+    | 'theme' above. A name of its own starts from "custom", so only the slots
+    | listed here change. No service provider, no Blade files, no build.
     |
     | The dynamic-table-* classes stay because they carry behaviour — sticky header,
     | resize handles, dialog layout, RTL mirroring — rather than looks. Colour
