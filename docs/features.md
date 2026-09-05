@@ -139,6 +139,8 @@ public function newRecordDefaults(): array
 | Feature | What it does | Implies | Module |
 |---|---|---|---|
 | `row_detail` | A chevron per row that opens a panel underneath it, fetched on demand from `rowDetail()`. | — | `detail` |
+| `row_reorder` | Drag a row by its handle to write its position. | — | `reorder` |
+| `pinned_rows` | A star per row; pinned rows sort to the top for that viewer. | — | `pins` |
 | `grouping` | Group rows by a column, with a heading row per value. | — | — |
 | `column_picker` | *Which* columns are shown: the panel, and adding any field the metadata reaches. | — | `columns` |
 | `column_reorder` | *What order* they are in: drag handles in the panel, and Move left/right in the header menu. | — | `columns` |
@@ -161,6 +163,66 @@ The record is re-fetched through the table's own base query and checked against
 the `view` ability, so a detail can never be read for a row the table would not
 have shown. The panel is fetched the first time it is opened and cached until
 the rows change.
+
+## Reordering rows
+
+```php
+protected array $features = ['row_reorder'];
+
+protected string $reorderable = 'sort_order';
+
+protected array $defaultSort = ['sort_order' => 'asc'];
+```
+
+A grip appears at the start of each row; drag it — or focus it and press
+**Alt + up/down** — and the position column is written on drop.
+
+**Only while the table is sorted by that column.** Under any other sort,
+dropping a row between two others describes a position the table is not
+showing, so the handles disappear rather than doing something surprising. The
+same rule is enforced on the server, which refuses a drag arriving under the
+wrong sort.
+
+What a drag writes is worth knowing, because it decides what it costs:
+
+> The rows on the page hold a set of position values. The drag does not invent
+> new numbers — it **permutes which row sits in which value that was already
+> there**.
+
+So a drag on page 40 costs exactly what a drag on page 1 costs, nothing outside
+the page is renumbered, and no new value can collide with a row the reader
+cannot see. Rows whose position is null or duplicated are given values above
+the largest one on the page, which leaves every properly-positioned row where
+it was.
+
+The endpoint re-fetches every record through the table's own base query and
+checks `update` on each one, so a drag can never move a row the table would not
+have shown. A refused drag is not half-applied: the whole reorder is rejected
+and the table refetches, rather than leaving an order that is neither the old
+one nor the one that was asked for.
+
+## Pinned rows
+
+```php
+protected array $features = ['pinned_rows'];
+```
+
+A star per row. Pinned rows sort above everything else — above the group
+heading too — for that viewer and nobody else.
+
+It is one `ORDER BY CASE`, not a second query or a union, so the pinned row is
+simply at the top of page 1 rather than *also* still on page 9: one result, one
+count, one page, and each row appears exactly once.
+
+The list lives in the session, like [remembered state](#), and for the same
+reason: it needs no table and no migration, it is private by construction, and
+it lasts as long as the sitting does. A pin is a working note — "these three
+while I deal with them" — not a document. Saved views are the durable,
+nameable, shareable version of the same idea.
+
+Up to 50 rows, oldest dropped first. An unbounded list in the session would be
+an unbounded `IN` clause in the query, and a cap that refused new pins would
+leave the reader pressing a button that does nothing.
 
 ## The three column features
 

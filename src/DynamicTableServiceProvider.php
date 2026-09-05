@@ -7,12 +7,14 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Shwaeki\DynamicTable\Commands\ClearCacheCommand;
+use Shwaeki\DynamicTable\Commands\DoctorCommand;
 use Shwaeki\DynamicTable\Commands\InstallCommand;
 use Shwaeki\DynamicTable\Commands\MakeTableCommand;
 use Shwaeki\DynamicTable\Metadata\MetadataEngine;
 use Shwaeki\DynamicTable\Support\AssetManager;
 use Shwaeki\DynamicTable\Support\TableRegistry;
 use Shwaeki\DynamicTable\Support\TableRenderer;
+use Shwaeki\DynamicTable\View\Components\Table as TableComponent;
 
 class DynamicTableServiceProvider extends ServiceProvider
 {
@@ -42,6 +44,7 @@ class DynamicTableServiceProvider extends ServiceProvider
                 MakeTableCommand::class,
                 InstallCommand::class,
                 ClearCacheCommand::class,
+                DoctorCommand::class,
             ]);
         }
     }
@@ -83,6 +86,10 @@ class DynamicTableServiceProvider extends ServiceProvider
         Blade::directive('dynamicTableScripts', function (): string {
             return "<?php echo app('".AssetManager::class."')->scripts(); ?>";
         });
+
+        // The same renderer as the directive, reachable the way a Blade
+        // component is — which is what a Livewire view, or a slot, wants.
+        Blade::component('dynamic-table', TableComponent::class);
     }
 
     protected function registerPublishing(): void

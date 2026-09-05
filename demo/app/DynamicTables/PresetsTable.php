@@ -53,6 +53,27 @@ class PresetsTable extends DynamicTable
                     ],
                 ],
             ],
+
+            /*
+             * A condition comparing two columns rather than a column and a
+             * value: {"field": …} in place of the value.
+             *
+             * This is how the data-quality questions get asked — rows that
+             * contradict themselves — and it compiles to whereColumn, so it
+             * costs nothing extra. Both sides have to be real columns on the
+             * table's own row and of the same type family; a relation path, an
+             * aggregate or a mismatched type is refused.
+             */
+            'impossible_dates' => [
+                'name' => 'Shipped before it was placed',
+                'sort' => [['field' => 'placed_at', 'direction' => 'desc']],
+                'filters' => [
+                    'logic' => 'and',
+                    'conditions' => [
+                        ['field' => 'shipped_at', 'operator' => 'before', 'value' => ['field' => 'placed_at']],
+                    ],
+                ],
+            ],
         ];
     }
 }

@@ -86,6 +86,61 @@ through a versioned route, which is why there is no build step and why a
 Bootstrap users are never served Tailwind classes and vice versa — a theme is
 just a class map. See [Themes](themes.md).
 
+## Rendering a table
+
+Two ways, the same renderer behind both:
+
+```blade
+@dynamicTable(UsersTable::class)
+@dynamicTable(UsersTable::class, ['theme' => 'bootstrap', 'params' => ['status' => 'open']])
+
+<x-dynamic-table :table="UsersTable::class" />
+<x-dynamic-table :table="$table" theme="bootstrap" :params="['status' => 'open']" />
+```
+
+The component exists because a directive is awkward where tables increasingly
+live: inside a Livewire component's view, inside another component's slot, or
+anywhere the arguments are variables rather than literals. Anything the
+directive takes in its options array is an attribute on the component.
+
+## Livewire, Inertia and Turbo
+
+Tables survive a page that is replaced without being loaded. The runtime
+re-mounts on `livewire:navigated`, `livewire:load`, `turbo:load`,
+`inertia:success` and `inertia:navigate`, and on Livewire's `morphed` hook — so
+a table that arrives with a new page is picked up, and one that leaves is let
+go of.
+
+**Letting go matters as much as picking up.** A table puts listeners on the
+document and the window — a resize handler, a `popstate` handler, the ones
+behind [external parameter controls](tables.md#parameters) — and those do not
+go away with the element. Every one of them is registered against the table's
+own abort signal, and a table whose element has left the page is destroyed:
+its observer disconnected, its in-flight request aborted, its listeners
+removed. Without that, an application that visits ten pages ends up with ten
+tables' worth of handlers still firing at a DOM that no longer exists.
+
+A table inside a Livewire component is usually best marked `wire:ignore`:
+
+```blade
+<div wire:ignore>
+    <x-dynamic-table :table="UsersTable::class" />
+</div>
+```
+
+The table owns its own state and talks to its own endpoint, so there is nothing
+for Livewire to morph — and morphing it would throw away the DOM the runtime is
+holding on every re-render.
+
+The runtime is also reachable directly, which is what an SPA integration
+occasionally needs:
+
+```js
+window.DynamicTable.boot();       // mount any table not yet mounted, sweep dead ones
+window.DynamicTable.find('users').refresh();
+window.DynamicTable.sweep();      // destroy tables whose element has gone
+```
+
 ## Assets and Content Security Policy
 
 By default the `@dynamicTable` directive injects one stylesheet link and one

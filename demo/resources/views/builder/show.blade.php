@@ -91,6 +91,11 @@
                         <input type="checkbox" name="summary" value="1" @checked($options['summary'])>
                         <span>{{ __('demo.builder.fields.summary') }}</span>
                     </label>
+
+                    <label class="builder-check builder-field">
+                        <input type="checkbox" name="links" value="1" @checked($options['links'])>
+                        <span>{{ __('demo.builder.fields.links') }}</span>
+                    </label>
                 </div>
             </fieldset>
 
@@ -129,6 +134,7 @@
                     features: data.getAll('features[]'),
                     sticky: data.get('sticky') ? 1 : 0,
                     summary: data.get('summary') ? 1 : 0,
+                    links: data.get('links') ? 1 : 0,
                 };
 
                 for (const name of ['theme', 'panels', 'responsive', 'pagination', 'perPage', 'maxHeight', 'direction', 'scheme']) {

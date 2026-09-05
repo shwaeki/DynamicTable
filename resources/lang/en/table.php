@@ -14,6 +14,7 @@ return [
     'empty' => 'No records found',
     'error' => 'Something went wrong while loading data.',
     'retry' => 'Retry',
+    'reload' => 'Reload',
     'per_page' => 'Rows per page',
     'pagination' => 'Pagination',
     'showing' => 'Showing :from–:to of :total',
@@ -21,6 +22,10 @@ return [
     'showing_estimated' => 'Showing :from–:to of about :total',
     'select_all' => 'Select all',
     'select_row' => 'Select row',
+    'reorder_row' => 'Drag, or Alt + arrow keys, to reorder',
+    'reorder_unavailable' => 'Sort by the position column to reorder',
+    'pin_row' => 'Pin to top',
+    'unpin_row' => 'Unpin',
     'selected' => ':count selected',
     'select_all_matching' => 'Select all :total matching records',
     'clear_selection' => 'Clear selection',
@@ -168,6 +173,7 @@ return [
         'preview' => 'Preview',
         'ignore' => 'Ignore this column',
         'run' => 'Start import',
+        'preview_summary' => 'Would create :created, update :updated, reject :failed. Nothing has been written yet.',
         'queued' => 'Your import has been queued.',
         'summary' => ':created created, :updated updated, :failed failed.',
         'failed_rows' => 'Rows that were not imported',
@@ -234,6 +240,23 @@ return [
         ],
     ],
 
+    /*
+     * Relation aggregates as the filter builder and the column picker name
+     * them. The relation is the group heading, so a field label does not
+     * repeat it — ":field · sum" reads better under "Orders" than "Orders sum
+     * of total" does anywhere.
+     */
+    'aggregate' => [
+        'group' => ':relation — counts and totals',
+        'count' => 'How many',
+        'exists' => 'Has any',
+        'sum' => ':field · sum',
+        'avg' => ':field · average',
+        'min' => ':field · lowest',
+        'max' => ':field · highest',
+        'earliest' => ':field · earliest',
+        'latest' => ':field · latest',
+    ],
     'summary' => [
         'sum' => 'Total',
         'avg' => 'Average',
@@ -245,6 +268,7 @@ return [
     'errors' => [
         'forbidden' => 'You are not allowed to perform this action.',
         'not_found' => 'Record not found.',
+        'stale' => 'Someone else changed this row while you were editing it. It has been refreshed — make your change again.',
         'nothing_to_save' => 'Nothing to save.',
         'no_selection' => 'Select at least one record first.',
         'unknown_relation' => 'No :field matches ":value".',
@@ -252,6 +276,12 @@ return [
         'duplicate_row' => 'This record already exists. Choose ":mode" to update it instead.',
         'database' => 'The database rejected this row: :message',
         'generic' => 'The request could not be completed.',
+        'not_reorderable' => 'These rows cannot be reordered while the table is sorted this way. Sort by the position column first.',
+        'offline' => 'Could not reach the server. Check your connection and try again.',
+        'server' => 'The server could not complete this request. Try again in a moment.',
+        'session_expired' => 'Your session has expired. Reload the page to continue.',
+        'throttled' => 'Too many requests. Wait a moment and try again.',
+        'throttled_in' => 'Too many requests. Try again in :seconds seconds.',
         'missing_required' => 'These columns have to be mapped before the file can be imported: :fields.',
         'match_unmapped' => 'No column in the file is mapped to :field, so existing records cannot be matched on it.',
         'unknown_table' => 'This table is no longer available.',

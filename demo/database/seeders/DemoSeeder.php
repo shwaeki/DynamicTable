@@ -69,9 +69,13 @@ class DemoSeeder extends Seeder
             'level' => $i + 1,
         ]));
 
-        $categories = collect(self::CATEGORIES)->map(fn (string $name): Category => Category::create([
+        // The position is seeded rather than left at its default, so the
+        // row-reorder example opens on a catalogue that is already in an order
+        // somebody could disagree with.
+        $categories = collect(self::CATEGORIES)->values()->map(fn (string $name, int $index): Category => Category::create([
             'name' => $name,
             'slug' => Str::slug($name),
+            'position' => $index + 1,
         ]));
 
         $this->seedUsers($companies, $departments, $roles);

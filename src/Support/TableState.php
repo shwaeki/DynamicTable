@@ -41,6 +41,15 @@ final class TableState
         public readonly array $selection = [],
         public readonly ?string $view = null,
         public readonly array $params = [],
+        /**
+         * Where the next page of an infinitely scrolled table starts.
+         *
+         * Opaque, and deliberately absent from toArray(): a cursor describes a
+         * position in one result, so saving it in a view or writing it to the
+         * URL would reopen the table halfway down a list that has since
+         * changed. Page numbers are still what the reader and a link talk in.
+         */
+        public readonly ?string $cursor = null,
     ) {}
 
     /**
@@ -125,6 +134,7 @@ final class TableState
             selection: self::normalizeSelection($input['selection'] ?? null),
             view: isset($input['view']) && is_scalar($input['view']) ? (string) $input['view'] : null,
             params: self::normalizeParams($input['params'] ?? null, $table),
+            cursor: self::normalizeCursor($input['cursor'] ?? null),
         );
 
         $state->warnings = $filterEngine->warnings();
@@ -305,6 +315,23 @@ final class TableState
         return is_scalar($value) ? $value : null;
     }
 
+    /**
+     * A cursor is opaque to us but not to the database.
+     *
+     * It is base64 of a JSON map of the sort columns' last values, which the
+     * paginator decodes and compares. A malformed one decodes to nothing and
+     * the page starts from the beginning, so the only job here is to keep
+     * anything unreasonable from reaching that decoder at all.
+     */
+    private static function normalizeCursor(mixed $value): ?string
+    {
+        if (! is_string($value) || $value === '' || strlen($value) > 2048) {
+            return null;
+        }
+
+        return preg_match('/^[A-Za-z0-9\-_=+\/]+$/', $value) === 1 ? $value : null;
+    }
+
     /** @return array<string, mixed> */
     private static function normalizeSelection(mixed $input): array
     {
@@ -337,6 +364,23 @@ final class TableState
             && $this->columnSearch === []
             && $this->filters->isEmpty()
             && $this->params === [];
+    }
+
+    /**
+     * Has the reader narrowed the result themselves?
+     *
+     * Not the same question as isUnfiltered(), and the difference is the Clear
+     * filters button. Search, column search and the filter tree belong to the
+     * reader, and clearFilters() undoes all three. Declared parameters belong
+     * to the page — a link, a tab, the date range the screen was opened with —
+     * and nothing in the table can clear them, so counting them here offered a
+     * button that changed nothing and left the same empty table behind it.
+     */
+    public function isNarrowedByReader(): bool
+    {
+        return $this->search !== ''
+            || $this->columnSearch !== []
+            || ! $this->filters->isEmpty();
     }
 
     public function hasSelection(): bool

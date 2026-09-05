@@ -198,6 +198,13 @@ return [
         'max_filters' => 40,
         'max_filter_depth' => 4,
         'max_relation_depth' => 3,
+
+        // How many aggregate fields one plural relation may contribute to the
+        // filter builder and the column picker — count, exists, and the sums,
+        // averages and extremes of the columns where those mean something. The
+        // cap is for the model with thirty numeric columns, where the honest
+        // list would be longer than anybody wants to scroll.
+        'max_aggregate_fields' => 40,
     ],
 
     // A developer panel with query count, time and memory. Per-machine rather

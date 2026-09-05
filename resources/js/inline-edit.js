@@ -84,8 +84,13 @@ export default function install(table) {
         cell.setAttribute('title', table.t('inline.saving'));
 
         try {
+            // The row's version as this page last saw it. The server refuses
+            // the write if the row has moved on since, rather than quietly
+            // overwriting whoever changed it.
+            const version = table.data.rows.find((row) => String(row.id) === String(rowId))?.v;
+
             const response = await table.post(table.endpoints.edit, {
-                changes: [{ id: rowId, field: column.key, value }],
+                changes: [{ id: rowId, field: column.key, value, version }],
                 state: table.serializeState(),
             });
 
@@ -103,6 +108,14 @@ export default function install(table) {
             const messages = error.payload?.errors?.[rowId]?.[column.key]
                 || error.payload?.errors?.[rowId]?._
                 || [error.message];
+
+            // A refusal can still carry rows — a row someone else changed under
+            // this edit comes back as it now stands, so the repaint below shows
+            // what is actually there rather than the value that was rejected.
+            for (const fresh of error.payload?.rows || []) {
+                const index = table.data.rows.findIndex((candidate) => String(candidate.id) === String(fresh.id));
+                if (index > -1) table.data.rows[index] = fresh;
+            }
 
             cell.classList.add('dynamic-table-cell-invalid', table.classes.cellInvalid);
             cell.setAttribute('title', messages.join(' '));

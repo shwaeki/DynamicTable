@@ -2,7 +2,11 @@
 
 namespace Shwaeki\DynamicTable\Support;
 
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Contracts\Pagination\Paginator;
+use Illuminate\Database\Eloquent\Model;
+use Shwaeki\DynamicTable\Columns\ColumnDefinition;
 use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Modules\Export\ExportManager;
 use Shwaeki\DynamicTable\Query\QueryEngine;
@@ -32,24 +36,9 @@ class TablePayload
 
         $payload = [
             'rows' => $this->formatter->rows($paginator->items(), $columns, $table),
-            // A simple paginator knows there is a next page but not how many
-            // there are, so total and lastPage are deliberately absent rather
-            // than guessed at.
-            'total' => $counted ? $paginator->total() : null,
-            'lastPage' => $counted ? $paginator->lastPage() : null,
-            'hasMore' => $paginator->hasMorePages(),
-            'counted' => $counted,
-            // Without a count, an approximate size is still far more useful
-            // than none — but only while nothing narrows the set, because the
-            // estimate describes the table, not the filtered result.
-            'estimate' => $counted || ! $state->isUnfiltered()
-                ? null
-                : app(TableEstimator::class)->rows($table->newModel()),
-            'page' => $paginator->currentPage(),
             'perPage' => $paginator->perPage(),
-            'from' => $paginator->firstItem(),
-            'to' => $paginator->lastItem(),
-        ];
+            'hasMore' => $paginator->hasMorePages(),
+        ] + $this->position($table, $state, $paginator);
 
         // Columns the picker added were never in the boot payload, so the
         // browser has a key in its state with no definition to paint. Send the
@@ -70,9 +59,11 @@ class TablePayload
 
         // "No records" and "no matches" are different sentences, and only the
         // second one has an action attached. The distinction is made here,
-        // where the state is known, rather than guessed at in the browser.
+        // where the state is known, rather than guessed at in the browser —
+        // and it asks what the *reader* narrowed, because Clear filters is the
+        // only thing the sentence offers and that is all it can undo.
         if ($paginator->isEmpty()) {
-            $payload['emptyReason'] = $state->isUnfiltered() ? 'none' : 'filtered';
+            $payload['emptyReason'] = $state->isNarrowedByReader() ? 'filtered' : 'none';
         }
 
         // Aggregates for the columns that asked for one, over the whole
@@ -82,6 +73,16 @@ class TablePayload
 
         if ($summaries !== []) {
             $payload['summaries'] = $this->formatter->summaries($summaries, $columns);
+
+            // The same aggregates once per group heading. Only worth asking for
+            // when the table is grouped *and* something opted into a summary,
+            // so an ungrouped table and a grouped one with no totals both cost
+            // exactly what they cost before.
+            $groups = $this->groupTotals($table, $state, $paginator->items(), $payload['rows'], $columns);
+
+            if ($groups !== []) {
+                $payload['groupSummaries'] = $groups;
+            }
         }
 
         if ($state->warnings !== []) {
@@ -97,6 +98,56 @@ class TablePayload
         }
 
         return $payload;
+    }
+
+    /**
+     * Where in the result this page sits, in whichever terms its paginator has.
+     *
+     * A length-aware paginator answers all of it. A simple one knows there is a
+     * next page but not how many there are, so the total and the last page are
+     * absent rather than guessed at. A cursor-paged one knows neither — that is
+     * the point of it — so the count is asked for separately when the table
+     * wants one, and the page number is the client's own tally, used for the
+     * range label and nothing else. It never reaches the query.
+     *
+     * @param  LengthAwarePaginator<int, Model>|Paginator<int, Model>|CursorPaginator<int, Model>  $paginator
+     * @return array<string, mixed>
+     */
+    protected function position(DynamicTable $table, TableState $state, LengthAwarePaginator|Paginator|CursorPaginator $paginator): array
+    {
+        if ($paginator instanceof CursorPaginator) {
+            $total = $table->countsRows() ? $this->queries->count($table, $state) : null;
+            $rows = count($paginator->items());
+            $from = (($state->page - 1) * $paginator->perPage()) + 1;
+
+            return [
+                'total' => $total,
+                'lastPage' => $total === null ? null : (int) max(1, ceil($total / $paginator->perPage())),
+                'counted' => $total !== null,
+                'estimate' => null,
+                'page' => $state->page,
+                'from' => $rows === 0 ? null : $from,
+                'to' => $rows === 0 ? null : $from + $rows - 1,
+                'nextCursor' => $paginator->nextCursor()?->encode(),
+            ];
+        }
+
+        $counted = $paginator instanceof LengthAwarePaginator;
+
+        return [
+            'total' => $counted ? $paginator->total() : null,
+            'lastPage' => $counted ? $paginator->lastPage() : null,
+            'counted' => $counted,
+            // Without a count, an approximate size is still far more useful
+            // than none — but only while nothing narrows the set, because the
+            // estimate describes the table, not the filtered result.
+            'estimate' => $counted || ! $state->isUnfiltered()
+                ? null
+                : app(TableEstimator::class)->rows($table->newModel()),
+            'page' => $paginator->currentPage(),
+            'from' => $paginator->firstItem(),
+            'to' => $paginator->lastItem(),
+        ];
     }
 
     /**
@@ -180,6 +231,14 @@ class TablePayload
                 $table->availableToolbarActions(),
             ),
             'sticky' => $table->stickyColumnKeys(),
+            // The column a drag writes to. Whether a drag is possible *now*
+            // also depends on the sort, which the reader can change without
+            // asking the server, so that half of the question is the client's.
+            'reorderable' => $table->reorderColumn(),
+            'rowClick' => $table->rowClickTrigger(),
+            // The ids this viewer keeps at the top. Sent so the rows can be
+            // marked; the ordering itself already happened in SQL.
+            'pinned' => app(PinMemory::class)->ids($table),
             'stickyActions' => $table->hasStickyActions(),
             'filterCounts' => $table->filterCountKeys(),
             'editableColumns' => array_values(array_map(
@@ -241,6 +300,8 @@ class TablePayload
             'create' => route('dynamic-table.create'),
             'bulkEdit' => route('dynamic-table.bulk-edit'),
             'rowDetail' => route('dynamic-table.row-detail'),
+            'reorder' => route('dynamic-table.reorder'),
+            'pin' => route('dynamic-table.pin'),
             'views' => route('dynamic-table.views.index'),
             'export' => route('dynamic-table.export'),
             'import' => route('dynamic-table.import'),
@@ -265,6 +326,62 @@ class TablePayload
             ['operators' => (array) trans('dynamic-table::operators')],
             (array) trans('dynamic-table::table'),
         );
+    }
+
+    /**
+     * Group subtotals, keyed the way the renderers will look them up.
+     *
+     * Both renderers start a new group when the *formatted* value in the row
+     * changes — "Marketing", not the department id that produced it — so the
+     * totals have to arrive under that same key. The database can only group by
+     * the raw column, so this pairs the two: the raw value is read straight off
+     * the model with getRawOriginal(), which is what the aggregate query will
+     * see as well, and the result is re-keyed to what the reader sees.
+     *
+     * @param  array<int, Model>  $items
+     * @param  list<array<string, mixed>>  $rows
+     * @param  list<ColumnDefinition>  $columns
+     * @return array<string, array<string, string>>
+     */
+    protected function groupTotals(DynamicTable $table, TableState $state, array $items, array $rows, array $columns): array
+    {
+        if ($state->group === null || ! $table->hasFeature(Feature::GROUPING)) {
+            return [];
+        }
+
+        $column = $table->columnFor($state->group);
+
+        if ($column === null || $column->isComputed() || $column->isRelational()) {
+            return [];
+        }
+
+        $name = (string) ($column->field->column ?? $column->field->name);
+        $items = array_values($items);
+        $rows = array_values($rows);
+
+        // Keyed by what the reader sees, valued by what the database groups on.
+        // First one wins: a group is contiguous, so the pairing is settled by
+        // its first row.
+        $raw = [];
+
+        foreach ($items as $index => $item) {
+            $key = QueryEngine::groupKey($rows[$index]['c'][$state->group] ?? null);
+
+            $raw[$key] ??= $item->getRawOriginal($name);
+        }
+
+        $totals = $this->queries->groupSummaries($table, $state, array_values($raw));
+        $formatted = [];
+
+        foreach ($raw as $key => $value) {
+            $found = $totals[QueryEngine::groupKey($value)] ?? null;
+
+            if ($found !== null) {
+                $formatted[$key] = $this->formatter->summaries($found, $columns);
+            }
+        }
+
+        return $formatted;
     }
 
     protected function panelEnabled(): bool

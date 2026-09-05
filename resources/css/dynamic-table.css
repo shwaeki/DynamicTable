@@ -1000,6 +1000,94 @@
 
 .dynamic-table-group-label { color: var(--dynamic-table-muted); }
 
+/* The row's own link: it inherits the cell's type entirely, because it is the
+   cell's content rather than a link inside it. Only the underline on hover says
+   it is one, which is enough where the whole row already reacts. */
+.dynamic-table .dynamic-table-row-link {
+    color: inherit;
+    text-decoration: none;
+    display: block;
+}
+
+.dynamic-table .dynamic-table-row-link:hover { text-decoration: underline; }
+
+/* ---------------------------------------------------------------- */
+/* Pinned rows                                                      */
+/* ---------------------------------------------------------------- */
+
+.dynamic-table .dynamic-table-pin-cell { inline-size: 1%; white-space: nowrap; }
+
+.dynamic-table .dynamic-table-pin {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    padding: .15rem .25rem;
+    line-height: 1;
+    color: var(--dynamic-table-muted);
+    font-size: 1rem;
+}
+
+/* The filled star is the state; the colour is only there to make it findable
+   again in a long list. */
+.dynamic-table .dynamic-table-pin-on { color: var(--dynamic-table-accent); }
+
+/* ---------------------------------------------------------------- */
+/* Row reordering                                                   */
+/* ---------------------------------------------------------------- */
+
+.dynamic-table .dynamic-table-reorder-cell { inline-size: 1%; white-space: nowrap; padding-inline-end: 0; }
+
+/* grab, not pointer: this drags, it does not click. It is a button so that it
+   can be reached and used from the keyboard, which is why the button chrome
+   has to be taken back off it. */
+.dynamic-table .dynamic-table-reorder-handle {
+    display: inline-block;
+    background: none;
+    border: 0;
+    cursor: grab;
+    color: var(--dynamic-table-muted);
+    font-size: 1rem;
+    line-height: 1;
+    padding: .25rem .35rem;
+    user-select: none;
+}
+
+.dynamic-table .dynamic-table-reorder-handle:hover { color: var(--dynamic-table-accent); }
+
+.dynamic-table .dynamic-table-reorder-handle:active { cursor: grabbing; }
+
+/* The row being dragged stays legible under the pointer rather than vanishing
+   into the ghost image the browser draws. */
+.dynamic-table .dynamic-table-row-dragging { opacity: .45; }
+
+/* A moved row is briefly marked, because the drop itself is the only feedback
+   there would otherwise be that the server agreed. */
+.dynamic-table .dynamic-table-row-moved > td { animation: dynamic-table-row-moved 1.2s ease-out; }
+
+@keyframes dynamic-table-row-moved {
+    from { background: var(--dynamic-table-accent-soft, var(--dynamic-table-surface-2)); }
+    to { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dynamic-table .dynamic-table-row-moved > td { animation: none; }
+}
+
+/* Subtotals sit at the far end of the heading, away from the group's name, so
+   the eye reads down a column of figures rather than hunting for them after a
+   label of unpredictable length. The label above each number is the summary
+   row's own, borrowed rather than restyled. */
+.dynamic-table-group-summaries {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0 1.25rem;
+    float: inline-end;
+    align-items: baseline;
+}
+
+.dynamic-table-group-summary { display: inline-block; text-align: end; }
+.dynamic-table-group-summary .dynamic-table-summary-value { font-weight: 600; }
+
 .dynamic-table-form { display: grid; gap: .75rem; }
 .dynamic-table-field { display: grid; gap: .25rem; }
 .dynamic-table-field-inline { display: flex; align-items: center; gap: .5rem; }
@@ -1810,6 +1898,25 @@
 .dynamic-table .dynamic-table-empty-state { display: grid; justify-items: center; gap: .5rem; }
 .dynamic-table .dynamic-table-empty-title { margin: 0; font-weight: 600; }
 .dynamic-table .dynamic-table-empty-hint { margin: 0; color: var(--dynamic-table-muted); font-size: .9em; }
+
+/* ---------------------------------------------------------------- */
+/* Slots                                                            */
+/* ---------------------------------------------------------------- */
+
+/* Layout only, and as little of it as the position allows: whatever an
+   application puts in a slot arrives with its own look, and a package that
+   styled the contents would be fighting the host page for a box it does not
+   own.
+
+   display: contents on the marker means a button dropped into the toolbar
+   joins the toolbar's own flex row and lines up with the table's buttons,
+   instead of sitting in a nested box of its own. */
+.dynamic-table .dynamic-table-slot { display: contents; }
+
+/* The two that are bands across the table rather than items inside a row do
+   need a box, because they need somewhere to put their padding. */
+.dynamic-table .dynamic-table-slot-above,
+.dynamic-table .dynamic-table-slot-below { display: block; padding: var(--dynamic-table-slot-padding, .5rem .75rem); }
 
 /* ---------------------------------------------------------------- */
 /* Cell renderers                                                   */

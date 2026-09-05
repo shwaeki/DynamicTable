@@ -269,6 +269,113 @@ without a join.
 The row is `<tfoot>` — which is where a table's totals belong, is announced as
 such by screen readers, and prints on every sheet.
 
+### Per group
+
+When the table is grouped, each heading also carries the subtotals for its own
+group. Nothing to switch on: a grouped table with summary columns shows them.
+
+The number is the **whole group's**, not the visible slice's — a group cut in
+half by a page break still reports what the group holds, because that is what
+the heading claims to describe. It costs one more aggregate query, bounded to
+the groups on the current page, and only on a grouped table that has summary
+columns at all.
+
+Grouping by a computed or relationship column gets no subtotals: there is no
+single column to group by without a join.
+
+## Relation aggregates
+
+How many, how much, whether any — over a **plural** relation:
+
+```php
+protected function columns(): array
+{
+    return [
+        'name',
+        'orders_count'      => ['label' => 'Orders'],
+        'orders_sum_total'  => ['label' => 'Lifetime spend', 'format' => 'currency:USD'],
+        'orders_max_total'  => ['label' => 'Biggest order'],
+        'orders_exists'     => ['label' => 'Has ordered'],
+    ];
+}
+```
+
+The spelling is Eloquent's own, because these compile to `withCount()`,
+`withExists()` and `withAggregate()` — the name you write is the name the query
+answers with:
+
+| Pattern | Means |
+|---|---|
+| `orders_count` | `count(*)` over the relation |
+| `orders_exists` | whether the relation has any rows |
+| `orders_sum_total` | `sum(total)`, numeric columns only |
+| `orders_avg_total` | `avg(total)`, numeric columns only |
+| `orders_min_total`, `orders_max_total` | any column that orders, dates included |
+
+Each is one correlated subselect — no join, no `GROUP BY` on the outer query,
+and no duplicated rows. A camelCase relation is addressed snake_cased, the way
+Eloquent aliases it: `orderItems` → `order_items_count`.
+
+**A real column always wins.** A model with a denormalised `orders_count`
+counter cache keeps reading that column: it is there, it is indexed, and
+reading it is free.
+
+They sort, and they filter:
+
+```php
+['field' => 'orders_count',     'operator' => 'greater_than', 'value' => 5]
+['field' => 'orders_sum_total', 'operator' => 'greater_than', 'value' => 1000]
+['field' => 'orders_exists',    'operator' => 'equals',       'value' => false]   // never ordered
+```
+
+Count and existence compile to `whereHas` / `whereDoesntHave`, which is the
+`EXISTS` form a database can use an index for. The value aggregates repeat the
+subquery inside the `WHERE`, because a select alias cannot be named there.
+
+`sum`, `avg` and `count` treat "no related rows" as zero, so "spend under 100"
+includes a customer who has never ordered. `min` and `max` over no rows are
+null, and `is empty` on any aggregate means the relation has no rows at all.
+
+Aggregates cannot be searched — search is a `WHERE` on a column, and a subquery
+alias is not one — and cannot be grouped by.
+
+### In the filter builder and the column picker
+
+Every plural relation gets a group of its own in the field list:
+
+```
+── Orders — counts and totals ──
+   How many
+   Has any
+   Total · sum
+   Total · average
+   Total · lowest
+   Total · highest
+   Placed at · earliest
+   Placed at · latest
+```
+
+A group of its own rather than mixed in with the model's fields: a customer has
+a name and a country, and "the sum of their orders' totals" is a different kind
+of thing — listed among the columns it would bury them.
+
+What is offered is decided by type, not by a list anyone maintains. Only real
+numeric columns get **sum** and **average**; anything that orders — dates
+included — gets **lowest** and **highest**, worded *earliest* and *latest* for
+dates. Primary and foreign keys are excluded from both: the average of an id is
+a number with no meaning.
+
+Because the filter builder and the column picker read the same catalogue, a
+reader can also **add** `Total · sum` as a column, sort by it, and export it.
+
+`config('dynamic-table.security.max_aggregate_fields')` caps how many one
+relation may contribute (40 by default), for the model with thirty numeric
+columns.
+
+They are governed by the `relations` feature, like every other reach through a
+relationship: with `-relations` a reader cannot filter on one, though a column
+the table itself declares still shows.
+
 ## Relationship columns
 
 ```php

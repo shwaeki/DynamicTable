@@ -79,6 +79,8 @@ use Shwaeki\DynamicTable\Support\Theme;
  * @property string|null $responsive
  * @property list<string> $responsiveFixed
  * @property list<string> $stickyColumns
+ * @property string|null $reorderable
+ * @property string|null $rowClick
  * @property bool $stickyActions
  * @property list<string> $filterCounts
  * @property int $relationDepth
@@ -229,6 +231,15 @@ abstract class DynamicTable
      *     Column paths pinned in place while the table scrolls sideways. Needs
      *     the sticky_columns feature.
      *
+     * $reorderable = null
+     *     The column a drag writes to — 'sort_order', 'position'. Needs the
+     *     row_reorder feature, and only takes effect while the table is sorted
+     *     by that column, because a drag has no meaning under any other order.
+     *
+     * $rowClick = null
+     *     What follows rowUrl(): "single", "double" or "none". Null means
+     *     "double" on a table with inline editing and "single" everywhere else.
+     *
      * $stickyActions = false
      *     Pin the row-actions column to the trailing edge as well.
      *
@@ -311,6 +322,77 @@ abstract class DynamicTable
     public function rowDetail(Model $record)
     {
         return null;
+    }
+
+    /**
+     * Where a row goes when it is clicked, or null for a table that goes
+     * nowhere.
+     *
+     *     public function rowUrl(Model $record)
+     *     {
+     *         return route('orders.show', $record);
+     *     }
+     *
+     * The first cell of the row becomes a real link to it — so it is
+     * focusable, announced as a link, and opens in a new tab on a middle-click
+     * — and a click anywhere else on the row follows the same URL.
+     *
+     * @return string|null
+     */
+    public function rowUrl(Model $record)
+    {
+        return null;
+    }
+
+    /**
+     * What kind of click follows rowUrl(): "single", "double" or "none".
+     *
+     * "none" keeps the link in the first cell and stops the rest of the row
+     * from reacting — which is what a table wants when its rows are mostly
+     * something else to click on.
+     *
+     * A table with inline editing gets "double" unless it says otherwise:
+     * double-click already opens the editor there, and a single click that
+     * navigated away from a cell somebody was about to edit is the more
+     * annoying of the two collisions. Editable cells never navigate at all.
+     *
+     * @return string
+     */
+    public function rowClickTrigger()
+    {
+        $configured = $this->rowClick ?? null;
+
+        if (in_array($configured, ['single', 'double', 'none'], true)) {
+            return $configured;
+        }
+
+        return $this->hasFeature(Feature::INLINE_EDIT) ? 'double' : 'single';
+    }
+
+    /**
+     * The application's own markup, in the places the table leaves for it.
+     *
+     * Each value takes the same three shapes as rowDetail(): a Blade view, an
+     * Htmlable, or a string — which is escaped, because a bare string is text.
+     * The names are the constants on Support\Slots; an unknown one throws
+     * rather than rendering nowhere.
+     *
+     *     public function slots()
+     *     {
+     *         return [
+     *             'above' => view('partials.quota-banner'),
+     *             'empty' => new HtmlString('<a href="/products/create">Add the first product</a>'),
+     *         ];
+     *     }
+     *
+     * This is the supported alternative to copying table.blade.php, which works
+     * once and turns every upgrade into a merge.
+     *
+     * @return array<string, mixed>
+     */
+    public function slots()
+    {
+        return [];
     }
 
     /**
@@ -1080,6 +1162,40 @@ abstract class DynamicTable
             array_map(static fn (string $path): string => $resolver->keyFor($path), $this->stickyColumns ?? []),
             static fn (string $key): bool => isset($resolved[$key]),
         ));
+    }
+
+    /**
+     * The column a row drag writes to, or null when rows cannot be dragged.
+     *
+     * Null unless three things are true: the feature is on, $reorderable names
+     * a real, non-computed, non-relational column, and the table is currently
+     * ordered by exactly that column. The last one is not a technicality —
+     * under any other sort, dropping a row between two others describes a
+     * position the table is not showing, and the drag would appear to do
+     * nothing or, worse, something else.
+     *
+     * @return string|null
+     */
+    public function reorderColumn()
+    {
+        if (! $this->hasFeature(Feature::ROW_REORDER)) {
+            return null;
+        }
+
+        $path = $this->reorderable ?? null;
+
+        if (! is_string($path) || $path === '') {
+            return null;
+        }
+
+        $key = app(ColumnResolver::class)->keyFor($path);
+        $column = $this->columnFor($key);
+
+        if ($column === null || $column->isComputed() || $column->isRelational() || $column->field->isAggregate()) {
+            return null;
+        }
+
+        return $key;
     }
 
     /** @return bool */

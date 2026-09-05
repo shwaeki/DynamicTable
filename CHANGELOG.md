@@ -6,6 +6,125 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Group subtotals.** A grouped table with summary columns now shows each
+  group's own totals on its heading row. The number is the whole group's, not
+  the visible slice's — a group cut in half by a page break still reports what
+  it holds — and it costs one aggregate query bounded to the groups on the page.
+
+- **Relation aggregates as columns, sorts and filters.** `orders_count`,
+  `orders_exists`, `orders_sum_total`, `orders_avg_total`, `orders_min_x`,
+  `orders_max_x` — Eloquent's own spelling, compiling to `withCount()`,
+  `withExists()` and `withAggregate()`. One correlated subselect each: no join,
+  no `GROUP BY` on the outer query, no duplicated rows. A real column of the
+  same name always wins, so a denormalised counter cache keeps being read.
+  Count and existence filter through `whereHas`; the value aggregates repeat
+  their subquery in the `WHERE`, because an alias cannot be named there.
+
+- **Relation aggregates in the filter builder and the column picker.** Every
+  plural relation gets a group of its own — "Orders — counts and totals" —
+  holding how many, whether any, and the sums, averages and extremes of the
+  columns where those mean something. What is offered is decided by type: only
+  numeric columns get a sum or an average, anything that orders gets lowest and
+  highest (worded *earliest* and *latest* for dates), and keys are excluded from
+  both. Capped by `security.max_aggregate_fields`.
+
+- **Keyset pagination for `infinite` mode.** Each page now asks for the rows
+  *after* the last ones rather than for rows 380–400. Offset paging duplicated
+  and skipped rows whenever anything was inserted above the window, and got
+  slower with depth; a cursor does neither. Falls back to offset for a sort the
+  cursor cannot express — on a relation or an aggregate — and for a cold jump to
+  a numbered page.
+
+- **Optimistic concurrency on inline editing.** Every editable row carries a
+  version derived from `updated_at`; an edit written against a version that has
+  moved on is refused and the row comes back as it now stands, instead of
+  silently erasing whoever changed it first. Nothing to switch on; a model
+  without timestamps edits exactly as before.
+
+- **`row_reorder`.** Drag a row by its handle to write a position column, named
+  with `$reorderable`. Only while the table is sorted by that column, on both
+  sides. A drag permutes the position values already on the page rather than
+  renumbering anything, so a drag on page 40 costs what a drag on page 1 costs.
+
+- **`pinned_rows`.** A star per row; pinned rows sort above everything else for
+  that viewer, as one `ORDER BY CASE` — one result, one count, and each row
+  still appearing exactly once.
+
+- **Clickable rows.** `rowUrl()` makes the first cell a real link — focusable,
+  announced as a link, middle-clickable — and the rest of the row follows it.
+  `$rowClick` chooses `single`, `double` or `none`; a table with inline editing
+  defaults to `double`, and editable cells never navigate.
+
+- **Slots.** `slots()` puts your own markup in five places the template leaves
+  for it — `toolbar.start`, `toolbar.end`, `above`, `below`, `empty` — so
+  adding a control no longer means copying `table.blade.php`. An unknown slot
+  name throws, for the same reason an unknown feature name does.
+
+- **Import preview.** A dry run that is the real import inside a transaction
+  that is rolled back: the same validation, casting, lookups and constraints.
+  It reports what would be created, updated and rejected, with the rejected rows
+  and their downloadable report, before anything is written. Import mappings are
+  also remembered per table and viewer, keyed by heading name so a file that has
+  gained a column keeps every decision already made.
+
+- **`php artisan dynamic-table:doctor`.** Checks the registered tables for what
+  hurts in production: a default sort on an unindexed column, saved views
+  without the migration, a table large enough that `COUNT(*)` costs, reordering
+  that cannot work, a theme naming a slot that does not exist. Reports and
+  changes nothing; only an error fails the command.
+
+- **`<x-dynamic-table>`**, the Blade component form of `@dynamicTable`, for the
+  places a directive is awkward — inside a Livewire view, inside a slot, or
+  where the arguments are variables.
+
+### Fixed
+
+- **A session that expires no longer fails as an opaque error.** Every request
+  the table makes now goes through one classifier: 419 and 401 are announced
+  page-wide, once, with the only button that fixes them; a network failure says
+  so and offers a retry; a 429 reports how long to wait. Retry is offered only
+  where retrying could work.
+
+- **Tables let go of the document listeners they registered.** A resize handler,
+  a `popstate` handler and the parameter-control listeners all outlived the
+  table on a Livewire or Inertia page, so every visit left another set firing at
+  a detached DOM. They are now registered against the table's own abort signal
+  and removed when it is destroyed, and tables whose element has gone are swept
+  on every navigation.
+
+- **The empty state's Clear filters button only appears when it can clear
+  something.** A table narrowed by declared parameters offered a button that
+  changed nothing and left the same empty table behind it.
+
+- **A theme passed at the call site reaches the class map**, not only the
+  template. `@dynamicTable(X::class, ['theme' => 'bootstrap'])` picked the
+  Bootstrap template and then painted it with the table's own classes.
+
+- **The summary row no longer mixes an aggregate with plain columns in one
+  `SELECT`.** MySQL refuses that outright under `ONLY_FULL_GROUP_BY`, and every
+  other engine answers with an arbitrary row's values.
+
+- **`php artisan dynamic-table:clear` now clears the cache.** It emptied only
+  the in-process memo, so the command the documentation sends you to after
+  adding a column cleared nothing that outlived the request, and the new column
+  stayed invisible until somebody ran `cache:clear`. The keys that were written
+  are now remembered, because tags are not available on the file or database
+  stores.
+
+- **Feature modules whose UI is already on the page now load.** `mount()` warmed
+  a hardcoded list of module names, so a module missing from it was rendered and
+  then never bound — the row-reorder grips and the pin stars were both dead on
+  arrival. The rule is now stated the other way round: panels are lazy because
+  nothing of them is on the page until they are opened, and everything else is
+  warmed.
+
+- **`'summary' => 'max'` on a date or text column no longer throws.** The
+  aggregate was coerced with `+ 0`, so a `MAX()` over a datetime raised "A
+  non-numeric value encountered". Only numbers are coerced now; a min or a max
+  is whatever the column holds, and is formatted the way that column formats.
+
 ### Changed
 
 - **Three themes, and only three: `custom`, `bootstrap`, `tailwind`.** The list

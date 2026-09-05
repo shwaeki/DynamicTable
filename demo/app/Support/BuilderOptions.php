@@ -31,7 +31,7 @@ class BuilderOptions
             'Columns' => [Feature::COLUMN_PICKER, Feature::COLUMN_REORDER, Feature::COLUMN_RESIZE, Feature::COLUMN_SEARCH, Feature::STICKY_COLUMNS, Feature::GROUPING],
             'Selecting & acting' => [Feature::SELECTION, Feature::BULK_ACTIONS, Feature::BULK_EDIT, Feature::ROW_ACTIONS, Feature::TOOLBAR_ACTIONS],
             'Writing' => [Feature::INLINE_EDIT, Feature::INLINE_CREATE, Feature::IMPORT, Feature::EXPORT, Feature::PRINT],
-            'More' => [Feature::SAVED_VIEWS, Feature::ROW_DETAIL, Feature::FILTER_COUNTS, Feature::RELATIONS, Feature::URL_STATE, Feature::REMEMBER_STATE],
+            'More' => [Feature::SAVED_VIEWS, Feature::ROW_DETAIL, Feature::PINNED_ROWS, Feature::FILTER_COUNTS, Feature::RELATIONS, Feature::URL_STATE, Feature::REMEMBER_STATE],
         ];
     }
 
@@ -50,6 +50,7 @@ class BuilderOptions
             'scheme' => 'auto',
             'sticky' => false,
             'summary' => true,
+            'links' => false,
         ];
     }
 
@@ -90,6 +91,7 @@ class BuilderOptions
             'scheme' => self::pick($input['scheme'] ?? null, ['auto', 'light', 'dark'], 'auto'),
             'sticky' => (bool) ($input['sticky'] ?? false),
             'summary' => (bool) ($input['summary'] ?? false),
+            'links' => (bool) ($input['links'] ?? false),
         ];
 
         Session::put(self::SESSION_KEY, $options);
@@ -193,6 +195,12 @@ class BuilderOptions
         if ($options['sticky']) {
             $lines[] = "    protected array \$stickyColumns = ['reference'];";
             $lines[] = '    protected bool $stickyActions = true;';
+        }
+
+        // A method rather than a property, so it is printed as one — the code
+        // panel is supposed to be the table, not a summary of the ticks.
+        if ($options['links']) {
+            $lines[] = "    public function rowUrl(Model \$record)\n    {\n        return route('orders.show', \$record);\n    }";
         }
 
         $body = $lines === [] ? '' : "\n".implode("\n\n", $lines)."\n";

@@ -21,3 +21,9 @@ parameters:
           paths:
               - src/Modules/Export/Writers/XlsxWriter.php
               - src/Modules/Import/Readers/XlsxReader.php
+
+        # getRelationExistenceQuery() is documented as taking a column name,
+        # but an Expression is exactly what Eloquent's own withAggregate()
+        # passes it — an aggregate has no column name to give.
+        - identifier: argument.type
+          path: src/Filters/FilterEngine.php

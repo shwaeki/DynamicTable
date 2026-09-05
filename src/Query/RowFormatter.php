@@ -17,6 +17,7 @@ use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Metadata\FieldType;
 use Shwaeki\DynamicTable\Support\DateFormat;
 use Shwaeki\DynamicTable\Support\Theme;
+use Shwaeki\DynamicTable\Support\Version;
 use UnitEnum;
 
 /**
@@ -90,8 +91,24 @@ class RowFormatter
             'c' => $cells,
         ];
 
+        $url = $table->rowUrl($record);
+
+        if (is_string($url) && $url !== '') {
+            $row['u'] = $url;
+        }
+
         if ($raw !== []) {
             $row['r'] = $raw;
+
+            // A version for the row, sent only where it can be used: the raw
+            // values are there because something on this row is editable, and
+            // the version is what an edit hands back to prove it was written
+            // against the row as it is now. See Version.
+            $version = Version::of($record);
+
+            if ($version !== null) {
+                $row['v'] = $version;
+            }
         }
 
         if ($html !== []) {

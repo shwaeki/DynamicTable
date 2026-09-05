@@ -13,6 +13,7 @@ use Shwaeki\DynamicTable\Http\Controllers\Concerns\ResolvesTable;
 use Shwaeki\DynamicTable\Query\QueryEngine;
 use Shwaeki\DynamicTable\Query\RowFormatter;
 use Shwaeki\DynamicTable\Support\Feature;
+use Shwaeki\DynamicTable\Support\Version;
 
 /**
  * Inline and bulk cell editing.
@@ -54,6 +55,7 @@ class EditController extends Controller
 
         // Group by record so each row is validated and saved exactly once.
         $grouped = [];
+        $versions = [];
 
         foreach ($changes as $change) {
             if (! is_array($change) || ! isset($change['id'], $change['field'])) {
@@ -61,6 +63,13 @@ class EditController extends Controller
             }
 
             $grouped[(string) $change['id']][(string) $change['field']] = $change['value'] ?? null;
+
+            // The row's version as the browser last saw it. Per change in the
+            // payload, per record here: every change in one request came from
+            // one painted row, so they all carry the same claim.
+            if (isset($change['version'])) {
+                $versions[(string) $change['id']] = $change['version'];
+            }
         }
 
         abort_if($grouped === [], 422, 'Nothing to update.');
@@ -74,7 +83,7 @@ class EditController extends Controller
         $errors = [];
 
         DB::connection($model->getConnectionName())->transaction(function () use (
-            $table, $grouped, $records, &$updated, &$errors, $state
+            $table, $grouped, $records, &$updated, &$errors, $state, $versions
         ): void {
             foreach ($grouped as $id => $fields) {
                 $record = $records->get((string) $id);
@@ -87,6 +96,22 @@ class EditController extends Controller
 
                 if (! $table->can('update', $record)) {
                     $errors[$id] = ['_' => [__('dynamic-table::table.errors.forbidden')]];
+
+                    continue;
+                }
+
+                /*
+                 * Somebody else saved this row after the browser painted it.
+                 *
+                 * Refused rather than applied: the edit was composed against
+                 * values that are no longer there, and writing it would erase
+                 * the other change without either person being told. The row is
+                 * sent back as it now stands, so the reader can see what they
+                 * are deciding between.
+                 */
+                if (! Version::matches($record, $versions[$id] ?? null)) {
+                    $errors[$id] = ['_' => [__('dynamic-table::table.errors.stale')]];
+                    $updated[] = $this->formatter->row($record, $this->queries->activeColumns($table, $state), $table);
 
                     continue;
                 }

@@ -28,11 +28,27 @@ final class FieldMetadata
         public readonly ?int $length = null,
         public readonly bool $primary = false,
         public readonly bool $indexed = false,
+        /**
+         * An aggregate over a plural relation: count, exists, sum, avg, min or
+         * max. Such a field has no column of its own — it is a subquery the
+         * database evaluates per row — so it is deliberately *not* relational:
+         * nothing eager loads it and nothing joins for it.
+         */
+        public readonly ?string $aggregate = null,
+        /** The plural relation the aggregate runs over, e.g. "orders". */
+        public readonly ?string $aggregateRelation = null,
+        /** The column being aggregated. Null for count and exists. */
+        public readonly ?string $aggregateColumn = null,
     ) {}
 
     public function isRelational(): bool
     {
         return $this->relationPath !== [];
+    }
+
+    public function isAggregate(): bool
+    {
+        return $this->aggregate !== null;
     }
 
     /**
@@ -51,7 +67,11 @@ final class FieldMetadata
 
     public function isSearchable(): bool
     {
-        return $this->isQueryable() && $this->type->isSearchable();
+        // Never an aggregate. Search compiles to a WHERE on the column, and a
+        // subquery alias cannot be named in a WHERE clause — Postgres refuses
+        // it outright and MySQL only tolerates it in HAVING. "Customers with
+        // more than five orders" is a filter, not a search term.
+        return $this->isQueryable() && ! $this->isAggregate() && $this->type->isSearchable();
     }
 
     public function isFilterable(): bool
@@ -87,6 +107,7 @@ final class FieldMetadata
             'filterable' => $this->isFilterable(),
             'relation' => $this->relationKey(),
             'relationType' => $this->relationType,
+            'aggregate' => $this->aggregate,
             'options' => $this->options,
         ];
     }
@@ -98,6 +119,7 @@ final class FieldMetadata
             $this->computed, $this->relationPath, $this->relationType, $this->relatedModel,
             $this->options, $this->enumClass, $this->column, $this->length,
             $this->primary, $this->indexed,
+            $this->aggregate, $this->aggregateRelation, $this->aggregateColumn,
         );
     }
 }

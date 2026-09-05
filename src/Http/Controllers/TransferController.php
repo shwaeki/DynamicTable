@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
+use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Http\Controllers\Concerns\ResolvesTable;
 use Shwaeki\DynamicTable\Modules\Export\ExportJob;
 use Shwaeki\DynamicTable\Modules\Export\ExportManager;
@@ -100,10 +101,70 @@ class TransferController extends Controller
         $stored = $request->file('file')->store('dynamic-table/imports');
         $path = Storage::path($stored);
 
-        return response()->json($this->imports->analyze($table, $path) + [
+        $analysis = $this->imports->analyze($table, $path);
+
+        /*
+         * The mapping this person used last time, where the file still has the
+         * heading it was for.
+         *
+         * It replaces the guess column by column rather than wholesale: a file
+         * with one new column keeps every decision already made about the
+         * others, and the new one still gets the suggestion.
+         */
+        $remembered = $this->recallMapping($table, $analysis['headings']);
+
+        if ($remembered !== []) {
+            $analysis['mapping'] = $remembered['columns'] + $analysis['mapping'];
+            $analysis['remembered'] = ['mode' => $remembered['mode'], 'matchBy' => $remembered['matchBy']];
+        }
+
+        // Kept so the mapping can be stored by heading when the import runs;
+        // the browser sends indexes, and indexes move.
+        if (app()->bound('session') && app('session')->isStarted()) {
+            session()->put('dynamic-table.import.headings.'.$table->key(), $analysis['headings']);
+        }
+
+        return response()->json($analysis + [
             'token' => $this->tokenFor($stored),
             'file' => $stored,
         ]);
+    }
+
+    /**
+     * The remembered mapping, translated back onto this file's column indexes.
+     *
+     * @param  list<string>  $headings
+     * @return array{columns: array<int, string|null>, mode: string, matchBy: string|null}|array{}
+     */
+    protected function recallMapping(DynamicTable $table, array $headings): array
+    {
+        if (! app()->bound('session') || ! app('session')->isStarted()) {
+            return [];
+        }
+
+        $stored = session('dynamic-table.import.mapping.'.$table->key());
+
+        if (! is_array($stored) || ! is_array($stored['columns'] ?? null)) {
+            return [];
+        }
+
+        $columns = [];
+
+        foreach ($headings as $index => $heading) {
+            if (array_key_exists($heading, $stored['columns'])) {
+                $columns[(int) $index] = $stored['columns'][$heading];
+            }
+        }
+
+        if ($columns === []) {
+            return [];
+        }
+
+        return [
+            'columns' => $columns,
+            'mode' => is_string($stored['mode'] ?? null) ? $stored['mode'] : 'create',
+            'matchBy' => is_string($stored['matchBy'] ?? null) ? $stored['matchBy'] : null,
+        ];
     }
 
     public function import(Request $request): JsonResponse
@@ -118,7 +179,10 @@ class TransferController extends Controller
             'mapping' => ['present', 'array'],
             'mode' => ['sometimes', 'in:create,update,upsert'],
             'matchBy' => ['sometimes', 'nullable', 'string'],
+            'dry' => ['sometimes', 'boolean'],
         ]);
+
+        $dry = (bool) ($validated['dry'] ?? false);
 
         // The stored path came from our own analyze() response; the token stops
         // a client from pointing the importer at an arbitrary file.
@@ -170,6 +234,26 @@ class TransferController extends Controller
         $threshold = (int) config('dynamic-table.excel.queue_threshold', 5000);
         $total = $this->imports->readerFor($path)->countRows($path) ?? 0;
 
+        /*
+         * A dry run stays in this request, whatever the size.
+         *
+         * Queueing it would answer "what will this do?" with "ask again
+         * later", and the answer would arrive after the person had gone. The
+         * upload is kept as well, because the real import is the next thing
+         * they will press.
+         */
+        if ($dry) {
+            $summary = $this->imports->run($table, $path, $mapping, $mode, $options + ['dryRun' => true]);
+
+            return response()->json(['queued' => false] + $this->signReport($summary, $table->key()));
+        }
+
+        // What was mapped, so the next upload of the same shape starts where
+        // this one ended. Stored only once the mapping has passed every check
+        // above — a mapping the importer would refuse is not worth offering
+        // back.
+        $this->rememberMapping($table, $mapping, $mode, $options['matchBy'] ?? null);
+
         if ($threshold > 0 && $total > $threshold) {
             $progressId = TransferProgress::start('import', $table->key(), $total);
 
@@ -187,6 +271,46 @@ class TransferController extends Controller
         @unlink($path);
 
         return response()->json(['queued' => false] + $this->signReport($summary, $table->key()));
+    }
+
+    /**
+     * Remember how this table's columns were mapped, for the next upload.
+     *
+     * Keyed by heading name rather than by position, because the same export
+     * re-run tomorrow may have gained a column and shifted every index by one.
+     * The session is the store: a mapping is a habit, private to one person,
+     * and worth exactly as much as their last upload — the same reasoning as
+     * StateMemory, and no migration either.
+     *
+     * @param  array<int, string|null>  $mapping
+     */
+    protected function rememberMapping(DynamicTable $table, array $mapping, string $mode, ?string $matchBy): void
+    {
+        if (! app()->bound('session') || ! app('session')->isStarted()) {
+            return;
+        }
+
+        $headings = session('dynamic-table.import.headings.'.$table->key());
+
+        if (! is_array($headings)) {
+            return;
+        }
+
+        $byHeading = [];
+
+        foreach ($mapping as $index => $columnKey) {
+            $heading = $headings[$index] ?? null;
+
+            if (is_string($heading) && $heading !== '') {
+                $byHeading[$heading] = $columnKey;
+            }
+        }
+
+        session()->put('dynamic-table.import.mapping.'.$table->key(), [
+            'columns' => $byHeading,
+            'mode' => $mode,
+            'matchBy' => $matchBy,
+        ]);
     }
 
     /**

@@ -5,6 +5,9 @@ namespace Shwaeki\DynamicTable\Filters;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Database\Query\Expression;
 use Shwaeki\DynamicTable\DynamicTable;
 use Shwaeki\DynamicTable\Metadata\FieldMetadata;
 use Shwaeki\DynamicTable\Metadata\FieldType;
@@ -154,7 +157,23 @@ class FilterEngine
             return null;
         }
 
-        $value = $this->coerce($field, $operator, $input['value'] ?? null, $input['value2'] ?? null);
+        $raw = $input['value'] ?? null;
+
+        // {"value": {"field": "starts_at"}} — compare two columns instead of a
+        // column and a literal.
+        if (is_array($raw) && array_key_exists('field', $raw)) {
+            $other = $this->comparableField($table, $field, $operator, $raw['field']);
+
+            if ($other === null) {
+                $this->warnings[] = $path;
+
+                return null;
+            }
+
+            return new Condition($field, $operator, null, $other);
+        }
+
+        $value = $this->coerce($field, $operator, $raw, $input['value2'] ?? null);
 
         if ($value === self::invalid()) {
             $this->warnings[] = $path;
@@ -182,7 +201,78 @@ class FilterEngine
             return false;
         }
 
-        return count($field->relationPath) <= $table->relationDepth();
+        // An aggregate has no relation path — it is a subquery, not a join —
+        // but it still reaches through a relationship, which is exactly what a
+        // table with "-relations" said it did not want offered.
+        $reach = $field->isAggregate() ? 1 : count($field->relationPath);
+
+        return $reach <= $table->relationDepth();
+    }
+
+    /**
+     * The other side of a field-to-field comparison, or null if it cannot be one.
+     *
+     * Both sides have to be real columns on the table's own row: comparing a
+     * column to one reached through a relation, or to an aggregate, would mean
+     * a join or a subquery per row, and neither is something a filter builder
+     * should be able to ask for by accident.
+     *
+     * The types have to belong to the same family, too. "ends_at before name"
+     * is not a question, and a database asked it invents an answer rather than
+     * refusing.
+     */
+    protected function comparableField(
+        DynamicTable $table,
+        FieldMetadata $field,
+        Operator $operator,
+        mixed $path,
+    ): ?FieldMetadata {
+        static $comparable = [
+            Operator::Equals, Operator::NotEquals,
+            Operator::GreaterThan, Operator::GreaterOrEqual,
+            Operator::LessThan, Operator::LessOrEqual,
+            Operator::Before, Operator::After,
+        ];
+
+        if (! is_string($path) || $path === '' || ! in_array($operator, $comparable, true)) {
+            return null;
+        }
+
+        if ($field->isRelational() || $field->isAggregate() || $field->computed) {
+            return null;
+        }
+
+        $column = $table->column(str_replace('.', '__', $path));
+        $other = $column !== null
+            ? $column->field
+            : $this->metadata->resolve($table->modelClass(), $path);
+
+        if ($other === null
+            || $other->isRelational()
+            || $other->isAggregate()
+            || $other->computed
+            || ! $other->isFilterable()
+            || ! $this->isExposed($table, $other)) {
+            return null;
+        }
+
+        return $this->sameFamily($field->type, $other->type) ? $other : null;
+    }
+
+    /** Types that can sensibly be compared to one another. */
+    protected function sameFamily(FieldType $left, FieldType $right): bool
+    {
+        $family = static fn (FieldType $type): string => match ($type) {
+            FieldType::Integer, FieldType::Decimal => 'number',
+            FieldType::Date, FieldType::DateTime, FieldType::Time => 'time',
+            FieldType::Boolean => 'boolean',
+            FieldType::Json => 'json',
+            default => 'text',
+        };
+
+        $left = $family($left);
+
+        return $left === $family($right) && $left !== 'json';
     }
 
     /**
@@ -327,6 +417,25 @@ class FilterEngine
     {
         $field = $condition->field;
 
+        if ($condition->valueField !== null) {
+            // Both sides are columns on this table's own row, checked when the
+            // condition was parsed, so whereColumn needs no subquery and no
+            // join — and neither name comes from the request.
+            $query->whereColumn(
+                $query->qualifyColumn((string) ($field->column ?? $field->name)),
+                (string) $this->comparison($condition->operator),
+                $query->qualifyColumn((string) ($condition->valueField->column ?? $condition->valueField->name)),
+            );
+
+            return;
+        }
+
+        if ($field->isAggregate()) {
+            $this->applyAggregate($query, $condition);
+
+            return;
+        }
+
         if (! $field->isRelational()) {
             $this->applyLeaf($query, $query->qualifyColumn((string) ($field->column ?? $field->name)), $condition);
 
@@ -369,6 +478,217 @@ class FilterEngine
         $query->whereHas($relation, function (EloquentBuilder $related) use ($column, $condition): void {
             $this->applyLeaf($related, $related->qualifyColumn($column), $condition);
         });
+    }
+
+    /**
+     * A filter on an aggregate over a plural relation.
+     *
+     * Existence and count go through whereHas(), because Eloquent already
+     * compiles those to the EXISTS or correlated-count form a database can use
+     * an index for — and "= 0" or "< 1" it turns into a NOT EXISTS by itself.
+     *
+     * The value aggregates have no such shorthand, so the subquery the select
+     * would have used is repeated inside the WHERE. It has to be repeated: a
+     * select alias cannot be named in a WHERE clause in any of the databases
+     * this package supports, and lifting the comparison into HAVING would mean
+     * grouping the outer query, which changes what a row is.
+     */
+    protected function applyAggregate(EloquentBuilder $query, Condition $condition): void
+    {
+        $field = $condition->field;
+        $relation = (string) $field->aggregateRelation;
+        $operator = $condition->operator;
+        $value = $condition->value;
+
+        if ($operator === Operator::IsEmpty || $operator === Operator::IsNotEmpty) {
+            // "Empty" on an aggregate means the relation has no rows: a min
+            // over nothing is null, and a sum over nothing is zero, but both
+            // describe the same customer with no orders.
+            $operator === Operator::IsEmpty
+                ? $query->whereDoesntHave($relation)
+                : $query->whereHas($relation);
+
+            return;
+        }
+
+        if ($field->aggregate === 'exists') {
+            $wanted = (bool) $value;
+
+            if ($operator === Operator::NotEquals) {
+                $wanted = ! $wanted;
+            }
+
+            $wanted ? $query->whereHas($relation) : $query->whereDoesntHave($relation);
+
+            return;
+        }
+
+        if ($operator === Operator::In || $operator === Operator::NotIn) {
+            $sub = $this->aggregateSubquery($query, $field);
+            $values = array_values((array) $value);
+
+            if ($sub === null || $values === []) {
+                return;
+            }
+
+            $query->getQuery()->whereRaw(
+                '('.$sub->toSql().')'.($operator === Operator::NotIn ? ' not in ' : ' in ')
+                    .'('.implode(', ', array_fill(0, count($values), '?')).')',
+                array_merge($sub->getBindings(), $values),
+            );
+
+            return;
+        }
+
+        $comparison = $this->comparison($operator);
+
+        if ($comparison === null) {
+            return;
+        }
+
+        $ranged = $operator === Operator::Between || $operator === Operator::NotBetween;
+
+        [$low, $high] = $ranged ? $this->range($value, $field->type) : [null, null];
+
+        if ($field->aggregate === 'count' && ! $ranged) {
+            $query->whereHas($relation, null, $comparison, (int) $value);
+
+            return;
+        }
+
+        if ($field->aggregate === 'count') {
+            // Between as its two halves. Two subqueries rather than one, and
+            // the database optimises them the same way it optimises any pair of
+            // EXISTS clauses.
+            $operator === Operator::Between
+                ? $query->whereHas($relation, null, '>=', (int) $low)->whereHas($relation, null, '<=', (int) $high)
+                : $query->where(function (EloquentBuilder $nested) use ($relation, $low, $high): void {
+                    $nested->whereHas($relation, null, '<', (int) $low)
+                        ->orWhereHas($relation, null, '>', (int) $high);
+                });
+
+            return;
+        }
+
+        $sub = $this->aggregateSubquery($query, $field);
+
+        if ($sub === null) {
+            return;
+        }
+
+        $sql = '('.$sub->toSql().')';
+
+        /*
+         * "? + 0" rather than "?", for numbers only.
+         *
+         * PDO has no float parameter type, so Laravel binds a float as a
+         * string. Compared against a plain column that costs nothing — the
+         * column's own affinity converts it — but a subquery has no affinity,
+         * and SQLite then sorts every text value above every number: "spend
+         * over 100000" matched nobody and "under 100" matched everybody. The
+         * arithmetic forces the parameter into numeric context on SQLite,
+         * MySQL and Postgres alike.
+         *
+         * A min or max over a date or a string is left alone: there both sides
+         * are text already, and the addition would be nonsense.
+         */
+        $numeric = in_array($field->type, [FieldType::Integer, FieldType::Decimal], true);
+        $bind = $numeric ? '(? + 0)' : '?';
+
+        if ($low !== null) {
+            $query->getQuery()->whereRaw(
+                $operator === Operator::Between
+                    ? $sql.' >= '.$bind.' and '.$sql.' <= '.$bind
+                    : '('.$sql.' < '.$bind.' or '.$sql.' > '.$bind.')',
+                array_merge($sub->getBindings(), [$low], $sub->getBindings(), [$high]),
+            );
+
+            return;
+        }
+
+        $query->getQuery()->whereRaw($sql.' '.$comparison.' '.$bind, array_merge($sub->getBindings(), [$value]));
+    }
+
+    /**
+     * The aggregate as a standalone correlated subquery.
+     *
+     * Built the way Eloquent builds it for withAggregate(), so a filter and a
+     * column on the same aggregate always mean the same number — including the
+     * coalesce, without which "total spend under 100" would silently exclude
+     * every customer who has never ordered.
+     */
+    protected function aggregateSubquery(EloquentBuilder $query, FieldMetadata $field): ?QueryBuilder
+    {
+        $name = (string) $field->aggregateRelation;
+
+        try {
+            /*
+             * Without constraints, exactly as withAggregate() builds it.
+             *
+             * A relation read off a model instance carries that instance's own
+             * key as a where clause, and the instance here has no key — so the
+             * subquery came back constrained to "customer_id is null" and every
+             * row's total was zero. Under noConstraints the correlation is
+             * added by getRelationExistenceQuery() against the outer query,
+             * which is the whole point of it.
+             */
+            $relation = Relation::noConstraints(
+                static fn () => $query->getModel()->newInstance()->{$name}()
+            );
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! $relation instanceof Relation) {
+            return null;
+        }
+
+        $related = $relation->getRelated();
+        $function = (string) $field->aggregate;
+
+        // count has no column of its own, and counting rows is the point.
+        $wrapped = $function === 'count'
+            ? 'count(*)'
+            : $function.'('.$query->getQuery()->getGrammar()->wrap(
+                $related->qualifyColumn((string) $field->aggregateColumn)
+            ).')';
+
+        // min and max over no rows are genuinely nothing; a sum, a count or an
+        // average of no rows is zero, which is the answer people expect and the
+        // one withAggregate() gives.
+        if (in_array($function, ['sum', 'avg', 'count'], true)) {
+            $wrapped = 'coalesce('.$wrapped.', 0)';
+        }
+
+        $sub = $relation
+            ->getRelationExistenceQuery($related->newQuery(), $query, new Expression($wrapped))
+            ->setBindings([], 'select')
+            ->mergeConstraintsFrom($relation->getQuery())
+            ->toBase();
+
+        // An ORDER BY inside a scalar subquery is dead weight the grammar still
+        // has to write, and its bindings would land in the wrong section.
+        $sub->orders = null;
+        $sub->setBindings([], 'order');
+
+        return $sub;
+    }
+
+    /** The SQL comparison an operator makes on a single value, or null if it makes none. */
+    protected function comparison(Operator $operator): ?string
+    {
+        return match ($operator) {
+            Operator::Equals => '=',
+            Operator::NotEquals => '!=',
+            Operator::GreaterThan => '>',
+            Operator::GreaterOrEqual => '>=',
+            Operator::LessThan => '<',
+            Operator::LessOrEqual => '<=',
+            Operator::Before => '<',
+            Operator::After => '>',
+            Operator::Between, Operator::NotBetween => 'between',
+            default => null,
+        };
     }
 
     protected function invert(Operator $operator): Operator

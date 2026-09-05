@@ -95,6 +95,30 @@ The value input for a relationship or enum field is a searchable remote select.
 It is backed by a paginated `DISTINCT` query — the package never runs
 `Department::all()`, even for a table with 100,000 departments.
 
+## Comparing two columns
+
+A condition's value can name another field instead of a literal:
+
+```php
+['field' => 'ends_at', 'operator' => 'before',       'value' => ['field' => 'starts_at']]
+['field' => 'paid',    'operator' => 'less_than',    'value' => ['field' => 'total']]
+```
+
+This is how the data-quality questions get asked — rows that contradict
+themselves — and it compiles to `whereColumn`, so it costs nothing extra.
+
+Both sides must be real columns on the table's own row: a relation path, an
+aggregate and a computed accessor are all refused, because each would mean a
+join or a subquery per row. The types must belong to the same family as well —
+number with number, date with date, text with text — since "ends_at before
+name" is a question a database answers rather than refuses.
+
+The operators that take one value are supported: `equals`, `not_equals`,
+`greater_than`, `greater_or_equal`, `less_than`, `less_or_equal`, `before`,
+`after`. A refused comparison is dropped with a warning, like any other invalid
+condition, and round-trips through a saved view as a comparison rather than as
+a filter on the literal string.
+
 ## Programmatic filters
 
 The base query is yours:

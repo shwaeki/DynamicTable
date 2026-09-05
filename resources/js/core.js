@@ -23,6 +23,40 @@ export { debounce, el };
  */
 const registry = (window.__dynamicTableRegistry ??= new Map());
 
+/**
+ * One failed request, described.
+ *
+ * `kind` is what went wrong in terms a caller can branch on — "offline",
+ * "expired", "forbidden", "throttled", "server", "request" — and `retryable`
+ * says whether running the same request again could plausibly work. A
+ * validation error is not retryable; an unreachable network is.
+ */
+function requestError(kind, message, { status = 0, payload = null, retryable = false, cause = null } = {}) {
+    const error = new Error(message, cause ? { cause } : undefined);
+
+    error.name = 'DynamicTableRequestError';
+    error.kind = kind;
+    error.status = status;
+    error.payload = payload;
+    error.retryable = retryable;
+
+    return error;
+}
+
+/**
+ * One group value as a lookup key, exactly as QueryEngine::groupKey() builds
+ * it in PHP. The two have to agree: the server keys a group subtotal with one
+ * and this renderer looks it up with the other.
+ */
+function groupKey(value) {
+    // A NUL sentinel rather than an empty string: a column holding both null
+    // and "" shows two headings, and they must not share one subtotal.
+    if (value === null || value === undefined) return '\u0000null';
+    if (typeof value === 'boolean') return value ? '1' : '0';
+
+    return String(value);
+}
+
 /* ------------------------------------------------------------------ */
 /* The table                                                           */
 /* ------------------------------------------------------------------ */
@@ -38,6 +72,13 @@ export class DynamicTable {
         this.permissions = boot.permissions || {};
         this.endpoints = boot.endpoints || {};
         this.labels = boot.labels || {};
+
+        /*
+         * Only the slots this runtime repaints — the empty state. The rest were
+         * rendered into the page by Blade, in parts of it nothing here rebuilds,
+         * so they are not in the payload and do not need to be.
+         */
+        this.slots = boot.slots || {};
         this.state = normalizeState(boot.state || {}, this.columns);
         this.data = boot.data || { rows: [], total: 0, page: 1, lastPage: 1 };
         this.selection = { mode: 'include', ids: new Set() };
@@ -45,6 +86,28 @@ export class DynamicTable {
         this.modules = new Map();
         this.pending = null;
         this.requestId = 0;
+        this.expired = null;
+
+        /*
+         * One signal for every listener this table puts somewhere it does not
+         * own — the document, the window.
+         *
+         * Listeners on the table's own element go with the element. These do
+         * not: on a Livewire or Inertia page that swaps the table out on every
+         * visit, each visit would otherwise leave behind a resize handler, a
+         * popstate handler and four document handlers, all still firing
+         * against a tree that is no longer on the page.
+         */
+        this.teardown = new AbortController();
+
+        /*
+         * The keyset cursor for infinite scrolling, when the server sent one.
+         *
+         * It lives outside this.state on purpose: it is not something a saved
+         * view, the URL or the remembered state should ever carry, because it
+         * points into one particular result and means nothing in another.
+         */
+        this.cursor = this.data.nextCursor ?? null;
         this.opening = null;
         this._dialog = null;
         this.appending = false;
@@ -111,18 +174,59 @@ export class DynamicTable {
     /* ---------------------------------------------------------- */
 
     async post(url, body = {}, options = {}) {
-        const response = await fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': csrfToken(),
-            },
+        return this.send(url, {
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ table: this.key, ...body }),
             signal: options.signal,
         });
+    }
+
+    /**
+     * A multipart POST — the import analyser hands the server a file.
+     *
+     * It exists so that an upload lands in the same classifier as everything
+     * else: a file chosen on a page whose session has expired says so, rather
+     * than reporting that the file could not be read.
+     */
+    async upload(url, data, options = {}) {
+        if (data instanceof FormData && !data.has('table')) data.append('table', this.key);
+
+        // No Content-Type: the browser has to set it, because only it knows
+        // the multipart boundary it is about to write.
+        return this.send(url, { body: data, signal: options.signal });
+    }
+
+    /**
+     * Every request the table makes goes through here, so every failure is
+     * described the same way and nothing has to be classified twice.
+     */
+    async send(url, { headers = {}, body = null, signal = null } = {}) {
+        let response;
+
+        try {
+            response = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': csrfToken(),
+                    ...headers,
+                },
+                body,
+                signal,
+            });
+        } catch (error) {
+            /*
+             * fetch only rejects when there was no answer at all: the network
+             * is down, the host is unreachable, or the caller aborted. An
+             * abort is not a failure and every caller already recognises it by
+             * name, so it is rethrown untouched.
+             */
+            if (error.name === 'AbortError') throw error;
+
+            throw requestError('offline', this.t('errors.offline'), { retryable: true, cause: error });
+        }
 
         if (response.status === 204) return null;
 
@@ -130,14 +234,69 @@ export class DynamicTable {
             ? await response.json()
             : await response.text();
 
-        if (!response.ok) {
-            const error = new Error(typeof payload === 'object' ? payload.message || this.t('errors.generic') : payload);
-            error.status = response.status;
-            error.payload = payload;
-            throw error;
+        if (response.ok) return payload;
+
+        throw this.failure(response, payload);
+    }
+
+    /**
+     * Turn a refused response into an error worth showing a person.
+     *
+     * The server's own message is kept wherever it said something specific —
+     * which validation, authorisation and the import reader all do. The
+     * package supplies text only for the statuses where the server's message
+     * is either absent or unhelpful: a bare "Server Error" in production tells
+     * the reader nothing they can act on.
+     */
+    failure(response, payload) {
+        const said = (payload && typeof payload === 'object' ? payload.message : payload) || '';
+        const status = response.status;
+        const detail = { status, payload };
+
+        /*
+         * 419 is an expired CSRF token and 401 an expired session. They mean
+         * one thing to the reader — they were signed in when this page loaded
+         * and are not now — and neither is fixable by retrying, so they are
+         * announced page-wide instead of per request.
+         */
+        if (status === 419 || status === 401) {
+            this.expire();
+
+            return requestError('expired', this.t('errors.session_expired'), detail);
         }
 
-        return payload;
+        if (status === 403) return requestError('forbidden', said || this.t('errors.forbidden'), detail);
+
+        if (status === 429) {
+            const seconds = Number(response.headers.get('Retry-After'));
+            const message = seconds > 0
+                ? this.t('errors.throttled_in', { seconds })
+                : this.t('errors.throttled');
+
+            return requestError('throttled', message, { ...detail, retryable: true });
+        }
+
+        if (status >= 500) return requestError('server', this.t('errors.server'), { ...detail, retryable: true });
+
+        return requestError('request', said || this.t('errors.generic'), detail);
+    }
+
+    /**
+     * The session went away under the reader's feet.
+     *
+     * A page-wide condition rather than one request's problem: everything
+     * after this fails identically, and no amount of retrying helps. So it is
+     * said once, without a timeout, with the only button that fixes it — and
+     * remembered, so a table that had six requests in flight does not stack
+     * six identical alerts.
+     */
+    expire() {
+        if (this.expired?.isConnected) return;
+
+        this.expired = this.alert(this.t('errors.session_expired'), 'error', {
+            timeout: 0,
+            action: { label: this.t('reload'), handler: () => window.location.reload() },
+        }) || null;
     }
 
     /** Reload the current page of rows. */
@@ -145,6 +304,14 @@ export class DynamicTable {
         const { resetPage = false, silent = false } = options;
 
         if (resetPage) this.state.page = 1;
+
+        /*
+         * Only loadMore() continues from where the last page ended. Anything
+         * else — a search, a filter, a new sort, a different page size — has
+         * changed the result the cursor pointed into, so it is thrown away and
+         * the server starts from the top.
+         */
+        if (! this.appending) this.cursor = null;
 
         this.pending?.abort();
         const controller = new AbortController();
@@ -160,6 +327,7 @@ export class DynamicTable {
             if (id !== this.requestId) return;
 
             this.data = response.data;
+            this.cursor = response.data.nextCursor ?? null;
 
             // Definitions for columns the picker added. They have to be learned
             // *before* the state is normalised, because normalising drops keys
@@ -187,11 +355,21 @@ export class DynamicTable {
         } catch (error) {
             if (error.name === 'AbortError') return;
 
-            // A failed load is the one error the reader can do something about,
-            // and "try again" beats making them find the reload button.
-            this.alert(error.message || this.t('error'), 'error', {
-                action: { label: this.t('retry'), handler: () => this.refresh(options) },
-            });
+            /*
+             * A failed load is the one error the reader can do something
+             * about, and "try again" beats making them find the reload
+             * button — but only where trying again could work. An expired
+             * session has already said its piece page-wide, with the only
+             * button that helps; a second alert under it is the same news
+             * twice, and a Retry there would just fail again.
+             */
+            if (error.kind !== 'expired') {
+                this.alert(error.message || this.t('error'), 'error', {
+                    action: error.kind && !error.retryable
+                        ? null
+                        : { label: this.t('retry'), handler: () => this.refresh(options) },
+                });
+            }
 
             this.emit('error', error);
         } finally {
@@ -215,6 +393,11 @@ export class DynamicTable {
             group: this.state.group || undefined,
             view: this.state.view || undefined,
             params: Object.keys(this.state.params || {}).length ? this.state.params : undefined,
+            // Where the next page of an infinitely scrolled table starts. Sent
+            // only while appending; every other fetch has already cleared it,
+            // because a cursor describes a position in a result the reader has
+            // just changed.
+            cursor: this.cursor || undefined,
         };
 
         if (this.selection.mode === 'exclude' || this.selection.ids.size) {
@@ -245,6 +428,7 @@ export class DynamicTable {
         const fragment = document.createDocumentFragment();
 
         const span = columns.length + (selectable ? 1 : 0) + (this.features.row_detail ? 1 : 0)
+            + (this.boot.reorderable ? 1 : 0) + (this.features.pinned_rows ? 1 : 0)
             + ((this.boot.rowActions || []).length ? 1 : 0);
 
         if (!this.data.rows.length) {
@@ -291,6 +475,13 @@ export class DynamicTable {
     renderEmpty() {
         const filtered = this.data.emptyReason === 'filtered';
 
+        // The application's own empty state, and only where it belongs: "add
+        // the first product" under a filter that matched nothing answers a
+        // question the reader did not ask. Mirrors table.blade.php.
+        const slot = !filtered && this.slots.empty
+            ? el('div', { class: 'dynamic-table-slot', 'data-dynamic-table-slot': 'empty', html: this.slots.empty })
+            : null;
+
         return el('div', { class: 'dynamic-table-empty-state', 'data-dynamic-table-empty': '' }, [
             el('p', { class: 'dynamic-table-empty-title', text: this.t(filtered ? 'empty_filtered' : 'empty') }),
             filtered ? el('p', { class: 'dynamic-table-empty-hint', text: this.t('empty_filtered_hint') }) : null,
@@ -302,6 +493,7 @@ export class DynamicTable {
                     'data-dynamic-table-clear-filters': '',
                 })
                 : null,
+            slot,
         ]);
     }
 
@@ -328,13 +520,38 @@ export class DynamicTable {
 
     renderGroupRow(key, value, span) {
         const column = this.columns.find((candidate) => candidate.key === key);
+        const totals = this.data.groupSummaries?.[groupKey(value)] ?? null;
 
         return el('tr', { class: `${this.classes.group} dynamic-table-group-row` }, [
             el('td', { colspan: span }, [
                 el('span', { class: 'dynamic-table-group-label', text: `${column?.label ?? key}: ` }),
                 el('strong', { text: value === null || value === '' ? '—' : String(value) }),
+                totals ? this.renderGroupSummaries(totals) : null,
             ]),
         ]);
+    }
+
+    /**
+     * A group heading's subtotals. Mirrors the same block in table.blade.php.
+     *
+     * The column label is repeated beside every number on purpose: three
+     * figures on one line with only "Sum" and "Average" to tell them apart is
+     * a puzzle, not a summary.
+     */
+    renderGroupSummaries(totals) {
+        return el(
+            'span',
+            { class: 'dynamic-table-group-summaries' },
+            this.columns
+                .filter((column) => column.visible && totals[column.key] !== undefined)
+                .map((column) => el('span', { class: 'dynamic-table-group-summary' }, [
+                    el('span', {
+                        class: 'dynamic-table-summary-label',
+                        text: `${column.label} · ${this.t(`summary.${column.summary}`)}`,
+                    }),
+                    el('span', { class: 'dynamic-table-summary-value', text: totals[column.key] }),
+                ])),
+        );
     }
 
     renderRow(row, columns, selectable) {
@@ -345,6 +562,43 @@ export class DynamicTable {
             'data-dynamic-table-row': row.id,
             'data-trashed': row.trashed ? '' : null,
         });
+
+        // Mirrors the same cell in table.blade.php.
+        if (this.features.pinned_rows) {
+            tr.append(
+                el('td', { class: `${this.classes.cell} dynamic-table-pin-cell` }, [
+                    el('button', {
+                        type: 'button',
+                        class: 'dynamic-table-pin',
+                        'data-dynamic-table-pin': row.id,
+                        'aria-pressed': 'false',
+                        title: this.t('pin_row'),
+                        text: '☆',
+                    }),
+                ]),
+            );
+        }
+
+        // Mirrors the same cell in table.blade.php. The handle is hidden until
+        // the reorder module says the current sort allows dragging.
+        if (this.boot.reorderable) {
+            tr.append(
+                el('td', { class: `${this.classes.cell} dynamic-table-reorder-cell` }, [
+                    // A button, not a decoration: it is focusable, it has a
+                    // name, and Alt with an arrow key moves the row without a
+                    // mouse. Mirrors table.blade.php.
+                    el('button', {
+                        type: 'button',
+                        class: 'dynamic-table-reorder-handle',
+                        'data-dynamic-table-reorder-handle': '',
+                        'aria-label': this.t('reorder_row'),
+                        title: this.t('reorder_row'),
+                        hidden: true,
+                        text: '≡',
+                    }),
+                ]),
+            );
+        }
 
         if (this.features.row_detail) {
             tr.append(
@@ -450,6 +704,7 @@ export class DynamicTable {
 
         if (value === null || value === undefined || value === '') {
             td.append(el('span', { class: 'dynamic-table-null', text: '—', 'aria-hidden': 'true' }));
+            this.linkCell(td, column, row);
 
             return;
         }
@@ -457,6 +712,7 @@ export class DynamicTable {
         // row.h marks the cells whose render closure returned an Htmlable.
         if (column.raw || column.format === 'raw' || row?.h?.[column.key]) {
             td.innerHTML = value;
+            this.linkCell(td, column, row);
 
             return;
         }
@@ -490,6 +746,75 @@ export class DynamicTable {
             default:
                 td.textContent = String(value);
         }
+
+        this.linkCell(td, column, row);
+    }
+
+    /**
+     * Wrap the first cell's content in the row's link.
+     *
+     * A real anchor rather than a click handler, and in the cell rather than
+     * over the row: it is focusable, it is announced as a link, a middle-click
+     * opens a tab, and "copy link address" works — none of which a handler
+     * gives you. The rest of the row is handled by the click listener, which is
+     * a convenience on top of this rather than the mechanism.
+     *
+     * Done here, at the end of painting, so a cell repainted after an inline
+     * edit keeps its link instead of quietly losing it.
+     */
+    /**
+     * A click on the body of a row follows that row's link.
+     *
+     * The first cell is already a real anchor, so this only covers the rest of
+     * the row — and it stays out of the way of everything a row is also for.
+     * Each of these exclusions is something that used to be a bug report
+     * somewhere:
+     *
+     *  - anything already interactive: a link, a button, an input, a label;
+     *  - the cells inline editing owns, so a double-click still opens an
+     *    editor rather than leaving the page;
+     *  - a click that ended a text selection, because selecting a cell's text
+     *    and having the page navigate is maddening;
+     *  - anything outside the table body — the toolbar, a panel, the footer.
+     *
+     * A modified click opens a tab instead, the way a link would.
+     */
+    followRow(event) {
+        if (event.button !== undefined && event.button !== 0) return;
+
+        const cell = event.target.closest?.('td');
+        const tr = cell?.closest('[data-dynamic-table-row]');
+
+        if (! tr || ! this.root.contains(tr)) return;
+
+        if (event.target.closest('a, button, input, select, textarea, label, [contenteditable], [data-dynamic-table-row-action]')) return;
+
+        if (this.features.inline_edit && cell.hasAttribute('data-dynamic-table-editable')) return;
+
+        if (String(window.getSelection?.() ?? '').length > 0) return;
+
+        const row = this.data.rows.find((candidate) => String(candidate.id) === String(tr.dataset.dynamicTableRow));
+
+        if (! row?.u) return;
+
+        event.preventDefault();
+
+        if (event.metaKey || event.ctrlKey || event.shiftKey) {
+            window.open(row.u, '_blank', 'noopener');
+
+            return;
+        }
+
+        window.location.assign(row.u);
+    }
+
+    linkCell(td, column, row) {
+        if (! row?.u || column.key !== this.visibleColumns()[0]?.key) return;
+
+        const link = el('a', { class: 'dynamic-table-row-link', href: row.u });
+
+        link.append(...td.childNodes);
+        td.replaceChildren(link);
     }
 
     renderPagination() {
@@ -964,6 +1289,12 @@ export class DynamicTable {
         }
 
         // Header interactions are delegated so a re-rendered header keeps working.
+        if (this.boot.rowClick === 'single' || this.boot.rowClick === 'double') {
+            this.root.addEventListener(this.boot.rowClick === 'double' ? 'dblclick' : 'click', (event) => {
+                this.followRow(event);
+            });
+        }
+
         this.root.addEventListener('click', (event) => {
             const sortButton = event.target.closest('[data-dynamic-table-sort]');
 
@@ -1013,11 +1344,11 @@ export class DynamicTable {
 
         // A header row that wraps at one width does not wrap at another, and
         // the row below it sticks to whatever it measures now.
-        window.addEventListener('resize', debounce(() => this.syncHeaderOffset(), 150));
+        window.addEventListener('resize', debounce(() => this.syncHeaderOffset(), 150), { signal: this.teardown.signal });
 
         window.addEventListener('popstate', () => {
             if (this.features.url_state) this.readUrl();
-        });
+        }, { signal: this.teardown.signal });
     }
 
     /**
@@ -1033,16 +1364,21 @@ export class DynamicTable {
         const apply = (options = {}) => this.setParams(this.readParamControls(), options);
         const applyLater = debounce(() => apply(), this.boot.searchDebounce || 350);
 
+        // Every one of these is on the document rather than the table, so every
+        // one of them outlives the table unless destroy() can take it back —
+        // which is what the shared abort signal is for.
+        const signal = this.teardown.signal;
+
         scope.addEventListener('change', (event) => {
             if (event.target.closest?.(this.paramSelector())) apply();
-        });
+        }, { signal });
 
         // Typing is debounced; a date or select fires "change" and applies at once.
         scope.addEventListener('input', (event) => {
             const control = event.target.closest?.(this.paramSelector());
 
             if (control && ['text', 'search', 'number'].includes(control.type)) applyLater();
-        });
+        }, { signal });
 
         scope.addEventListener('submit', (event) => {
             const form = event.target.closest?.(`form[data-dynamic-table-params="${CSS.escape(this.key)}"]`);
@@ -1051,7 +1387,7 @@ export class DynamicTable {
                 event.preventDefault();
                 apply();
             }
-        });
+        }, { signal });
 
         scope.addEventListener('click', (event) => {
             const reset = event.target.closest?.(`[data-dynamic-table-params-reset="${CSS.escape(this.key)}"]`);
@@ -1060,7 +1396,7 @@ export class DynamicTable {
                 event.preventDefault();
                 this.resetParams();
             }
-        });
+        }, { signal });
     }
 
     toggleSort(key, additive = false) {
@@ -1094,10 +1430,16 @@ export class DynamicTable {
      * the DOM they were watching.
      */
     destroy() {
+        // Announced before anything is let go of, so a listener can still read
+        // the table it is being told about.
+        this.emit('destroyed', this);
+
         this.observer?.disconnect();
         this.pending?.abort();
+        this.teardown.abort();
         this.listeners.clear();
         this.modules.clear();
+        this.root.removeAttribute('data-dynamic-table-mounted');
         registry.delete(this.root);
         registry.delete(this.key);
     }
@@ -1126,9 +1468,14 @@ export class DynamicTable {
     }
 
     hasMorePages() {
-        return this.data.counted === false
-            ? !! this.data.hasMore
-            : this.state.page < (this.data.lastPage || 1);
+        // A cursor-paged result is counted and still has no last page to
+        // compare against — "is there another one" is the only question it
+        // answers, and the only one infinite scrolling needs to ask.
+        if (this.data.counted === false || this.data.nextCursor !== undefined) {
+            return !! this.data.hasMore;
+        }
+
+        return this.state.page < (this.data.lastPage || 1);
     }
 
     async loadMore() {
@@ -1547,10 +1894,20 @@ export function mount(root) {
     registry.set(root, table);
     registry.set(boot.key, table);
 
-    // Only modules that must be live before any user interaction are warmed;
-    // panels (filters, views, columns, transfer) load when first opened.
+    /*
+     * Everything except the panels is warmed now.
+     *
+     * Stated as "which modules are lazy" rather than "which are eager", which
+     * is the safer way round: a panel is lazy because nothing of it is on the
+     * page until it is opened, and that list changes rarely. The other way
+     * round, every new module has to be remembered here — and a module that is
+     * forgotten does not fail, it just silently never binds. The row-reorder
+     * grips and the pin stars were rendered and dead for exactly that reason.
+     */
+    const lazy = ['filters', 'views', 'columns', 'transfer'];
+
     for (const name of boot.modules || []) {
-        if (['actions', 'inline-edit', 'responsive', 'header-menu', 'detail', 'sticky'].includes(name)) table.load(name);
+        if (! lazy.includes(name)) table.load(name);
     }
 
     // Resizing lives in the columns module but is not a panel: its handles are
@@ -1562,7 +1919,22 @@ export function mount(root) {
 }
 
 export function boot(scope = document) {
+    sweep();
     scope.querySelectorAll('[data-dynamic-table]').forEach(mount);
+}
+
+/**
+ * Let go of every table whose element has left the page.
+ *
+ * mount() already replaces a table whose root was swapped for a new one of the
+ * same key, but a navigation that removes a table without putting another in
+ * its place leaves nothing to trigger that — and the table would keep its
+ * document listeners and its observer for the life of the tab.
+ */
+export function sweep() {
+    for (const table of new Set(registry.values())) {
+        if (! table.root.isConnected) table.destroy();
+    }
 }
 
 export function find(key) {
@@ -1570,7 +1942,7 @@ export function find(key) {
 }
 
 if (typeof window !== 'undefined') {
-    window.DynamicTable = { boot, mount, find, el, debounce };
+    window.DynamicTable = { boot, mount, find, sweep, el, debounce };
 
     // Global, so a second copy of this module cannot register a second set of
     // navigation listeners and boot everything again.
@@ -1583,8 +1955,28 @@ if (typeof window !== 'undefined') {
             boot();
         }
 
-        // Play nicely with Livewire/Turbo style navigation.
-        document.addEventListener('livewire:navigated', () => boot());
-        document.addEventListener('turbo:load', () => boot());
+        /*
+         * Every way a page can be replaced without being loaded.
+         *
+         * All of them do the same two things — let go of the tables whose DOM
+         * has gone, mount the ones that have arrived — so all of them call the
+         * same function. Listening for an event a page never fires costs
+         * nothing, which is why they are all here rather than behind a
+         * detection of which framework is present.
+         *
+         * Inertia is listened for twice on purpose: "inertia:success" fires
+         * for a visit that swapped the page, and "inertia:navigate" for a
+         * history move between pages already rendered.
+         */
+        for (const event of ['livewire:navigated', 'livewire:load', 'turbo:load', 'inertia:success', 'inertia:navigate']) {
+            document.addEventListener(event, () => boot());
+        }
+
+        // A Livewire component that re-renders morphs its own DOM without any
+        // navigation, so the table's element may be replaced under it. The hook
+        // exists only when Livewire does.
+        document.addEventListener('livewire:init', () => {
+            window.Livewire?.hook?.('morphed', () => boot());
+        });
     }
 }

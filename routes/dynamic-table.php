@@ -5,7 +5,9 @@ use Shwaeki\DynamicTable\Http\Controllers\ActionController;
 use Shwaeki\DynamicTable\Http\Controllers\BulkEditController;
 use Shwaeki\DynamicTable\Http\Controllers\CreateController;
 use Shwaeki\DynamicTable\Http\Controllers\EditController;
+use Shwaeki\DynamicTable\Http\Controllers\PinController;
 use Shwaeki\DynamicTable\Http\Controllers\PrintController;
+use Shwaeki\DynamicTable\Http\Controllers\ReorderController;
 use Shwaeki\DynamicTable\Http\Controllers\RowActionController;
 use Shwaeki\DynamicTable\Http\Controllers\RowDetailController;
 use Shwaeki\DynamicTable\Http\Controllers\TableController;
@@ -24,6 +26,8 @@ Route::post('toolbar-action', ToolbarActionController::class)->name('toolbar-act
 Route::post('create', CreateController::class)->name('create');
 Route::post('bulk-edit', BulkEditController::class)->name('bulk-edit');
 Route::post('row-detail', RowDetailController::class)->name('row-detail');
+Route::post('reorder', ReorderController::class)->name('reorder');
+Route::post('pin', PinController::class)->name('pin');
 
 Route::post('views', [ViewController::class, 'index'])->name('views.index');
 Route::post('views/create', [ViewController::class, 'store'])->name('views.store');

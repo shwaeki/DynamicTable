@@ -2,6 +2,7 @@
 
 namespace Shwaeki\DynamicTable\Query;
 
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,6 +16,7 @@ use Shwaeki\DynamicTable\Filters\ParamFilters;
 use Shwaeki\DynamicTable\Metadata\FieldType;
 use Shwaeki\DynamicTable\Metadata\MetadataEngine;
 use Shwaeki\DynamicTable\Support\Feature;
+use Shwaeki\DynamicTable\Support\PinMemory;
 use Shwaeki\DynamicTable\Support\TableState;
 use Throwable;
 
@@ -38,6 +40,7 @@ class QueryEngine
         $query = $this->baseQuery($table, $state);
 
         $this->applySelect($query, $table, $state);
+        $this->applyAggregates($query, $table, $state);
         $this->applyEagerLoads($query, $table, $state);
         $this->applySearch($query, $table, $state);
         $this->applyColumnSearch($query, $table, $state);
@@ -57,15 +60,91 @@ class QueryEngine
      *
      * @return LengthAwarePaginator<int, Model>|Paginator<int, Model>
      */
-    public function paginate(DynamicTable $table, TableState $state): LengthAwarePaginator|Paginator
+    public function paginate(DynamicTable $table, TableState $state): LengthAwarePaginator|Paginator|CursorPaginator
     {
         $query = $this->build($table, $state);
+
+        /*
+         * A cursor answers "the rows after these", so it can only ever move
+         * forward from somewhere it has been. Asking for page 4 cold — a link
+         * with ?page=4, or a page button on a table that shows them — has no
+         * cursor to start from, and offset is the only thing that can answer
+         * it. Sequential scrolling, which is all of infinite scrolling, always
+         * carries one.
+         */
+        $keyset = $table->paginationStyle() === 'infinite'
+            && ($state->cursor !== null || $state->page === 1)
+            && $this->supportsKeyset($query, $table);
+
+        if ($keyset) {
+            return $query->cursorPaginate(perPage: $state->perPage, cursorName: 'cursor', cursor: $state->cursor);
+        }
 
         if (! $table->countsRows()) {
             return $query->simplePaginate(perPage: $state->perPage, page: $state->page);
         }
 
         return $query->paginate(perPage: $state->perPage, page: $state->page);
+    }
+
+    /**
+     * How many rows the current filters match.
+     *
+     * Only the cursor path needs this — the other paginators count as part of
+     * their own work. Ordering and eager loads are dropped first: neither
+     * changes a count, and both cost real time on a large table.
+     */
+    public function count(DynamicTable $table, TableState $state): int
+    {
+        return $this->build($table, $state)->reorder()->setEagerLoads([])->toBase()->getCountForPagination();
+    }
+
+    /**
+     * Can this query be paged by its sort values rather than by an offset?
+     *
+     * It matters most where it is used. An infinitely scrolled table reads
+     * page after page of the same result while people are inserting into it,
+     * and OFFSET answers that by counting from the top every time: a row
+     * inserted above the window shifts everything down, so the reader sees a
+     * row twice and never sees another — and page 400 costs the database 10,000
+     * rows it throws away.
+     *
+     * Keyset paging asks "the next rows after these values" instead, which is
+     * both stable under inserts and indexable. The price is that every ORDER BY
+     * has to be a plain column this query can also compare in a WHERE, so a
+     * sort on a relation or on an aggregate — both subqueries — falls back to
+     * offset rather than producing SQL no database will accept.
+     *
+     * @param  Builder<Model>  $query
+     */
+    protected function supportsKeyset(Builder $query, DynamicTable $table): bool
+    {
+        $orders = $query->getQuery()->orders ?? [];
+
+        if ($orders === []) {
+            return false;
+        }
+
+        $columns = array_flip($table->metadata()->columnNames());
+        $prefix = $table->metadata()->table.'.';
+
+        foreach ($orders as $order) {
+            $column = $order['column'] ?? null;
+
+            // A raw order has no 'column' at all, and an Expression is a
+            // subquery wearing one.
+            if (! is_string($column)) {
+                return false;
+            }
+
+            $name = str_starts_with($column, $prefix) ? substr($column, strlen($prefix)) : $column;
+
+            if (! isset($columns[$name])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -118,17 +197,148 @@ class QueryEngine
             $selects[] = strtoupper($column->summary)."({$qualified}) as ".$grammar->wrap('dt_'.$column->key);
         }
 
-        $row = (array) $query->selectRaw(implode(', ', $selects))->first()?->getAttributes();
+        // select([]) first, because build() may have narrowed the select to the
+        // columns the page needs. Appending an aggregate to that list asks the
+        // database for plain columns and an aggregate in one row without a
+        // GROUP BY, which MySQL refuses outright under ONLY_FULL_GROUP_BY and
+        // every other engine answers with an arbitrary row's values.
+        $row = (array) $query->select([])->selectRaw(implode(', ', $selects))->first()?->getAttributes();
 
         $summaries = [];
 
         foreach ($columns as $column) {
             $value = $row['dt_'.$column->key] ?? null;
 
-            $summaries[$column->key] = $value === null ? null : $value + 0;
+            /*
+             * Numbers arrive from the driver as strings and are wanted as
+             * numbers. A min or a max, though, is whatever the column holds — a
+             * date, a name, a reference — and coercing that is how MAX over a
+             * datetime column became "A non-numeric value encountered".
+             */
+            $summaries[$column->key] = match (true) {
+                $value === null => null,
+                is_numeric($value) => $value + 0,
+                default => $value,
+            };
         }
 
         return $summaries;
+    }
+
+    /**
+     * The same aggregates as summaries(), once per group heading on this page.
+     *
+     * Two decisions worth stating, because both could have gone the other way:
+     *
+     * The values are the *whole group's*, not the visible slice's. A group cut
+     * in half by a page break still reports what the group holds, because that
+     * is what the heading claims to describe — "Engineering" is a department,
+     * not "the four engineers who fit on this page".
+     *
+     * The query is bounded to the groups on this page. Grouping a large table
+     * by a high-cardinality column would otherwise aggregate every group in the
+     * result to label the handful the reader can see.
+     *
+     * A computed or relational group column gets nothing: there is no single
+     * column to GROUP BY, and inventing one would mean a join this engine
+     * deliberately does not make.
+     *
+     * @param  list<mixed>  $values  raw group values on this page, in row order
+     * @return array<string, array<string, float|int|null>> keyed by groupKey()
+     */
+    public function groupSummaries(DynamicTable $table, TableState $state, array $values): array
+    {
+        $group = $state->group === null ? null : $table->columnFor($state->group);
+
+        if ($group === null || $values === [] || $group->isComputed() || $group->isRelational()) {
+            return [];
+        }
+
+        $columns = array_filter(
+            $this->activeColumns($table, $state),
+            static fn (ColumnDefinition $column): bool => $column->isSummable(),
+        );
+
+        if ($columns === []) {
+            return [];
+        }
+
+        $query = $this->build($table, $state)->reorder()->setEagerLoads([]);
+        $grammar = $query->getQuery()->getGrammar();
+
+        $groupColumn = $query->qualifyColumn((string) ($group->field->column ?? $group->field->name));
+        $selects = [$grammar->wrap($groupColumn).' as '.$grammar->wrap('dt_group')];
+
+        foreach ($columns as $column) {
+            $name = (string) ($column->field->column ?? $column->field->name);
+            $qualified = $grammar->wrap($query->qualifyColumn($name));
+
+            $selects[] = strtoupper($column->summary)."({$qualified}) as ".$grammar->wrap('dt_'.$column->key);
+        }
+
+        $present = array_values(array_filter($values, static fn (mixed $value): bool => $value !== null));
+        $nullable = count($present) !== count($values);
+
+        $query->where(function ($inner) use ($groupColumn, $present, $nullable): void {
+            if ($present !== []) {
+                $inner->whereIn($groupColumn, $present);
+            }
+
+            // A null group is a group — "no department" is a heading a reader
+            // sees — and whereIn never matches one.
+            if ($nullable) {
+                $present === [] ? $inner->whereNull($groupColumn) : $inner->orWhereNull($groupColumn);
+            }
+        });
+
+        $rows = $query->select([])
+            ->selectRaw(implode(', ', $selects))
+            ->groupBy($groupColumn)
+            ->get();
+
+        $summaries = [];
+
+        foreach ($rows as $row) {
+            $attributes = $row->getAttributes();
+            $totals = [];
+
+            foreach ($columns as $column) {
+                $value = $attributes['dt_'.$column->key] ?? null;
+
+                // Same reasoning as summaries(): a max is whatever the column
+                // holds, and only a number is coerced to one.
+                $totals[$column->key] = match (true) {
+                    $value === null => null,
+                    is_numeric($value) => $value + 0,
+                    default => $value,
+                };
+            }
+
+            $summaries[self::groupKey($attributes['dt_group'] ?? null)] = $totals;
+        }
+
+        return $summaries;
+    }
+
+    /**
+     * One group value as an array key.
+     *
+     * Null gets a sentinel rather than the empty string, so a column holding
+     * both null and '' does not report one group's total under the other's
+     * heading — they are separate groups on screen and have to stay separate
+     * here.
+     */
+    public static function groupKey(mixed $value): string
+    {
+        return match (true) {
+            $value === null => "\0null",
+            is_bool($value) => $value ? '1' : '0',
+            is_scalar($value) => (string) $value,
+            // Nothing else can be keyed against a value the database returned,
+            // so it gets a key that matches nothing and the group simply shows
+            // no subtotal. Better than a wrong one under the wrong heading.
+            default => "\0unkeyable",
+        };
     }
 
     public function selectionQuery(DynamicTable $table, TableState $state): Builder
@@ -188,7 +398,10 @@ class QueryEngine
                 return;
             }
 
-            if (! $column->isRelational()) {
+            // An aggregate has no column to select — it arrives as a subquery
+            // that applyAggregates() adds. Naming it here would ask the
+            // database for a column that does not exist.
+            if (! $column->isRelational() && ! $column->field->isAggregate()) {
                 $needed[] = (string) ($column->field->column ?? $column->field->name);
             }
         }
@@ -207,6 +420,21 @@ class QueryEngine
             $needed[] = 'deleted_at';
         }
 
+        /*
+         * The row version an edit is checked against — see Support\Version.
+         *
+         * Only for a table that can be edited: on a read-only table the column
+         * would be selected, sent, and never looked at. On an editable one it
+         * is what stops two people silently overwriting each other.
+         */
+        if ($table->features()->any(Feature::INLINE_EDIT, Feature::BULK_EDIT)) {
+            $updatedAt = $query->getModel()->getUpdatedAtColumn();
+
+            if ($query->getModel()->usesTimestamps() && is_string($updatedAt)) {
+                $needed[] = $updatedAt;
+            }
+        }
+
         $needed = array_values(array_unique(array_filter(
             $needed,
             static fn (string $name): bool => $name !== '',
@@ -221,6 +449,50 @@ class QueryEngine
             static fn (string $name): string => $meta->table.'.'.$name,
             $needed,
         ));
+    }
+
+    /**
+     * Attach the subquery behind every aggregate column the page will show.
+     *
+     * One correlated subselect per aggregate, which is what withCount() has
+     * always cost — no join, no GROUP BY on the outer query, and no extra row
+     * per related record. Only columns are registered here: a filter on an
+     * aggregate compiles its own subquery, because a select alias cannot be
+     * named in a WHERE clause, and a sort reuses the alias this adds.
+     */
+    protected function applyAggregates(Builder $query, DynamicTable $table, TableState $state): void
+    {
+        $fields = [];
+
+        foreach ($this->activeColumns($table, $state) as $column) {
+            if ($column->field->isAggregate()) {
+                $fields[$column->field->name] = $column->field;
+            }
+        }
+
+        /*
+         * A sort on an aggregate needs its alias to exist even when the column
+         * itself is hidden — the reader can turn a column off and keep sorting
+         * by it. Keyed by alias, so a column that is both shown and sorted adds
+         * one subquery rather than two identically named ones.
+         */
+        foreach ($state->sort as $entry) {
+            $column = $table->columnFor($entry['field']);
+
+            if ($column !== null && $column->field->isAggregate()) {
+                $fields[$column->field->name] ??= $column->field;
+            }
+        }
+
+        foreach ($fields as $field) {
+            $relation = (string) $field->aggregateRelation;
+
+            match ($field->aggregate) {
+                'count' => $query->withCount($relation),
+                'exists' => $query->withExists($relation),
+                default => $query->withAggregate($relation, (string) $field->aggregateColumn, (string) $field->aggregate),
+            };
+        }
     }
 
     protected function applyEagerLoads(Builder $query, DynamicTable $table, TableState $state): void
@@ -398,13 +670,37 @@ class QueryEngine
 
         $applied = 0;
 
+        /*
+         * Pinned rows sort above everything else, including the group.
+         *
+         * A CASE rather than a UNION or a second query: it keeps one result
+         * set, one count and one page, so a pinned row that would have been on
+         * page 9 is simply at the top of page 1 and is not also still on page
+         * 9. The ids come from the viewer's own session and are bound as
+         * parameters.
+         */
+        $pinned = app(PinMemory::class)->ids($table);
+
+        if ($pinned !== []) {
+            $key = $query->getModel()->getQualifiedKeyName();
+            $placeholders = implode(', ', array_fill(0, count($pinned), '?'));
+
+            $query->orderByRaw(
+                'case when '.$query->getQuery()->getGrammar()->wrap($key).' in ('.$placeholders.') then 0 else 1 end',
+                $pinned,
+            );
+        }
+
         // Grouping is expressed as a leading sort, so the database does the
         // work and the browser only has to notice where the value changes.
         // Nothing is ever loaded into PHP just to be grouped.
         $group = $state->group === null ? null : $table->columnFor($state->group);
 
+        // An aggregate is excluded along with a computed column, and for the
+        // same reason: a heading per distinct subquery result is a grouping of
+        // the answer rather than of the data.
         if ($group !== null) {
-            if (! $group->isComputed()) {
+            if (! $group->isComputed() && ! $group->field->isAggregate()) {
                 $name = (string) ($group->field->column ?? $group->field->name);
 
                 if ($group->isRelational()) {
@@ -426,6 +722,15 @@ class QueryEngine
             $direction = $entry['direction'];
             $field = $column->field;
             $name = (string) ($field->column ?? $field->name);
+
+            if ($field->isAggregate()) {
+                // The alias applyAggregates() added, unqualified: it belongs to
+                // the select list, not to a table.
+                $query->orderBy($name, $direction);
+                $applied++;
+
+                continue;
+            }
 
             if (! $field->isRelational()) {
                 $query->orderBy($query->qualifyColumn($name), $direction);

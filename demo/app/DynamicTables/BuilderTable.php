@@ -51,10 +51,14 @@ class BuilderTable extends DynamicTable
         $this->stickyActions = (bool) $options['sticky'];
         $this->facets = ['status'];
         $this->summarise = (bool) $options['summary'];
+        $this->linked = (bool) $options['links'];
     }
 
     /** Whether the money column carries a total, driven by the builder. */
     private bool $summarise = true;
+
+    /** Whether rows are links, driven by the builder. */
+    private bool $linked = false;
 
     protected function columns(): array
     {
@@ -109,6 +113,17 @@ class BuilderTable extends DynamicTable
     public function rowDetail(Model $record): mixed
     {
         return view('partials.order-detail', ['order' => $record->load('items.product', 'customer')]);
+    }
+
+    /**
+     * Unlike the hooks above, this one *is* conditional.
+     *
+     * There is no feature to switch it off with: a rowUrl() that returns a URL
+     * makes every row a link, so the tick has to reach the method itself.
+     */
+    public function rowUrl(Model $record): ?string
+    {
+        return $this->linked ? route('examples.show', 'row-links').'#'.$record->reference : null;
     }
 
     public function rules(): array

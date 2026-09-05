@@ -241,11 +241,57 @@ class ImportManager
         $mode = in_array($mode, ['create', 'update', 'upsert'], true) ? $mode : 'create';
         $matchKey = isset($options['matchBy']) ? (string) $options['matchBy'] : null;
 
+        /*
+         * A dry run is the real import, rolled back.
+         *
+         * Not a simulation of it: the same validation, the same casting, the
+         * same relation lookups, the same unique constraints, the same
+         * database. A preview that ran different code would be a preview of
+         * different code, and the row it disagreed about would be exactly the
+         * one somebody cared about.
+         *
+         * What it cannot undo is what leaves the database: an observer that
+         * queues a job, sends a mail, or writes to an external service still
+         * did so. That is documented rather than guessed at.
+         */
+        $dry = (bool) ($options['dryRun'] ?? false);
+
+        if ($dry) {
+            $connection = DB::connection($table->newModel()->getConnectionName());
+            $connection->beginTransaction();
+
+            try {
+                return $this->execute($table, $path, $mapping, $mode, $matchKey, $progressId, true);
+            } finally {
+                $connection->rollBack();
+            }
+        }
+
+        return $this->execute($table, $path, $mapping, $mode, $matchKey, $progressId, false);
+    }
+
+    /**
+     * The import itself, with the transaction decision already made.
+     *
+     * @param  array<int, string|null>  $mapping
+     * @return array<string, mixed>
+     */
+    protected function execute(
+        DynamicTable $table,
+        string $path,
+        array $mapping,
+        string $mode,
+        ?string $matchKey,
+        ?string $progressId,
+        bool $dry,
+    ): array {
+
         if ($mode !== 'create' && $matchKey === null) {
             $matchKey = $table->metadata()->keyName;
         }
 
         $reader = $this->readerFor($path);
+
         $chunkSize = max(50, (int) config('dynamic-table.excel.chunk', 1000));
 
         $columns = $table->resolvedColumns();
@@ -256,7 +302,11 @@ class ImportManager
         $skipped = 0;
         $errors = [];
 
-        event(new ImportStarted($table->key(), $progressId ?? 'sync', ['mode' => $mode]));
+        // A dry run announces nothing. A listener that reacted to it would be
+        // reacting to an import that is about to be undone.
+        if (! $dry) {
+            event(new ImportStarted($table->key(), $progressId ?? 'sync', ['mode' => $mode]));
+        }
 
         $buffer = [];
         $lineNumber = 1; // heading row
@@ -296,6 +346,12 @@ class ImportManager
             ), 0, 50),
             'report' => $report,
         ];
+
+        if ($dry) {
+            // Said plainly in the payload rather than inferred from a flag the
+            // caller passed: the panel draws a different sentence for it.
+            return $summary + ['dry' => true];
+        }
 
         event($errors === [] || $created + $updated > 0
             ? new ImportCompleted($table->key(), $progressId ?? 'sync', $summary)

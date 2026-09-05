@@ -60,12 +60,44 @@ public function actions(): array;                       // bulk actions
 public function rowActions(): array;                    // per-row buttons
 public function toolbar(): array;                       // your own toolbar buttons
 public function rowDetail(Model $record): mixed;        // the expanded row panel
+public function rowUrl(Model $record): ?string;         // where a row click goes
+public function slots(): array;                         // your markup, in the template's five slots
 public function newRecordDefaults(): array;             // values for the create row
 public function rules(): array;                         // validation, keyed by path
 public function validationMessages(): array;
 public function presets(): array;                       // developer-defined views
 public function authorize(string $ability, ?Model $record = null): ?bool;
 ```
+
+## Clickable rows
+
+```php
+public function rowUrl(Model $record)
+{
+    return route('orders.show', $record);
+}
+```
+
+The first cell of every row becomes a **real link** to it. That word is doing
+work: a link is focusable, is announced as a link, opens in a new tab on a
+middle-click, and offers "copy link address". A click handler does none of
+those, which is why the handler is only the convenience on top — it makes the
+rest of the row follow the same URL, and modified clicks open a tab the way a
+link would.
+
+```php
+protected string $rowClick = 'single';   // 'single' | 'double' | 'none'
+```
+
+The default is `'double'` on a table with inline editing and `'single'`
+everywhere else, because double-click already opens the editor there and a
+single click that navigates away from a cell someone was about to edit is the
+more annoying collision. `'none'` keeps the link in the first cell and leaves
+the rest of the row alone.
+
+A click never navigates from an editable cell, from anything already
+interactive (a link, a button, an input, a label, a row action), or when it
+ended a text selection.
 
 ## Parameters
 

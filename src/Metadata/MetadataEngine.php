@@ -137,6 +137,21 @@ class MetadataEngine
         $field = $meta->field($name);
 
         if ($field === null) {
+            /*
+             * "orders_count", "orders_sum_total" — an aggregate over a plural
+             * relation, spelled the way Eloquent spells the attribute it would
+             * add for it. Tried only after the real columns, so a denormalised
+             * counter cache actually named orders_count still wins: it is a
+             * column, it is indexed, and reading it is free.
+             */
+            if ($relationPath === []) {
+                $aggregate = $this->aggregateField($current, $name);
+
+                if ($aggregate !== null) {
+                    return $aggregate;
+                }
+            }
+
             // "department" on its own resolves to the relation's label column.
             $relation = $meta->relation($name);
 
@@ -166,6 +181,102 @@ class MetadataEngine
         }
 
         return $this->rebase($field, $path, $relationPath, $relationType, $current, $this->labelFor($path));
+    }
+
+    /**
+     * An aggregate over one of the model's plural relations, or null.
+     *
+     * The spelling is Eloquent's own — orders_count, orders_exists,
+     * orders_sum_total, orders_avg_total, orders_min_x, orders_max_x — because
+     * those are exactly the attribute names withCount() and withAggregate()
+     * produce, so the name a developer writes is the name the query answers
+     * with, and nobody has to learn a second syntax.
+     *
+     * Singular relations are excluded: "the customer's name" is a column
+     * reached through a relation, which the package already does far better as
+     * a join-free eager load.
+     *
+     * @param  class-string<Model>  $model
+     */
+    protected function aggregateField(string $model, string $name): ?FieldMetadata
+    {
+        $meta = $this->for($model);
+
+        foreach ($meta->relations as $relationName => $relation) {
+            if (! $relation->isTraversable() || $relation->isSingular() || $relation->relatedModel === null) {
+                continue;
+            }
+
+            $prefix = Str::snake($relationName).'_';
+
+            if (! str_starts_with($name, $prefix)) {
+                continue;
+            }
+
+            $rest = substr($name, strlen($prefix));
+
+            if ($rest === 'count' || $rest === 'exists') {
+                return new FieldMetadata(
+                    path: $name,
+                    name: $name,
+                    label: __('dynamic-table::table.aggregate.'.$rest, ['relation' => $this->labelFor($relationName)]),
+                    type: $rest === 'count' ? FieldType::Integer : FieldType::Boolean,
+                    // Both coalesce: no rows is zero, or false, never null.
+                    nullable: false,
+                    aggregate: $rest,
+                    aggregateRelation: $relationName,
+                );
+            }
+
+            foreach (['sum', 'avg', 'min', 'max'] as $function) {
+                if (! str_starts_with($rest, $function.'_')) {
+                    continue;
+                }
+
+                $column = substr($rest, strlen($function) + 1);
+                $field = $this->for($relation->relatedModel)->field($column);
+
+                if ($field === null || $field->computed) {
+                    continue;
+                }
+
+                // Summing a date or a name is a question with no answer. Min
+                // and max are meaningful on anything that orders, so they are
+                // left to the column's own type.
+                if (in_array($function, ['sum', 'avg'], true)
+                    && ! in_array($field->type, [FieldType::Integer, FieldType::Decimal], true)) {
+                    continue;
+                }
+
+                /*
+                 * "Total · sum" rather than "Orders Sum Total".
+                 *
+                 * The relation is already the group heading, so repeating it in
+                 * every label is noise; and a date's extremes are earliest and
+                 * latest, which is what people say, rather than lowest and
+                 * highest.
+                 */
+                $dated = in_array($field->type, [FieldType::Date, FieldType::DateTime], true);
+                $wording = $dated && $function === 'min' ? 'earliest' : ($dated && $function === 'max' ? 'latest' : $function);
+
+                return new FieldMetadata(
+                    path: $name,
+                    name: $name,
+                    label: __('dynamic-table::table.aggregate.'.$wording, [
+                        'field' => $this->labelFor($column),
+                        'relation' => $this->labelFor($relationName),
+                    ]),
+                    type: $function === 'avg' ? FieldType::Decimal : $field->type,
+                    // A sum over no rows is zero; a min over no rows is nothing.
+                    nullable: in_array($function, ['min', 'max'], true),
+                    aggregate: $function,
+                    aggregateRelation: $relationName,
+                    aggregateColumn: $column,
+                );
+            }
+        }
+
+        return null;
     }
 
     protected function rebase(
@@ -211,7 +322,12 @@ class MetadataEngine
         $groups = [];
         $blocked = array_flip($blocked);
 
-        $walk = function (string $class, array $prefix, int $level, array $seen = []) use (&$walk, &$groups, $depth, $blocked): void {
+        // Kept apart from $groups until the end: a relation's aggregates belong
+        // after the model's own fields and its singular relations, not wedged
+        // between them.
+        $aggregateGroups = [];
+
+        $walk = function (string $class, array $prefix, int $level, array $seen = []) use (&$walk, &$groups, &$aggregateGroups, $depth, $blocked): void {
             // Stop the walk from circling back: order -> invoice -> order adds
             // a group that is redundant and confusing in the filter builder.
             $seen[$class] = true;
@@ -233,6 +349,25 @@ class MetadataEngine
 
                 if ($resolved !== null) {
                     $fields[] = $resolved->toArray();
+                }
+            }
+
+            /*
+             * The aggregates of each plural relation, as a group of their own.
+             *
+             * Their own group rather than mixed into the model's fields: a
+             * customer has a name and a country, and "the sum of their orders'
+             * totals" is a different kind of thing. Listed among the columns it
+             * would bury them; under a heading of its own it reads as what it
+             * is, and the picker already draws one heading per group.
+             */
+            if ($prefix === [] && $depth >= 1) {
+                foreach ($meta->relations as $relationName => $relation) {
+                    $group = $this->aggregateGroup($class, $relationName, $blocked);
+
+                    if ($group !== null) {
+                        $aggregateGroups[] = $group;
+                    }
                 }
             }
 
@@ -265,7 +400,98 @@ class MetadataEngine
 
         $walk($model, [], 0);
 
-        return $groups;
+        return array_merge($groups, $aggregateGroups);
+    }
+
+    /**
+     * One plural relation's aggregates, as a catalogue group.
+     *
+     * Everything the database can answer about the relation without leaving the
+     * row: how many, whether any, and — for the columns where it means
+     * something — the sum, the average, the lowest and the highest.
+     *
+     * What is offered is decided by type, not by a list somebody maintains:
+     * summing a name or a foreign key is not a question, so only real numeric
+     * columns get sum and average, and only things that order get lowest and
+     * highest. Keys are excluded from both — the average of an id is a number
+     * with no meaning.
+     *
+     * @param  class-string<Model>  $model
+     * @param  array<string, int>  $blocked
+     * @return array{key: string, label: string, fields: list<array<string, mixed>>}|null
+     */
+    protected function aggregateGroup(string $model, string $relationName, array $blocked): ?array
+    {
+        $meta = $this->for($model);
+        $relation = $meta->relation($relationName);
+
+        if ($relation === null || ! $relation->isTraversable() || $relation->isSingular() || $relation->relatedModel === null) {
+            return null;
+        }
+
+        $prefix = Str::snake($relationName);
+        $related = $this->for($relation->relatedModel);
+        $paths = [$prefix.'_count', $prefix.'_exists'];
+
+        // Foreign keys look numeric and are never worth summing, so they are
+        // recognised by name rather than by type — the alternative is a
+        // catalogue full of "Average of category_id".
+        $keys = [$related->keyName];
+
+        foreach (array_keys($related->fields) as $name) {
+            if (str_ends_with((string) $name, '_id')) {
+                $keys[] = (string) $name;
+            }
+        }
+
+        foreach ($related->fields as $name => $field) {
+            if ($field->computed || in_array((string) $name, $keys, true)) {
+                continue;
+            }
+
+            if (in_array($field->type, [FieldType::Integer, FieldType::Decimal], true)) {
+                array_push($paths, $prefix.'_sum_'.$name, $prefix.'_avg_'.$name, $prefix.'_min_'.$name, $prefix.'_max_'.$name);
+
+                continue;
+            }
+
+            // A date has no sum, but "earliest" and "latest" are two of the
+            // most useful questions on this whole list.
+            if (in_array($field->type, [FieldType::Date, FieldType::DateTime], true)) {
+                array_push($paths, $prefix.'_min_'.$name, $prefix.'_max_'.$name);
+            }
+        }
+
+        $limit = max(2, (int) config('dynamic-table.security.max_aggregate_fields', 40));
+        $fields = [];
+
+        foreach ($paths as $path) {
+            if (count($fields) >= $limit) {
+                break;
+            }
+
+            // A real column of the same name wins, here as everywhere else, and
+            // it is already in the model's own group.
+            if (isset($blocked[$path]) || isset($meta->fields[$path])) {
+                continue;
+            }
+
+            $field = $this->aggregateField($model, $path);
+
+            if ($field !== null) {
+                $fields[] = $field->toArray();
+            }
+        }
+
+        if ($fields === []) {
+            return null;
+        }
+
+        return [
+            'key' => $prefix,
+            'label' => __('dynamic-table::table.aggregate.group', ['relation' => $this->labelFor($relationName)]),
+            'fields' => $fields,
+        ];
     }
 
     public function labelFor(string $path): string
@@ -289,6 +515,28 @@ class MetadataEngine
 
             return;
         }
+
+        /*
+         * Everything, including what is in the cache store.
+         *
+         * This used to clear only the in-process memo, which meant
+         * "php artisan dynamic-table:clear" — the command the documentation
+         * sends people to after adding a column — cleared nothing that
+         * outlived the request, and the new column stayed invisible until
+         * somebody ran cache:clear.
+         *
+         * The index is how: tags are not available on the file or database
+         * stores, so the keys that were written are remembered instead.
+         */
+        $cache = Cache::store($this->store());
+
+        foreach ((array) $cache->get($this->indexKey(), []) as $key) {
+            if (is_string($key)) {
+                $cache->forget($key);
+            }
+        }
+
+        $cache->forget($this->indexKey());
 
         $this->memo = [];
         $this->pathMemo = [];
@@ -662,8 +910,47 @@ class MetadataEngine
         }
 
         $ttl = (int) config('dynamic-table.cache.ttl', 86400);
+        $cache = Cache::store($this->store());
+        $key = $this->cacheKey($class);
+        $cached = $cache->get($key);
 
-        return Cache::store($this->store())->remember($this->cacheKey($class), $ttl, $callback);
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $value = $callback();
+
+        $cache->put($key, $value, $ttl);
+
+        // Written on a miss only, which is where the cost belongs: a warm
+        // cache does not pay for the bookkeeping that lets it be cleared.
+        $this->index($key, $ttl);
+
+        return $value;
+    }
+
+    /** Remember that a key was written, so flush() can find it again. */
+    protected function index(string $key, int $ttl): void
+    {
+        $cache = Cache::store($this->store());
+        $keys = (array) $cache->get($this->indexKey(), []);
+
+        if (in_array($key, $keys, true)) {
+            return;
+        }
+
+        $keys[] = $key;
+
+        // Outlives the entries it points at: an index that expired first would
+        // leave keys nothing could clear.
+        $cache->put($this->indexKey(), array_values($keys), $ttl * 2);
+    }
+
+    protected function indexKey(): string
+    {
+        $prefix = (string) config('dynamic-table.cache.prefix', 'dynamic-table');
+
+        return $prefix.':meta:index:'.md5((string) config('app.env'));
     }
 
     protected function cacheKey(string $class): string

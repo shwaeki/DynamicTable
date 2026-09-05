@@ -97,6 +97,48 @@ table.selectionCount();
 This is intentionally minimal and is documented so you can integrate, not so you
 can rebuild the UI. Prefer the PHP API where both exist.
 
+## Slots
+
+Five places in the template belong to your application. Return markup for the
+ones you want from `slots()`:
+
+```php
+use Illuminate\Support\HtmlString;
+
+public function slots()
+{
+    return [
+        'toolbar.start' => view('partials.quota-badge'),
+        'above'         => new HtmlString('<p class="alert">Prices update at 06:00.</p>'),
+        'empty'         => view('partials.add-first-product'),
+    ];
+}
+```
+
+| Slot | Where it renders |
+|---|---|
+| `toolbar.start` | Beside the search box, before the table's own start-aligned controls |
+| `toolbar.end` | After export, print, columns and views |
+| `above` | Between the toolbar and the table |
+| `below` | Under the pagination footer |
+| `empty` | Inside the empty state — but **only** when the table is genuinely empty, never when a filter matched nothing |
+
+Values take the same three shapes as `rowDetail()`: a Blade view, an `Htmlable`,
+or a string — which is **escaped**, because a bare string is text. An unknown
+slot name throws, for the same reason an unknown feature name does: markup
+rendered nowhere, with nothing anywhere saying why.
+
+A slot's marker is `display: contents`, so a button in `toolbar.start` joins the
+toolbar's own flex row rather than sitting in a nested box. The package styles
+the position, never the contents.
+
+Only the `empty` slot travels in the boot payload, because it is the only one
+the JavaScript renderer redraws. The rest are rendered once by Blade, in parts
+of the page the core module never rebuilds.
+
+This is the supported alternative to copying `table.blade.php`, which works once
+and turns every upgrade into a merge.
+
 ## Custom themes
 
 See [Themes](themes.md). A theme is one array of CSS classes, and the "themes"

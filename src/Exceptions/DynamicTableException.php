@@ -43,4 +43,17 @@ class DynamicTableException extends RuntimeException
     {
         return new self("The field [{$field}] is not available on this table.");
     }
+
+    /**
+     * @param  list<string>  $unknown
+     * @param  list<string>  $known
+     */
+    public static function unknownSlots(array $unknown, array $known, string $class): self
+    {
+        return new self(
+            'Unknown slot '.(count($unknown) > 1 ? 'names' : 'name').' ['.implode(', ', $unknown)."] on [{$class}].\n".
+            "The markup would otherwise be rendered nowhere, with nothing to say why.\n".
+            'Available: '.implode(', ', $known).'.'
+        );
+    }
 }

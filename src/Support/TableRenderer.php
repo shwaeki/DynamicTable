@@ -46,12 +46,40 @@ class TableRenderer
         $data = $this->payload->data($table, $state);
         $boot = $this->payload->boot($table, $state, $data);
 
+        /*
+         * Slots are resolved once, here, rather than in the payload: rendering
+         * them costs whatever the application's views cost, and the empty slot
+         * would otherwise be rendered twice — once for Blade and once for the
+         * JSON. Only the slots the core module repaints travel in the boot
+         * payload; the rest are Blade's alone, in parts of the page the module
+         * never rebuilds.
+         */
+        $slots = Slots::resolve($table);
+        $boot['slots'] = Slots::repainted($slots);
+
         $theme = $options['theme'] ?? $table->theme();
+
+        /*
+         * A theme passed at the call site has to reach the class map, not only
+         * the template.
+         *
+         * The payload asked the table for its theme, so rendering the same
+         * table as "bootstrap" from one page picked the Bootstrap *template*
+         * and then painted it with the table's own classes — which for every
+         * table that had not set $theme meant no Bootstrap classes at all, and
+         * an option that looked ignored.
+         */
+        if (isset($options['theme'])) {
+            $boot['theme'] = $theme;
+            $boot['classes'] = Theme::classes($theme);
+        }
+
         $view = $this->themeView($theme);
 
         return new HtmlString(View::make($view, [
             'table' => $table,
             'boot' => $boot,
+            'slots' => $slots,
             'state' => $state,
             'assets' => $this->assets,
             'options' => $options,

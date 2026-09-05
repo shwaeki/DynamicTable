@@ -311,27 +311,11 @@ export default function install(table) {
                 status.replaceChildren(el('p', { text: table.t('loading') }));
 
                 try {
-                    const response = await fetch(table.endpoints.import.replace(/\/?$/, '/analyze'), {
-                        method: 'POST',
-                        credentials: 'same-origin',
-                        headers: {
-                            Accept: 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                        },
-                        body: data,
-                    });
-
-                    const payload = response.headers.get('content-type')?.includes('application/json')
-                        ? await response.json()
-                        : null;
-
                     // The server says what was wrong with the file — too large,
-                    // the wrong type, a format nothing installed can read. That
-                    // was thrown away and replaced with "the request could not
-                    // be completed".
-                    if (!response.ok) throw new Error(payload?.message || table.t('errors.generic'));
-
-                    analysis = payload;
+                    // the wrong type, a format nothing installed can read — and
+                    // upload() keeps that message, supplying its own only where
+                    // the server had nothing useful to say.
+                    analysis = await table.upload(table.endpoints.import.replace(/\/?$/, '/analyze'), data);
                     mapping = { ...analysis.mapping };
 
                     /*
@@ -464,12 +448,48 @@ export default function install(table) {
             ]);
         }
 
+        /**
+         * The same import, rolled back.
+         *
+         * It answers the question people actually have in front of a mapping
+         * screen — "what is this about to do to my data?" — with the numbers
+         * the real run would produce, because it *is* the real run. The upload
+         * survives it, so Start import is still the next thing to press.
+         */
+        const previewButton = el('button', {
+            type: 'button',
+            class: table.classes.button,
+            text: table.t('import.preview'),
+            onclick: async () => {
+                previewButton.disabled = true;
+                runButton.disabled = true;
+
+                try {
+                    const response = await table.post(table.endpoints.import, {
+                        file: analysis.file,
+                        token: analysis.token,
+                        mapping,
+                        mode,
+                        matchBy: matchBy || null,
+                        dry: true,
+                    });
+
+                    status.replaceChildren(...summaryNodes(response));
+                } catch (error) {
+                    status.replaceChildren(el('p', { class: 'dynamic-table-error', text: error.message }));
+                } finally {
+                    sync();
+                }
+            },
+        });
+
         const runButton = el('button', {
             type: 'button',
             class: table.classes.buttonPrimary,
             text: table.t('import.run'),
             onclick: async () => {
                 runButton.disabled = true;
+                previewButton.disabled = true;
 
                 try {
                     const response = await table.post(table.endpoints.import, {
@@ -538,6 +558,7 @@ export default function install(table) {
 
             runButton.disabled = ! analysis || found.length > 0;
             runButton.title = analysis ? found.join(' ') : table.t('import.no_file');
+            previewButton.disabled = runButton.disabled;
         }
 
         function paint() {
@@ -558,12 +579,15 @@ export default function install(table) {
             body,
             footer: el('div', { class: 'dynamic-table-modal-actions' }, [
                 el('button', { type: 'button', class: table.classes.button, text: table.t('cancel'), onclick: () => instance.close() }),
+                previewButton,
                 runButton,
             ]),
         });
 
         function summaryText(result) {
-            return table.t('import.summary', {
+            // A dry run reports the same three numbers in the future tense, so
+            // nobody mistakes a preview for a finished import.
+            return table.t(result.dry ? 'import.preview_summary' : 'import.summary', {
                 created: result.created || 0,
                 updated: result.updated || 0,
                 failed: result.failed || 0,

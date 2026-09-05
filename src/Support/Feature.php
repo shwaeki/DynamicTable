@@ -46,6 +46,12 @@ final class Feature
 
     public const ROW_DETAIL = 'row_detail';
 
+    /** Drag a row to write its position. Needs $reorderable to name the column. */
+    public const ROW_REORDER = 'row_reorder';
+
+    /** Keep chosen rows at the top of the table, per viewer. */
+    public const PINNED_ROWS = 'pinned_rows';
+
     public const STICKY_COLUMNS = 'sticky_columns';
 
     public const FILTER_COUNTS = 'filter_counts';
@@ -108,6 +114,8 @@ final class Feature
         self::BULK_EDIT,
         self::INLINE_CREATE,
         self::ROW_DETAIL,
+        self::ROW_REORDER,
+        self::PINNED_ROWS,
         self::STICKY_COLUMNS,
         self::FILTER_COUNTS,
         self::RELATIONS,
@@ -158,6 +166,8 @@ final class Feature
         self::BULK_EDIT => ['actions'],
         self::INLINE_CREATE => ['inline-edit'],
         self::ROW_DETAIL => ['detail'],
+        self::ROW_REORDER => ['reorder'],
+        self::PINNED_ROWS => ['pins'],
         self::STICKY_COLUMNS => ['sticky'],
         self::EXPORT => ['transfer'],
         self::IMPORT => ['transfer'],

@@ -14,9 +14,15 @@
     $sort = collect($boot['state']['sort'] ?? [])->keyBy('field');
     $selectable = $features['selection'] ?? false;
     $expandable = $features['row_detail'] ?? false;
+
+    // The column a drag writes to, or null. Whether a drag is possible right
+    // now also depends on the sort, and that is the reorder module's question:
+    // the reader can change the sort without asking the server.
+    $reorderable = $boot['reorderable'] ?? null;
+    $pinnable = $features['pinned_rows'] ?? false;
     $sticky = array_flip($boot['sticky'] ?? []);
     $toolbarActions = collect($boot['toolbarActions'] ?? []);
-    $leading = ($selectable ? 1 : 0) + ($expandable ? 1 : 0);
+    $leading = ($selectable ? 1 : 0) + ($expandable ? 1 : 0) + ($reorderable ? 1 : 0) + ($pinnable ? 1 : 0);
     $headerMenu = in_array('header-menu', $boot['modules'] ?? [], true);
     $summaries = $data['summaries'] ?? [];
 
@@ -39,6 +45,15 @@
 
     $filtered = array_flip($filteredKeys);
     $t = fn (string $key, array $replace = []) => __('dynamic-table::table.'.$key, $replace);
+
+    /*
+     * The application's own markup, already rendered and already escaped where
+     * escaping was the right thing — see Support\Slots. A theme template that
+     * renders this file's markup itself gets an empty map rather than an
+     * undefined variable.
+     */
+    $slots = $slots ?? [];
+    $slot = fn (string $name) => $slots[$name] ?? null;
 @endphp
 
 {!! $assets->head() !!}
@@ -57,6 +72,10 @@
 
     <div class="{{ $classes['toolbar'] }}" data-dynamic-table-toolbar>
         <div class="dynamic-table-toolbar-start">
+            @if ($slot('toolbar.start'))
+                <div class="dynamic-table-slot" data-dynamic-table-slot="toolbar.start">{!! $slot('toolbar.start') !!}</div>
+            @endif
+
             @if ($features['search'] ?? false)
                 <label class="dynamic-table-visually-hidden" for="{{ $id }}-search">{{ $t('search') }}</label>
                 <input
@@ -153,10 +172,18 @@
                     @endif
                 </div>
             @endif
+
+            @if ($slot('toolbar.end'))
+                <div class="dynamic-table-slot" data-dynamic-table-slot="toolbar.end">{!! $slot('toolbar.end') !!}</div>
+            @endif
         </div>
     </div>
 
     <div class="dynamic-table-alerts" data-dynamic-table-alerts aria-live="polite"></div>
+
+    @if ($slot('above'))
+        <div class="dynamic-table-slot dynamic-table-slot-above" data-dynamic-table-slot="above">{!! $slot('above') !!}</div>
+    @endif
 
     {{-- The height lives on the element, because a sticky header needs a box that scrolls. --}}
     <div
@@ -194,6 +221,18 @@
         <table class="{{ $classes['table'] }} @if ($sized) dynamic-table-sized @endif" data-dynamic-table-table>
             <thead class="{{ $classes['thead'] }}">
                 <tr class="{{ $classes['headRow'] }}">
+                    @if ($pinnable)
+                        <th class="{{ $classes['th'] }} dynamic-table-pin-cell" scope="col">
+                            <span class="dynamic-table-visually-hidden">{{ $t('pin_row') }}</span>
+                        </th>
+                    @endif
+
+                    @if ($reorderable)
+                        <th class="{{ $classes['th'] }} dynamic-table-reorder-cell" scope="col">
+                            <span class="dynamic-table-visually-hidden">{{ $t('reorder_row') }}</span>
+                        </th>
+                    @endif
+
                     @if ($expandable)
                         <th class="{{ $classes['th'] }} dynamic-table-expand-cell" scope="col">
                             <span class="dynamic-table-visually-hidden">{{ $t('detail.title') }}</span>
@@ -272,6 +311,8 @@
                         search row whose inputs sit under the wrong columns.
                     --}}
                     <tr class="{{ $classes['filterRow'] }}" data-dynamic-table-search-row>
+                        @if ($pinnable)<th class="{{ $classes['th'] }} dynamic-table-pin-cell"></th>@endif
+                        @if ($reorderable)<th class="{{ $classes['th'] }} dynamic-table-reorder-cell"></th>@endif
                         @if ($expandable)<th class="{{ $classes['th'] }} dynamic-table-expand-cell"></th>@endif
                         @if ($selectable)<th class="{{ $classes['th'] }} dynamic-table-select-cell"></th>@endif
                         @foreach ($visible as $column)
@@ -317,6 +358,15 @@
                     $groupLabel = $groupKey === null
                         ? null
                         : (collect($boot['columns'])->firstWhere('key', $groupKey)['label'] ?? $groupKey);
+
+                    /*
+                     * Subtotals per heading, keyed by the formatted value the
+                     * row carries — the same key the JS renderer builds, from
+                     * the same function, so a group's totals do not move when
+                     * the second page arrives.
+                     */
+                    $groupTotals = $data['groupSummaries'] ?? [];
+                    $totalsFor = fn ($value) => $groupTotals[\Shwaeki\DynamicTable\Query\QueryEngine::groupKey($value)] ?? [];
                 @endphp
 
                 @forelse ($data['rows'] as $row)
@@ -329,6 +379,22 @@
                                 <td colspan="{{ $span }}">
                                     <span class="dynamic-table-group-label">{{ $groupLabel }}: </span>
                                     <strong>{{ $groupValue === null || $groupValue === '' ? '—' : $groupValue }}</strong>
+
+                                    {{-- Mirrored by renderGroupRow(). --}}
+                                    @php $totals = $totalsFor($groupValue); @endphp
+
+                                    @if ($totals !== [])
+                                        <span class="dynamic-table-group-summaries">
+                                            @foreach ($visible as $column)
+                                                @if (isset($totals[$column['key']]))
+                                                    <span class="dynamic-table-group-summary">
+                                                        <span class="dynamic-table-summary-label">{{ $column['label'] }} · {{ $t('summary.'.$column['summary']) }}</span>
+                                                        <span class="dynamic-table-summary-value">{{ $totals[$column['key']] }}</span>
+                                                    </span>
+                                                @endif
+                                            @endforeach
+                                        </span>
+                                    @endif
                                 </td>
                             </tr>
                         @endif
@@ -341,6 +407,19 @@
                         data-dynamic-table-row="{{ $row['id'] }}"
                         @if (! empty($row['trashed'])) data-trashed @endif
                     >
+                        @if ($pinnable)
+                            {{-- Mirrored by renderRow(); the pins module fills the star it holds. --}}
+                            <td class="{{ $classes['cell'] }} dynamic-table-pin-cell">
+                                <button type="button" class="dynamic-table-pin" data-dynamic-table-pin="{{ $row['id'] }}" aria-pressed="false" title="{{ $t('pin_row') }}">&#9734;</button>
+                            </td>
+                        @endif
+
+                        @if ($reorderable)
+                            <td class="{{ $classes['cell'] }} dynamic-table-reorder-cell">
+                                {{-- Mirrored by renderRow(); hidden until the reorder module says the sort allows a drag. --}}
+                                <button type="button" class="dynamic-table-reorder-handle" data-dynamic-table-reorder-handle aria-label="{{ $t('reorder_row') }}" title="{{ $t('reorder_row') }}" hidden>&equiv;</button>
+                            </td>
+                        @endif
                         @if ($expandable)
                             <td class="{{ $classes['cell'] }} dynamic-table-expand-cell">
                                 <button
@@ -368,7 +447,16 @@
                                 data-label="{{ $column['label'] }}"
                                 @if (!empty($column['editable']) && ($features['inline_edit'] ?? false)) data-dynamic-table-editable @endif
                             >
-                                @include('dynamic-table::partials.cell', ['column' => $column, 'value' => $value, 'classes' => $classes, 'html' => isset($row['h'][$column['key']])])
+                                @if (! empty($row['u']) && $loop->first)
+                                    {{-- A real link in the first cell; mirrored by linkCell(). The rest
+                                         of the row is the click handler's job, and only a convenience
+                                         on top of this one. --}}
+                                    <a class="dynamic-table-row-link" href="{{ $row['u'] }}">
+                                        @include('dynamic-table::partials.cell', ['column' => $column, 'value' => $value, 'classes' => $classes, 'html' => isset($row['h'][$column['key']])])
+                                    </a>
+                                @else
+                                    @include('dynamic-table::partials.cell', ['column' => $column, 'value' => $value, 'classes' => $classes, 'html' => isset($row['h'][$column['key']])])
+                                @endif
                             </td>
                         @endforeach
 
@@ -422,6 +510,15 @@
                                     <button type="button" class="{{ $classes['button'] ?? '' }}" data-dynamic-table-clear-filters>
                                         {{ $t('clear_filters') }}
                                     </button>
+                                @elseif ($slot('empty'))
+                                    {{--
+                                        Only when the table is genuinely empty.
+                                        "Add the first product" under a filter
+                                        that matched nothing answers a question
+                                        the reader did not ask — they have
+                                        products, just not these.
+                                    --}}
+                                    <div class="dynamic-table-slot" data-dynamic-table-slot="empty">{!! $slot('empty') !!}</div>
                                 @endif
                             </div>
                         </td>
@@ -438,6 +535,8 @@
                 --}}
                 <tfoot class="dynamic-table-tfoot" data-dynamic-table-summary-row>
                     <tr class="dynamic-table-summary-row">
+                        @if ($pinnable)<td class="{{ $classes['cell'] }}"></td>@endif
+                        @if ($reorderable)<td class="{{ $classes['cell'] }}"></td>@endif
                         @if ($expandable)<td class="{{ $classes['cell'] }}"></td>@endif
                         @if ($selectable)<td class="{{ $classes['cell'] }}"></td>@endif
 
@@ -506,6 +605,10 @@
                 <nav class="{{ $classes['pagination'] }}" data-dynamic-table-pagination aria-label="{{ $t('pagination') }}"></nav>
             </div>
         </div>
+    @endif
+
+    @if ($slot('below'))
+        <div class="dynamic-table-slot dynamic-table-slot-below" data-dynamic-table-slot="below">{!! $slot('below') !!}</div>
     @endif
 
     @if ($boot['panel'] ?? false)

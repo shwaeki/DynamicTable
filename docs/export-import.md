@@ -123,6 +123,47 @@ Analysis returns the file's headings, the first five rows, a row count and a
 suggested mapping produced by matching headings against column labels and paths.
 You can override any mapping, or set a column to "ignore".
 
+### The mapping is remembered
+
+The next upload to the same table starts from the mapping the last one ended
+with — the columns, the mode, and the field it matched on. It is stored **by
+heading name**, not by position, so a file that has gained a column since last
+month keeps every decision already made about the others and offers a
+suggestion only for the new one.
+
+Per person, in the session, like [remembered state](features.md): a mapping is
+a habit rather than a document, and this needs no table and no migration. It is
+stored only after the mapping has passed every check, because a mapping the
+importer would refuse is not worth offering back.
+
+### Preview: the import, rolled back
+
+**Preview** answers the question people actually have in front of a mapping
+screen — *what is this about to do to my data?*
+
+> Would create 128, update 40, reject 3. Nothing has been written yet.
+
+It is not a simulation. It is the **real import inside a transaction that is
+rolled back**: the same validation, the same casting, the same relationship
+lookups, the same unique constraints, the same database. A preview that ran
+different code would be a preview of different code, and the row it disagreed
+about would be exactly the one somebody cared about.
+
+The rejected rows come back with it, and so does the downloadable error report,
+so a bad file can be fixed before anything is written rather than after.
+
+Two things to know:
+
+- **A preview never queues**, whatever the file's size. Answering "what will
+  this do?" with "ask again later" is not an answer, and the reply would arrive
+  after the person had gone.
+- **It cannot undo what leaves the database.** A model observer that queues a
+  job, sends a mail or calls an external service still did so. The import's own
+  events are not fired for a preview, but yours are.
+
+The upload survives a preview, so **Start import** is still the next thing to
+press.
+
 ### Modes
 
 | Mode | Behaviour |

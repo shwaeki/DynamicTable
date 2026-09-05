@@ -46,6 +46,7 @@ return [
             'scheme' => 'Colour scheme',
             'summary' => 'Total under the money column',
             'sticky' => 'Freeze the first column and the row actions',
+            'links' => 'Rows link to the record',
         ],
     ],
 

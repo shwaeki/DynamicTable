@@ -194,6 +194,61 @@ An `IntersectionObserver` watches a sentinel below the last row, so there is no
 scroll handler firing on every pixel. Changing the search, a filter or the sort
 starts again from the first page.
 
+### It pages by key, not by offset
+
+Each page asks for **the rows after the last ones**, not for rows 380 to 400.
+That matters exactly where infinite scrolling is used: reading page after page
+of a result other people are still writing to.
+
+With `OFFSET`, a row inserted above the window shifts everything down, so the
+reader sees one row twice and never sees another — and the database counts and
+discards 380 rows to hand back 20. A keyset cursor has neither problem: it is
+stable under inserts, and it can use the index on the columns being sorted.
+
+The cursor is opaque, lives outside the table's state, and is thrown away
+whenever anything changes the result. It is never written to the URL and never
+saved in a view: it points into one particular result and means nothing in
+another.
+
+Two cases fall back to offset paging, silently and correctly:
+
+- **A sort the cursor cannot express** — on a relationship or on a relation
+  aggregate. Both are subqueries, and a keyset comparison needs plain columns
+  it can also name in a `WHERE`.
+- **A cold jump to a numbered page**, such as a `?page=4` link. A cursor can
+  only move on from somewhere it has been.
+
+## The doctor
+
+```bash
+php artisan dynamic-table:doctor            # every registered table
+php artisan dynamic-table:doctor orders     # one of them
+```
+
+Everything on this page is a statement about what a table should not do.
+Documentation is a thing people read once; this is the same set of statements,
+checked:
+
+- a **default sort** on a column with no index — the most expensive mistake
+  available, because it runs on every first paint;
+- **searchable columns** with no index, but only on a table large enough for it
+  to cost something;
+- `saved_views` enabled with the **migration not run**;
+- a table **large enough that `COUNT(*)` hurts** and still counting;
+- `row_reorder` whose `$reorderable` **names nothing usable**, or whose default
+  sort is not the position column — so the handles never appear;
+- `pinned_rows` with a session driver that **forgets** between requests;
+- a `themes` config naming a **slot that does not exist** and is therefore
+  silently dropped.
+
+Every finding says what is wrong and what to do about it. It reports and
+changes nothing, and it uses the row *estimate* rather than counting, so it is
+never the most expensive thing you run against a production database.
+
+Only an **error** fails the command. A warning is a judgement call about a
+table someone may have every reason to keep as it is, and failing CI over one
+would only teach people to stop running it.
+
 ## Measuring
 
 Turn on the developer panel (never in production):

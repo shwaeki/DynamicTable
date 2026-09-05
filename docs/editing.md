@@ -62,6 +62,37 @@ browser sends.
 
 ---
 
+## Two people, one row
+
+Two readers open the same list. Both change the same cell. Without anything in
+the way, the second save silently overwrites the first — nobody is told, and
+the first change is simply gone.
+
+Every editable row carries a short version token derived from `updated_at`. The
+browser sends it back with the edit, and the server refuses a write whose token
+no longer matches:
+
+> Someone else changed this row while you were editing it. It has been
+> refreshed — make your change again.
+
+The refusal comes back with **the row as it now stands**, so the cell repaints
+with the other person's value rather than with the rejected one. Nothing is
+half-applied: the edit is rejected before validation, inside the same
+transaction as every other edit in the request.
+
+There is nothing to switch on and no column to add. A model without timestamps
+has no version and edits exactly as it always did — the alternative would be a
+version column this package asks every application to migrate for, to buy a
+guarantee most tables do not need. `updated_at` is selected only on tables with
+`inline_edit` or `bulk_edit` enabled, so a read-only table pays nothing.
+
+A client that sends no token is not refused either, which keeps an application
+calling the endpoint itself working unchanged.
+
+**Bulk edit is not covered.** It sets the same columns across a selection that
+may span pages, most of which the reader never looked at, so there is no
+"as you last saw it" to compare against.
+
 ## Inline create
 
 ```php
