@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-09-05
+
 ### Added
 
 - **Group subtotals.** A grouped table with summary columns now shows each
@@ -769,7 +771,8 @@ First public release.
 - PHPStan (larastan) level 5, Laravel Pint
 - Query-count and memory budgets asserted by the performance suite
 
-[Unreleased]: https://github.com/shwaeki/DynamicTable/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/shwaeki/DynamicTable/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v3.0.0
 [2.2.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.2.0
 [2.1.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.1.0
 [2.0.0]: https://github.com/shwaeki/DynamicTable/releases/tag/v2.0.0

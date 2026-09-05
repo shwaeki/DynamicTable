@@ -14,6 +14,40 @@ Anything under `Metadata`, `Query`, `Filters`, `Columns`, `Support` or
 `Http\Controllers`, and the JSON endpoint shape, is **internal** and may change
 in a minor release. See [docs/extending.md](docs/extending.md).
 
+## 3.0.0: three themes, and `Theme::register()` is gone
+
+The theme list was six names deep and an author had to work out which of them
+their application wanted; the answer was almost always "the framework I already
+load, or none". Three ship now: `custom`, `bootstrap`, `tailwind`.
+
+| Was | Now |
+| --- | --- |
+| `minimal`, `bordered`, `none` | removed — resolve to `custom` |
+| `bootstrap5` | removed — use `bootstrap` |
+| `Theme::register('mine', [...])` | an entry under `themes` in `config/dynamic-table.php` |
+| `'themes' => ['mine' => ['extends' => 'bootstrap', ...]]` | `'themes' => ['bootstrap' => [...]]` — a name in config starts from the built-in of the same name, and a name of its own starts from `custom` |
+
+**An unrecognised name now resolves to `custom` rather than to Tailwind**, so an
+application naming a removed theme keeps a finished-looking table instead of an
+unstyled one. Nothing throws, and nothing has to be changed the day you upgrade
+— but a table that named `bootstrap5` is no longer getting Bootstrap classes,
+which is worth grepping for:
+
+```bash
+grep -rn "bootstrap5\|Theme::register\|'extends' =>" app/ config/
+```
+
+Two smaller changes in the same release:
+
+- **The default theme is `bootstrap`** (it was `tailwind`).
+- **Tables are light by default.** `config('dynamic-table.scheme')` ships as
+  `'light'` rather than `null`, so one page no longer renders light or dark
+  depending on whose operating system opened it. Set it back to `null` to
+  follow `prefers-color-scheme`.
+
+Everything else in 3.0.0 is additive: new features are opt-in by name, and a
+table that declares none behaves exactly as it did.
+
 ## 2.0.0: `data-dt-*` attributes are now `data-dynamic-table-*`
 
 The prefix rename covers the DOM hooks, which this guide names as public API.
